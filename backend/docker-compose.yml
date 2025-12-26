@@ -1,0 +1,88 @@
+version: '3.8'
+
+# BACKEND SERVICES (Redis, Elasticsearch, FastAPI, Dramatiq)
+# Run from backend/ folder: docker-compose up -d
+# Frontend runs separately with: cd ../frontend && npm run dev
+
+services:
+  # Note: PostgreSQL is now handled by Supabase (cloud-hosted)
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: bias-news-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: bias-news-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bias-news-backend
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ../datasets:/app/datasets
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Dramatiq Worker
+  dramatiq-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bias-news-dramatiq-worker
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    volumes:
+      - .:/app
+      - ../datasets:/app/datasets
+    depends_on:
+      - redis
+    command: dramatiq app.tasks
+
+volumes:
+  redis_data:
+  elasticsearch_data:
