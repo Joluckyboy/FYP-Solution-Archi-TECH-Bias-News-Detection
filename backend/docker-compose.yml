@@ -1,5 +1,3 @@
-version: '3.8'
-
 # BACKEND SERVICES (Redis, Elasticsearch, FastAPI, Dramatiq)
 # Run from backend/ folder: docker-compose up -d
 # Frontend runs separately with: cd ../frontend && npm run dev
