@@ -40,10 +40,7 @@ cd FYP-Solution-Archi-TECH-Bias-News-Detection
 
 ### Step 2: Configure Environment Variables
 
-```bash
-# Create .env under backend folder
-```
-
+#### Create .env under backend folder
 Add your Supabase credentials:
 ```env
 SUPABASE_URL=https://your-project-id.supabase.co
@@ -53,10 +50,7 @@ REDIS_URL=redis://localhost:6379
 ELASTICSEARCH_URL=http://localhost:9200
 ```
 
-```bash
-# Create .env under root folder
-```
-
+#### Create .env under root folder
 Add your Supabase credentials:
 ```env
 # Supabase Configuration
