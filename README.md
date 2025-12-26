@@ -163,6 +163,8 @@ Expected: Returns the created article with an ID
 │   ├── docker-compose.yml     ← Backend services orchestration
 │   ├── Dockerfile             ← Backend container config
 │   ├── requirements.txt       ← Python dependencies
+│   ├── datasets/              ← Training data and models
+│   │   └── datasets visualization/
 │   └── app/
 │       ├── main.py            ← FastAPI application
 │       ├── api/v1/endpoints/  ← API routes
@@ -174,9 +176,6 @@ Expected: Returns the created article with an ID
 │   ├── package.json           ← Node.js dependencies
 │   ├── src/app/               ← Pages & components
 │   └── public/                ← Static assets
-│
-├── datasets/                   ← Training data and models
-│   └── datasets visualization/
 │
 ├── .env                        ← Environment variables (Supabase credentials)
 └── README.md                  ← This file

@@ -56,7 +56,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - ../datasets:/app/datasets
+      - ./datasets:/app/datasets
     depends_on:
       redis:
         condition: service_healthy
@@ -78,7 +78,7 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
     volumes:
       - .:/app
-      - ../datasets:/app/datasets
+      - ./datasets:/app/datasets
     depends_on:
       - redis
     command: dramatiq app.tasks
