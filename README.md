@@ -11,9 +11,6 @@ A comprehensive AI-powered news bias detection system built with microservices a
 - [Configuration](#-configuration)
 - [Services Overview](#-services-overview)
 - [API Documentation](#-api-documentation)
-- [Testing](#-testing)
-- [Development](#-development)
-- [Troubleshooting](#-troubleshooting)
 
 ## ✨ Features
 
@@ -174,7 +171,7 @@ Each service exposes its API documentation at the `/docs` endpoint:
 
 1. **Start your services**: Make sure Docker containers are running
    ```bash
-   docker-compose up
+   docker compose up -d
    ```
 
 2. **Open your browser** and navigate to any service's `/docs` endpoint
@@ -209,122 +206,13 @@ Each service exposes its API documentation at the `/docs` endpoint:
 }
 ```
 
-## 🧪 Testing
-
-### Backend Testing
-
-**Test individual service:**
-```bash
-docker-compose up database
-```
-
-**View service logs:**
-```bash
-docker-compose logs -f database
-```
-
-**Restart a service:**
-```bash
-docker-compose restart database
-```
-
-### Frontend Testing
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-The development server will start with hot-reload enabled.
-
-## 💻 Development
-
-### Rebuild Specific Service
-
-When you make changes to a specific service:
-
-```bash
-# Rebuild and restart single service
-docker-compose up --build <service_name>
-
-# Examples:
-docker-compose up --build database
-docker-compose up --build sentiment
-```
-
-### Stop All Services
-
-```bash
-# Stop and remove containers
-docker-compose down
-
-# Stop, remove containers and volumes
-docker-compose down -v
-```
-
-### View All Running Containers
-
-```bash
-docker ps
-```
-
-## 🐛 Troubleshooting
-
-### Port Already in Use
-
-If you see port conflict errors:
-
-```bash
-# Check what's using the port (Windows)
-netstat -ano | findstr :8010
-
-# Kill the process
-taskkill /PID <process_id> /F
-```
-
-### Supabase Connection Issues
-
-1. Verify your credentials in `backend/.env`
-2. Check your Supabase project is active
-3. Ensure your IP is allowed in Supabase settings
-
-### Frontend Not Loading
-
-1. Clear browser cache
-2. Check if backend services are running: `docker ps`
-3. Verify API URL in `frontend/src/config/config.js`
-
-### Docker Build Failures
-
-```bash
-# Clean Docker cache
-docker system prune -a
-
-# Rebuild from scratch
-docker-compose build --no-cache
-docker-compose up
-```
-
-### Chrome Extension Errors
-
-If you see `chrome.runtime.sendMessage` errors in console:
-- ✅ This is expected when running as a web app (not as an extension)
-- ✅ Extension features are automatically disabled in browser mode
-- ✅ The app will function normally
-
-## 📝 Service Ports Reference
-
-| Service | Port | Status |
-|---------|------|--------|
-| Application | 8010 | ✅ Running |
-| Database | 8011 | ✅ Running |
-| Sentiment | 8012 | ✅ Running |
-| Emotion | 8013 | ✅ Running |
-| Propaganda | 8014 | ✅ Running |
-| Scraper | 8015 | ✅ Running |
-| Fact-Check | 8016 | ✅ Running |
-| Telegram Bot | 8020 | ✅ Running |
 
 ## 🤝 Contributing
 
