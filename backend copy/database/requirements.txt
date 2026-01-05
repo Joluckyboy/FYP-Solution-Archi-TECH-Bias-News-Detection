@@ -1,5 +1,0 @@
-mongoengine == 0.29.1
-dnspython
-fastapi 
-uvicorn
-dotenv

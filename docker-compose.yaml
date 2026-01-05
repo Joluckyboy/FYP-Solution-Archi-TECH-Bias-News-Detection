@@ -4,7 +4,9 @@ services:
     build: 
       context: ./backend/database
     ports:
-      - "8011:8011" 
+      - "8011:8011"
+    env_file:
+      - ./backend/.env
     environment:
       - ENV=production
     restart: always

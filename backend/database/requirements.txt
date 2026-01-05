@@ -1,0 +1,6 @@
+supabase == 2.9.1
+fastapi 
+uvicorn
+python-dotenv
+httpx
+websockets
