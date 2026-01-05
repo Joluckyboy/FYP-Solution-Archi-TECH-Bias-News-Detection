@@ -1,0 +1,59 @@
+# apiVersion: networking.gke.io/v1
+# kind: ManagedCertificate
+# metadata:
+#   name: backend-certificate
+#   namespace: backend
+# spec:
+#   domains:
+#     - api.chfwhitehats2024.games
+# ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+  namespace: backend
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "backend-api-static-ip"  # Reference the static IP
+    networking.gke.io/managed-certificates: backend-certificate
+    kubernetes.io/ingress.allow-http: "false" 
+spec:
+  # ingressClassName: gce
+  rules:
+  - host: api.chfwhitehats2024.games
+    http:
+      paths:
+      - path: /sentiment
+        pathType: Prefix
+        backend:
+          service:
+            name: sentiment-service
+            port:
+              number: 80
+      - path: /emotion
+        pathType: Prefix
+        backend:
+          service:
+            name: emotion-service
+            port:
+              number: 80
+      - path: /propaganda
+        pathType: Prefix
+        backend:
+          service:
+            name: propaganda-service
+            port:
+              number: 80
+      - path: /factcheck
+        pathType: Prefix
+        backend:
+          service:
+            name: factcheck-service
+            port:
+              number: 80
+      - path: /scraper
+        pathType: Prefix
+        backend:
+          service:
+            name: scraper-service
+            port:
+              number: 80

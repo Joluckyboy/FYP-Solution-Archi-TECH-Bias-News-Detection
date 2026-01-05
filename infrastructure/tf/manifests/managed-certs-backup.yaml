@@ -1,0 +1,49 @@
+apiVersion: v1
+items:
+- apiVersion: networking.gke.io/v1
+  kind: ManagedCertificate
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.gke.io/v1","kind":"ManagedCertificate","metadata":{"annotations":{},"name":"backend-certificate","namespace":"backend"},"spec":{"domains":["api.chfwhitehats2024.games"]}}
+    creationTimestamp: "2025-03-01T16:17:24Z"
+    generation: 3
+    name: backend-certificate
+    namespace: backend
+    resourceVersion: "21190"
+    uid: 0fe38bdb-6ac0-4568-bfa7-2bbdbf7e4e4e
+  spec:
+    domains:
+    - api.chfwhitehats2024.games
+  status:
+    certificateName: mcrt-2d9938d1-0972-455c-ab6d-668536977bf1
+    certificateStatus: Active
+    domainStatus:
+    - domain: api.chfwhitehats2024.games
+      status: Active
+    expireTime: "2025-05-30T09:32:17.000-07:00"
+- apiVersion: networking.gke.io/v1
+  kind: ManagedCertificate
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.gke.io/v1","kind":"ManagedCertificate","metadata":{"annotations":{},"name":"service-certificate","namespace":"service"},"spec":{"domains":["service.chfwhitehats2024.games"]}}
+    creationTimestamp: "2025-03-01T16:17:34Z"
+    generation: 4
+    name: service-certificate
+    namespace: service
+    resourceVersion: "34183"
+    uid: be0a1242-7b9a-4fa1-a6c9-cab2070d1704
+  spec:
+    domains:
+    - service.chfwhitehats2024.games
+  status:
+    certificateName: mcrt-c6386b4d-065c-4937-bbef-de3193e57917
+    certificateStatus: Active
+    domainStatus:
+    - domain: service.chfwhitehats2024.games
+      status: Active
+    expireTime: "2025-05-30T09:34:10.000-07:00"
+kind: List
+metadata:
+  resourceVersion: ""

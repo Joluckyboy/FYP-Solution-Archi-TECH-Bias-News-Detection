@@ -1,0 +1,74 @@
+{
+    "quiz": [
+      {
+        "question": "Which headline is biased? \\n A: 'Candidate X Crushes Opponent in Fiery Debate, Exposing Lies and Weak Policies.' \\n B: 'Candidate X and Y Debate Economic Policies in Heated Exchange.'",
+        "options": [
+          "A",
+          "B",
+          "Both"
+        ],
+        "answer": [
+          0
+        ],
+        "question_type": "bias",
+        "debrief": "A is biased because it uses loaded words like 'Crushes,' 'Exposing Lies,' and 'Weak Policies,' which imply a strong opinion rather than neutrality. B is neutral as it simply describes the event without emotional language.",
+        "id": "67d647b85ac652462568cabb"
+      },
+      {
+        "question": "Which headline contains bias or emotional manipulation? \\n A: 'Angry Mob Takes to the Streets, Causing Chaos and Destruction.' \\n B: 'Citizens Rally to Demand Change in Peaceful Protest.' \\n C: 'A large protest was held in the city center, drawing thousands of participants.'",
+        "options": [
+          "A",
+          "B",
+          "C",
+          "Both A & B"
+        ],
+        "answer": [
+          3
+        ],
+        "question_type": "bias",
+        "debrief": "Both A and B are biased. A uses negative language ('Angry Mob,' 'Chaos and Destruction') to create fear, while B portrays the protest positively ('Citizens Rally,' 'Peaceful Protest'). C is neutral and factual.",
+        "id": "67d647b85ac652462568cabc"
+      },
+      {
+        "question": "Which headline is more emotionally charged? \\n A: 'Stock Market Plummets in Catastrophic Crash, Investors Panic!' \\n B: 'Markets Experience Decline Amid Economic Uncertainty.'",
+        "options": [
+          "A",
+          "B",
+          "Both"
+        ],
+        "answer": [
+          0
+        ],
+        "question_type": "bias",
+        "debrief": "A is more emotionally charged because it uses dramatic words like 'Plummets,' 'Catastrophic Crash,' and 'Panic!' B is neutral, using factual terms without emotional weight.",
+        "id": "67d647b85ac652462568cabd"
+      },
+      {
+        "question": "Which headline contains bias or sensationalism? \\n A: 'Shocking Discovery: Drinking Coffee Daily Could Cut Your Risk of Disease in Half!' \\n B: 'New Study Suggests Potential Health Benefits of Moderate Coffee Consumption.'",
+        "options": [
+          "A",
+          "B",
+          "Both"
+        ],
+        "answer": [
+          0
+        ],
+        "question_type": "bias",
+        "debrief": "A is biased and sensationalist due to 'Shocking Discovery' and 'Cut Your Risk in Half!' which exaggerate the claim. B presents the information neutrally.",
+        "id": "67d647b85ac652462568cabe"
+      },
+      {
+        "question": "Which of these headlines is more neutral? \\n A: 'Leader X Bows to Pressure and Meets With Foreign Adversary.' \\n B: 'Leaders of X and Y Hold Talks Amid Rising Tensions.'",
+        "options": [
+          "A",
+          "B"
+        ],
+        "answer": [
+          1
+        ],
+        "question_type": "bias",
+        "debrief": "A is biased because 'Bows to Pressure' and 'Foreign Adversary' imply negativity. B is neutral as it states the facts without judgment.",
+        "id": "67d647b85ac652462568cabf"
+      }
+    ]
+  }

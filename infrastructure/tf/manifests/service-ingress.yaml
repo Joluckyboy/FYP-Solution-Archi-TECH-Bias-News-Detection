@@ -1,0 +1,38 @@
+# apiVersion: networking.gke.io/v1
+# kind: ManagedCertificate
+# metadata:
+#   name: service-certificate
+#   namespace: service
+# spec:
+#   domains:
+#     - service.chfwhitehats2024.games
+# ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: service-ingress
+  namespace: service
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "service-api-static-ip"  # Reference the static IP
+    networking.gke.io/managed-certificates: service-certificate
+    kubernetes.io/ingress.allow-http: "false" 
+spec:
+  # ingressClassName: gce
+  rules:
+  - host: service.chfwhitehats2024.games
+    http:
+      paths:
+      - path: /database
+        pathType: Prefix
+        backend:
+          service:
+            name: database-service
+            port:
+              number: 80
+      - path: /application
+        pathType: Prefix
+        backend:
+          service:
+            name: application-service
+            port:
+              number: 80

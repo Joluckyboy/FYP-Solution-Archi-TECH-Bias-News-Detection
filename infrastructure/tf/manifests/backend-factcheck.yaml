@@ -1,0 +1,78 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-port-80
+  namespace: backend
+spec:
+  podSelector:
+    matchLabels:
+      app: factcheck
+  policyTypes:
+  - Ingress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: factcheck-deployment
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: factcheck
+  template:
+    metadata:
+      labels:
+        app: factcheck
+    spec:
+      containers:
+      - name: factcheck
+        image: nmywrld/ctrlaltelite-factcheck:latest
+        ports:
+        - containerPort: 8016
+        env:
+        - name: ENV
+          value: "production"
+
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: factcheck-secret
+              key: API_KEY
+
+        - name: API_KEYDS
+          valueFrom:
+            secretKeyRef:
+              name: factcheck-secret
+              key: API_KEYDS
+        # resources:
+        #   requests:
+        #     memory: "64Mi"
+        #     cpu: "250m"
+        #   limits:
+        #     memory: "128Mi"
+        #     cpu: "500m"
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: factcheck-service
+  namespace: backend
+  annotations:
+    cloud.google.com/backend-config: '{"default": "backend-config"}'
+spec:
+  selector:
+    app: factcheck
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8016
+  type: ClusterIP

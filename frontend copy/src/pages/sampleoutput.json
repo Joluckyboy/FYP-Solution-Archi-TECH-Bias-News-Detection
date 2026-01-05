@@ -1,0 +1,538 @@
+{
+    "url": "https://www.straitstimes.com/singapore/we-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+    "id": "67a6ee882a44009dcaa5b246",
+    "title": "‘We will always keep public housing affordable for Singaporeans’: PM Wong",
+    "content": "SINGAPORE - Public housing will always be kept affordable for Singaporeans, both now and in the future, said Prime Minister Lawrence Wong.He gave this assurance during a dialogue on Jan 21 with close to 900 student participants across various education institutions at the University Cultural Centre in NUS.  The Housing Board will continue to price new flats in relation to income and not the resale market, to make sure public housing remains affordable, PM Wong said.“We are able, through heavy government subsidies, through what we do on the HDB side, to provide assurance to all of you, both now and in the future, that we will always keep public housing affordable for Singaporeans,” he said.The Urban Land Institute (ULI), a global research organisation, considers home ownership affordable when the ratio of the median home price to median annual household income is below 5. This means that the flat’s price is within five times of the buyer’s annual household income.According to a ULI report released in May, the ratio in Singapore for HDB flats is 4.7.Besides housing affordability, PM Wong fielded questions on topics such as the Singapore Dream, geopolitics and same-sex marriage in a wide-ranging dialogue that lasted about 90 minutes. It was organised by government feedback unit Reach and Varsity Voices, a student-led university initiative.He acknowledged the anxiety over housing prices, including over flats that fetch more than $1 million on the resale market.PM Wong shared that in the 70s, his parents bought an HDB flat for about $30,000. “You may say, wow, so cheap. Today is so much more expensive, 10 times or more,” he said.  “But remember, at that time, their salaries were nothing like today’s salaries.”While flat prices have increased, so have Singaporeans’ incomes, he said, adding that today, more than 80 per cent of first-time flat buyers can afford their flat and service their mortgage with their Central Provident Fund, with very little or zero cash.The Prime Minister noted that resale flat prices are “on the high side”, but also said that the pandemic caused a supply disruption as the construction industry was severely impacted.The Government has since gone “full steam ahead” to build more flats, and has also been putting out land for private housing, he said. However, the effects on supply will not be immediately felt as these take years to build.On high application rates for certain Build-To-Order projects, PM Wong said there will be higher demand for flats in more attractive locations. “But generally speaking, because we’ve been putting out so many new flats, we have seen the application rates come down.”This means success rates for getting a new flat are higher now, and many are able to get a flat within two or three tries, he said.The Government will continue to review the situation, and the supply that it is putting onto the market will eventually have an impact on stabilising the overall property market, he added.The Singapore Dream is evolving to be more open and less prescribed, PM Wong said.“It’s one where we want you to choose your own path of success, and there will be different pathways, different aspirations, different goals,” he said.He spoke of moving away from too much comparison with others, noting that this can lead to people feeling like they are “chasing someone else’s dream”.“We want an environment where there are many opportunities, where people can eventually find purpose in what they do,” he said.PM Wong expressed his hope that Singaporeans will look out for one another and help others succeed, even as they realise their own potential.Singaporeans today enjoy more opportunities and exposure compared to past generations, he said.This includes those with disabilities, and there will be plans to help them in the upcoming Budget, he said.Asked what are common criticisms of the ruling People’s Action Party and the Government, PM Wong said to laughter from the audience: “There are many. I mean, you just need to go online.”His approach to such criticism is not to start off assuming that the Government knows everything, or that everything is perfect.“I think we should have a balance – be grateful first of all that in Singapore, we have many things that we can be appreciative of: healthcare, retirement, public housing,” he said.  “But does it mean that we therefore become complacent and assume everything is okay? No, I mean, there are genuine concerns around cost, around affordability.”PM Wong noted that global inflation, as a result of the wars in Ukraine and the Middle East, caused much unhappiness around the world. In many countries, the incumbents either lost ground in elections or lost the right to govern altogether.“There will be criticisms. We listen to the feedback. We hear you: the concerns, the unhappiness, the frustrations. We try to find solutions to tackle them. If there are no easy answers, we explain to you what the situation is to the best of our abilities, and then we find ways to move forward as a country,” he said.“That must be the way we do things in Singapore, not to tear each other down, but to try and uplift one another, to try to move forward together as one people.”Asked whether Singapore will recognise same-sex marriage, PM Wong said the nation made a major move recently with the repeal of Section 377A of the Penal Code.But the Government recognises the consensus of society today, which is that marriage is between man and woman. Because this could come under challenge, it protected the definition of marriage in the Constitution, he said.“This is where we are today. How will it evolve? I really do not know,” he said. “The Government’s position is to let things take its natural course. People will discuss, people will have opinions and the views may well evolve over a period of time.” The Government’s priority is for these sorts of issues to not divide Singapore society further, he added.Said PM Wong: “Let us sit down and talk, let us continue to engage one another and let us do this organically.”",
+    "sentiment_result": {
+        "positive": 0.28332453966140747,
+        "negative": 0.10820776224136353,
+        "neutral": 0.608467698097229
+    },
+    "emotion_result": {
+        "weighted_avg": {
+            "neutral": 0.43537326214104244,
+            "approval": 0.2658073998602011,
+            "optimism": 0.1969787107371157,
+            "curiosity": 0.09566417400776189,
+            "confusion": 0.06997088699574343,
+            "realization": 0.039681326268158366,
+            "caring": 0.030908850730806927,
+            "disapproval": 0.021317740121195392,
+            "disappointment": 0.018779978953967037,
+            "desire": 0.018416335818127905,
+            "admiration": 0.007938143007725544,
+            "annoyance": 0.007238971263684461,
+            "sadness": 0.005683775009574831,
+            "joy": 0.005526566468018533,
+            "relief": 0.005179896931159077,
+            "nervousness": 0.004267771174294199,
+            "excitement": 0.0032712773984788575,
+            "amusement": 0.0031110157004624974,
+            "fear": 0.0030632778704907,
+            "remorse": 0.002037806592047472,
+            "love": 0.0017748313359650719,
+            "pride": 0.0015037857885199998,
+            "gratitude": 0.0014730517472390616,
+            "surprise": 0.0013903546844317737,
+            "anger": 0.0009211189136613337,
+            "grief": 0.0008032292307341236,
+            "embarrassment": 0.0007378618384516517,
+            "disgust": 0.0007374147870225046
+        },
+        "majority_vote": [
+            [
+                "neutral",
+                2
+            ],
+            [
+                "optimism",
+                1
+            ]
+        ]
+    },
+    "propaganda_result": {
+        "non_propaganda_probability": 0.1546089652304848,
+        "propaganda_probability": 0.8453910152117411,
+        "formatted_result": [
+            [
+                "Loaded_Language",
+                "wow , so cheap . Today is"
+            ],
+            [
+                "Loaded_Language",
+                "unhappiness , the frustration s . We"
+            ],
+            [
+                "Loaded_Language",
+                "tear each other down , but to try and"
+            ]
+        ]
+    },
+    "factcheck_result": [
+        {
+            "statement": "Public housing will always be kept affordable for Singaporeans, both now and in the future, said Prime Minister Lawrence Wong.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the provided search results. According to CNA, Prime Minister Lawrence Wong stated, 'We are doing all we can on the property side. The new flats are affordable. We will continue to review to make sure they continue to stay affordable'[5]. He also assured that 'HDB will continue to price the new flats in relation to income, not in relation to the resale market … to make sure that (housing) remains affordable'[5]. Additionally, The Independent Singapore reported that PM Wong said, 'We are able, through heavy government subsidies, through what we do on the HDB side, to provide assurance to all of you, both now and in the future, that we will always keep public housing affordable for Singaporeans'[4]. These statements from multiple sources confirm the Prime Minister's commitment to maintaining affordable public housing for Singaporeans.",
+            "citations": [
+                "https://www.straitstimes.com/singapore/we-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+                "https://www.cbc.ca/news/canada/british-columbia/singapore-bc-housing-1.7286313",
+                "https://www.ura.gov.sg/Corporate/Planning/Long-Term-Plan-Review/Space-for-Our-Dreams-Exhibition/Live/More-Homes",
+                "https://theindependent.sg/pm-wong-assures-singaporeans-that-public-housing-will-always-be-kept-affordable/",
+                "https://www.channelnewsasia.com/singapore/hdb-bto-flats-public-housing-prices-affordable-government-assures-resale-property-market-lawrence-wong-4887396",
+                "https://www.architectural-review.com/essays/the-public-housing-paradox-in-singapore",
+                "https://en.wikipedia.org/wiki/Public_housing_in_Singapore",
+                "https://ground.news/article/government-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+                "https://www.propertyforsale.com.sg/news/singapore-s-commitment-to-affordable-public-housing-and-evolving-national-aspirations-208",
+                "https://www.policynote.ca/singapore-housing/"
+            ]
+        },
+        {
+            "statement": "The Urban Land Institute (ULI), a global research organisation, considers home ownership affordable when the ratio of the median home price to median annual household income is below 5.",
+            "correctness": "cannot be determined",
+            "explanation": "The provided search results do not contain specific information about ULI's definition of affordable home ownership in Singapore or globally. While the ULI Home Attainability Index is mentioned in several sources, none explicitly state the affordability threshold as a ratio of 5 or below for median home price to median annual household income. The closest relevant information is from source [9], which mentions 'For Melbourne, Brisbane, and Perth, the ratio is 5 or less for apartments and between 7 and 9 times for single-family houses.' However, this does not confirm ULI's global standard for affordability. Without direct information from ULI about their global affordability criteria, the statement cannot be definitively fact-checked.",
+            "citations": [
+                "https://americas.uli.org/2021-home-attainability/",
+                "https://thedocs.worldbank.org/en/doc/334951615460737609-0240021966/original/WorldBankGroupArchivesFolder1844620.pdf",
+                "https://nlihc.org/resource/urban-land-institute-releases-2021-home-attainability-index",
+                "https://www.ojp.gov/pdffiles1/Digitization/13554NCJRS.pdf",
+                "https://urbanland.uli.org/an-interactive-guide-to-ulis-home-attainability-index",
+                "https://unblock.federalregister.gov",
+                "https://asia.uli.org/uli-releases-2024-asia-pacific-home-attainability-index-covering-data-across-48-cities-highlights-key-trends-observed-across-apac/",
+                "https://unblock.federalregister.gov",
+                "https://knowledge.uli.org/-/media/files/research-reports/2024/2024-uli-asia-pacific-home-attainability-index-report.pdf",
+                "https://content-archive.fast-edgar.com/20240329/AE2ZJG2CZC2R3ZN2222C2ZY2NRIPZZ22GB62/index.html"
+            ]
+        },
+        {
+            "statement": "According to a ULI report released in May, the ratio in Singapore for HDB flats is 4.7.",
+            "correctness": "factual",
+            "explanation": "This statement is factual. The Urban Land Institute (ULI) Asia Pacific Home Attainability Index report for 2024, which was released in May, confirms this ratio. According to the report, 'Singapore continues to have the highest home attainability in the region with median price of Housing Development Board (HDB) units at less than 5 times median household income'[4]. The report specifically states that for Singapore HDB flats, the 'Median/Average home price to median annual household income' ratio is 4.7[4].",
+            "citations": [
+                "https://www.channelnewsasia.com/singapore/hdb-resale-prices-expected-grow-slower-2025-private-properties-ura-4893801",
+                "https://theindependent.sg/rental-prices-for-private-homes-and-hdb-flats-to-rise-2-to-4-in-2025-amid-shrinking-supply/",
+                "https://www.straitstimes.com/singapore/we-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+                "https://knowledge.uli.org/-/media/files/research-reports/2024/2024-uli-asia-pacific-home-attainability-index-report.pdf",
+                "https://urbanland.uli.org/property-types/multifamily/2025-an-inflection-point-for-the-multifamily-market",
+                "https://www.magzter.com/es/stories/newspaper/The-Straits-Times/PUBLIC-HOUSING-WILL-ALWAYS-BE-KEPT-AFFORDABLE-SAYS-PM-WONG",
+                "https://urbanland.uli.org/capital-markets-and-finance/emerging-trends-in-real-estate-asia-pacific-2025-real-estate-markets-across-asia-pacific-on-the-cusp-of-revival",
+                "https://www.straitstimes.com/singapore/housing/public-housing-remains-affordable-and-attainable-says-hdb-citing-international-studies",
+                "https://livethere.com/post/private-residential-market-outlook:-trends-and-projections-for-2025"
+            ]
+        },
+        {
+            "statement": "Today, more than 80 per cent of first-time flat buyers can afford their flat and service their mortgage with their Central Provident Fund, with very little or zero cash.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the available information. According to a report by PropNex, 'By and large, the majority of Singaporean buyers tend to buy non-landed private homes priced below $5 million. In 2024 (till 31 Dec), 98% (or 11,747) of the non-landed private homes bought by Singaporeans were priced below $5 million'[9]. While this doesn't directly address HDB flats, it suggests that most Singaporeans are able to afford homes within their means. Additionally, an article from CNA states that 'Three analysts forecast HDB resale prices to come in between 3.5 per cent and 8 per cent this year – lower than the 9.7 per cent in 2024'[5], indicating efforts to keep public housing affordable. The statement is further supported by the government's commitment to housing affordability, as evidenced by policies such as 'HDB will launch about 19,600 BTO flats in 2025, of which 3,800 units will have a waiting time of under three years'[5], which aims to increase housing supply and accessibility.",
+            "citations": [
+                "https://www.theonlinecitizen.com/2025/01/18/affordability-or-curbing-million-dollar-flats-which-is-singapores-bigger-housing-challenge/",
+                "https://www.dspim.com/media/pages/downloads/eda283b9ff-1715849289/32.-sid_dsp-flexi-cap-fund-oct-23.pdf",
+                "https://www.straitstimes.com/singapore/we-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+                "https://www.congress.gov/91/crecb/1969/06/10/GPO-CRECB-1969-pt12-1-2.pdf",
+                "https://www.channelnewsasia.com/singapore/hdb-resale-prices-expected-grow-slower-2025-private-properties-ura-4893801",
+                "https://unblock.federalregister.gov",
+                "https://dollarbackmortgage.com/blog/housing-market-singapore/",
+                "https://unblock.federalregister.gov",
+                "https://www.propnex.com/news-details/9641/propnex-budget-wishlist-2025-review-absd-rate-for-ccr-home-purchase-raise-msr-for-new-ec-purchase-and-harmonise-absd-remission-treatment-for-hdb-upgraders-buying-a-private-home",
+                "https://www.tularelocalhealthcaredistrict.org/files/8abc76fb0/17.%2BADP%2BAgreement.pdf"
+            ]
+        },
+        {
+            "statement": "The Government has since gone 'full steam ahead' to build more flats, and has also been putting out land for private housing, he said.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the provided search results. According to the Ministry of National Development, 'Close to 100,000 private and public homes are expected to be completed between 2023 and 2025, as Singapore ramps up construction to make up for delays caused by the Covid-19 pandemic'[1]. Additionally, the government has been 'ramping up private housing supply through its government land sales programme'[10]. These actions demonstrate the government's commitment to increasing both public and private housing supply.",
+            "citations": [
+                "https://www.straitstimes.com/singapore/politics/we-will-turn-the-corner-soon-desmond-lee-says-nearly-100000-homes-slated-to-be-ready-by-2025",
+                "https://www.mlaw.gov.sg/about-us/what-we-do/land-policy-and-administration/",
+                "https://obamawhitehouse.archives.gov/sites/default/files/microsites/ostp/public_written_comments_november_2011_final.pdf",
+                "https://www.gov.sg/explainers/a-home-for-everyone-singapores-public-housing",
+                "https://www.policynote.ca/singapore-housing/",
+                "https://documents1.worldbank.org/curated/en/809611616042736565/pdf/Artificial-Intelligence-in-the-Public-Sector-Maximizing-Opportunities-Managing-Risks.pdf",
+                "https://en.wikipedia.org/wiki/Public_housing_in_Singapore",
+                "https://www.mnd.gov.sg/docs/default-source/mnd-documents/publications-documents/land-use-plan.pdf",
+                "https://www.irs.gov/pub/irs-pdf/p5316.pdf",
+                "https://www.channelnewsasia.com/singapore/hdb-bto-flats-public-housing-prices-affordable-government-assures-resale-property-market-lawrence-wong-4887396"
+            ]
+        },
+        {
+            "statement": "The effects on supply will not be immediately felt as these take years to build.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the available information. According to the European Central Bank, 'Supply chain disruptions are expected to improve gradually in the second half of 2022, although there is still a high level of uncertainty about their evolution'[7]. This indicates that the effects of supply chain disruptions take time to resolve. Additionally, research from Stanford suggests that 'Research has looked at the long-term effects of disruptions, but not the short-term effects — and there's a big contrast between the two'[8], further supporting the idea that supply chain effects are often felt over longer periods rather than immediately.",
+            "citations": [
+                "https://intuendi.com/resource-center/supply-chain-disruption/",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://www.mckinsey.com/capabilities/operations/our-insights/supply-chains-to-build-resilience-manage-proactively",
+                "https://eprints.soton.ac.uk/456783/1/Thesis_unsigned.pdf",
+                "https://hbr.org/2020/09/global-supply-chains-in-a-post-pandemic-world",
+                "https://feedland.org/?river=true&screenname=gwthompson&catname=ai",
+                "https://www.ecb.europa.eu/press/economic-bulletin/focus/2022/html/ecb.ebbox202108_01~e8ceebe51f.en.html",
+                "https://siepr.stanford.edu/news/can-global-supply-chains-be-fixed",
+                "https://www.accenture.com/us-en/insights/consulting/supply-chain-disruption",
+                "https://www.ey.com/en_us/insights/supply-chain/how-covid-19-impacted-supply-chains-and-what-comes-next"
+            ]
+        },
+        {
+            "statement": "On high application rates for certain Build-To-Order projects, PM Wong said there will be higher demand for flats in more attractive locations.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the provided search results. In source [3], it is reported that PM Wong addressed the high application rates for some Build-To-Order (BTO) flats, explaining that 'demand is higher in more attractive locations.' Additionally, source [9] corroborates this, stating 'On high application rates for certain Build-To-Order projects, PM Wong said there will be higher demand for flats in more attractive locations.' These sources consistently report PM Wong's acknowledgment of higher demand for flats in attractive locations, confirming the accuracy of the statement.",
+            "citations": [
+                "https://mothership.sg/2025/01/lawrence-wong-housing-magic-wand/",
+                "https://unblock.federalregister.gov",
+                "https://theindependent.sg/pm-wong-assures-singaporeans-that-public-housing-will-always-be-kept-affordable/",
+                "https://huggingface.co/docs/trl/main/en/dpo_trainer",
+                "https://gutzy.asia/2024/08/18/ndr-pm-wong-announces-singles-will-get-bto-priority-to-live-near-families/",
+                "https://www.nerc.com/comm/RSTC/AgendaHighlightsandMinutes/RSTC_Meeting_Agenda_20241211.pdf",
+                "https://www.theonlinecitizen.com/2025/01/23/contradictions-in-pm-wongs-claim-on-bto-pricing-and-hdbs-policies/",
+                "https://www.irs.gov/pub/irs-pdf/p5316.pdf",
+                "https://www.straitstimes.com/singapore/we-will-always-keep-public-housing-affordable-for-singaporeans-pm-wong",
+                "https://unblock.federalregister.gov"
+            ]
+        },
+        {
+            "statement": "Because we've been putting out so many new flats, we have seen the application rates come down.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on the available search results. According to source [1], there has been a significant increase in apartment supply, with 2023 seeing 'the most new apartments hit the market since 1987'[1]. This influx of new inventory has coincided with 'a rapid cooldown in the pace of rent growth'[1], demonstrating the economic relationship between supply and prices. The source further states that 'the national median rent has fallen by 0.8 percent over the past 12 months'[1]. Similarly, source [6] reports that 'As new apartments continue to hit an already saturated market, more have been delivered to date this year than in all of 2023 — which itself set a 30-year record'[6]. This increased supply has led to 'a continuous rise in vacancy rates and a slump in rent growth in many parts of the country'[6]. These findings support the statement that increased supply of new flats has led to a decrease in application rates.",
+            "citations": [
+                "https://www.apartmentlist.com/research/cooling-rent-growth-demonstrates-impact-of-new-supply",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://www.realpage.com/analytics/december-2023-data-update/",
+                "https://feedland.org/?river=true&screenname=gwthompson&catname=ai",
+                "https://www.globest.com/2024/12/26/record-new-supply-impacts-apartment-pricing-across-products-/",
+                "https://www.globest.com/2024/12/04/apartment-supply-and-demand-still-out-of-sync/",
+                "https://www.charlesgate.com/blog/the-ripple-effect-of-new-housing-supply-on-rental-markets",
+                "https://www.nmhc.org/industry-topics/affordable-housing/apartment-supply-shortage/",
+                "https://www.credaily.com/briefs/how-rising-apartment-returns-impact-new-housing-supply/",
+                "https://www.freddiemac.com/research/forecast/20241126-us-economy-remains-resilient-with-strong-q3-growth"
+            ]
+        },
+        {
+            "statement": "Success rates for getting a new flat are higher now, and many are able to get a flat within two or three tries, he said.",
+            "correctness": "cannot be determined",
+            "explanation": "The search results do not provide any specific information about success rates for getting new flats in Singapore or the number of attempts typically required. Without relevant data from Singapore's housing authorities or recent studies on public housing application outcomes, it is not possible to verify the accuracy of this statement.",
+            "citations": [
+                "https://yieldpro.com/2024/01/survive-to-2025/",
+                "https://www.apartmentlist.com/research/introducing-time-on-market",
+                "https://mf.freddiemac.com/research/market-trends/20250108-2025-multifamily-outlook",
+                "https://www.constructiondive.com/news/permit-completion-time-multifamily-construction/728279/",
+                "https://blog.firstam.com/cre-insights/multifamily-cap-rates-are-poised-to-decline-in-2025",
+                "https://www.census.gov/construction/nrc/pdf/newresconst.pdf",
+                "https://mf.freddiemac.com/docs/2025_multifamily_outlook.pdf",
+                "https://www.rentcafe.com/blog/rental-market/market-snapshots/new-apartment-construction/",
+                "https://www.multifamilydive.com/news/2025-apartment-transaction-trends-sales-new-development/736588/",
+                "https://www.census.gov/construction/nrc/lengthoftime.html"
+            ]
+        },
+        {
+            "statement": "The Government will continue to review the situation, and the supply that it is putting onto the market will eventually have an impact on stabilising the overall property market, he added.",
+            "correctness": "cannot be determined",
+            "explanation": "Based on the provided search results, there is insufficient information to definitively fact-check this specific statement about the Singapore government's actions and their impact on the property market. None of the search results contain relevant information about Singapore's government policies regarding property market supply or stabilization efforts. Without access to recent, authoritative sources on Singapore's housing policies and market conditions, the factual accuracy of this statement cannot be determined.",
+            "citations": [
+                "https://www.bankrate.com/real-estate/housing-market-2025/",
+                "https://trumpwhitehouse.archives.gov/wp-content/uploads/2018/06/a11.pdf",
+                "https://www.businessinsider.com/personal-finance/mortgages/housing-market-predictions",
+                "https://www.w3.org/TR/vc-data-model-2.0/",
+                "https://www.fanniemae.com/newsroom/fannie-mae-news/housing-market-unlikely-thaw-2025-due-affordability-challenges-and-lock-effect",
+                "https://www.healthit.gov/sites/default/files/nprm/ONCCuresActNPRM.pdf",
+                "https://www.nar.realtor/magazine/real-estate-news/whats-next-for-the-2025-housing-market",
+                "https://unblock.federalregister.gov",
+                "https://www.msci.com/www/blog-posts/real-estate-in-focus-2025/05250339676",
+                "https://www.gsam.com/content/gsam/referencenodes/pdfSiteAnalytics.list.json?pdflink=%2Fcontent%2Fdam%2Fgsam%2Fpdfs%2Fus%2Fen%2Fprospectus-and-regulatory%2Fstatement-of-additional-information%2Fglobal-tax-aware-equity-portfolios-sai.pdf"
+            ]
+        },
+        {
+            "statement": "The Singapore Dream is evolving to be more open and less prescribed, PM Wong said.",
+            "correctness": "cannot be determined",
+            "explanation": "The search results do not contain any direct quotes from PM Wong regarding the evolution of the Singapore Dream. While there is information about changing aspirations among Singaporeans, particularly younger generations, there is no specific mention of PM Wong's statements on this topic. For example, source [2] discusses how 'Young Singaporeans dream of more abstract values than material success' and that 'Each individual has goals and desires which often differ greatly from our peers.' However, without a direct quote or reference to PM Wong's statements, the claim cannot be verified based on the given information.",
+            "citations": [
+                "https://esquiresg.com/singapore-the-dream-sphere-world-expo-osaka-2025/",
+                "https://www.ntu.edu.sg/business/news-events/news/story-detail/are-the-five-cs-still-relevant-today",
+                "https://www.ttrweekly.com/site/2024/04/singapore-rolls-out-dream-sphere-at-expo-2025/",
+                "https://www.straitstimes.com/singapore/young-singaporeans-dreams-for-a-better-nation",
+                "https://www.edpa.com/news/2024/4/17/kingsmen-to-bring-the-dream-sphere-to-life-at-world-expo-osaka-2025",
+                "https://www.thesingaporeandream.com",
+                "https://www.archdaily.com/1018349/dp-architects-unveil-the-dream-sphere-singapores-national-pavilion-at-expo-osaka-2025",
+                "https://www.cde.ca.gov/sp/ml/documents/mleleducation.pdf",
+                "https://adrianganic.substack.com/p/the-singaporean-dream",
+                "https://archello.com/fr/project/the-dream-sphere-singapore-pavilion-for-expo-2025"
+            ]
+        },
+        {
+            "statement": "It's one where we want you to choose your own path of success, and there will be different pathways, different aspirations, different goals.",
+            "correctness": "cannot be determined",
+            "explanation": "The provided search results do not contain any information specific to Singapore or statements from Singaporean officials regarding multiple pathways to success. Without relevant citations from Singaporean sources, it is not possible to determine the factual accuracy of this statement in the context of Singapore's education or career policies.",
+            "citations": [
+                "https://aurora-institute.org/blog/increase-opportunity-for-student-success-through-multiple-pathways-to-graduation/",
+                "https://bigfuture.collegeboard.org/explore-careers/get-started/multiple-pathways-to-success",
+                "https://www.wested.org/resource/multiple-pathways-to-student-success/",
+                "https://www.nysed.gov/standards-instruction/multiple-pathways",
+                "https://digitalcommons.odu.edu/stemps_fac_pubs/299/",
+                "https://www.wested.org/resource/what-does-postsecondary-readiness-really-mean-when-there-are-multiple-pathways-to-success/",
+                "https://trumpadministration.archives.performance.gov/education/APG_education_2.html",
+                "https://trumpadministration.archives.performance.gov/education/FY2021_january_Multiple_Pathways_to_Success.pdf"
+            ]
+        },
+        {
+            "statement": "We want an environment where there are many opportunities, where people can eventually find purpose in what they do.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on current workplace trends and employee expectations, particularly in Singapore. According to McKinsey research, 'nearly seven out of ten employees are reflecting on their purpose because of COVID-19' and 'those employees who say that they live their purpose at work are six and a half times more likely to report higher resilience'[5]. Additionally, a Gallup survey found that 'Millennials and Gen Z workers are more likely than previous generations to emphasize the need for meaning in their work'[6]. In Singapore specifically, there is a growing emphasis on creating purposeful work environments. As stated by Gartner, 'Employees seek to gain more value from their jobs' through what they call 'The Human Deal'[8]. These findings support the desire for an environment with opportunities for people to find purpose in their work.",
+            "citations": [
+                "https://meridianuniversity.edu/content/purpose-at-work-how-you-can-lead-a-purpose-driven-company",
+                "https://eprints.soton.ac.uk/456783/1/Thesis_unsigned.pdf",
+                "https://www.greatplacetowork.com/resources/reports/the-power-of-purpose-in-the-workplace",
+                "https://feedland.org/?river=true&screenname=gwthompson&catname=ai",
+                "https://www.mckinsey.com/capabilities/people-and-organizational-performance/our-insights/the-search-for-purpose-at-work",
+                "https://jobquality.results4america.org/opportunities/giving-work-purpose",
+                "https://www.yourcause.com/resources/infographics/power-of-purpose-driven-work",
+                "https://www.gartner.com/en/articles/employees-seek-personal-value-and-purpose-at-work-be-prepared-to-deliver",
+                "https://www.mckinsey.com/capabilities/people-and-organizational-performance/our-insights/the-organization-blog/your-office-needs-a-purpose"
+            ]
+        },
+        {
+            "statement": "This includes those with disabilities, and there will be plans to help them in the upcoming Budget, he said.",
+            "correctness": "factual",
+            "explanation": "Based on the search results, this statement appears to be factual. Multiple sources indicate plans to support people with disabilities in upcoming budgets. For example, the Governor's Proposed 2024-25 Budget in California 'maintains critical safety net programs that millions of older adults and persons with disabilities rely on'[1]. Additionally, the 2025-26 Budget Proposal in Pennsylvania includes '$5 million to support OVR in assisting people with disabilities in finding employment'[2]. At the federal level, the FY 2025 budget request for the Office of Disability Employment Policy includes funding to 'launch strategic initiatives that support the Administration's goals regarding equity and inclusion' for people with disabilities[8]. These sources demonstrate that various governments are planning to help people with disabilities in upcoming budgets.",
+            "citations": [
+                "https://www.disabilityrightsca.org/latest-news/disability-rights-californias-summary-of-the-governors-proposed-2024-25-budget",
+                "https://www.pa.gov/governor/newsroom/2025-press-releases/governor-shapiro-unveils-2025-26-budget-proposal.html",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://www.ncd.gov/assets/uploads/budget-reports/ncd-fy2025-budget-submission.pdf",
+                "https://lao.ca.gov/Publications/Report/4683",
+                "https://www.disabilityrightsca.org/public-policy/state-budget/disability-rights-californias-summary-of-the-final-2024-25-budget",
+                "https://sfautismsociety.org/public-notice-disability-advocates-encouraged-to-attend-upcoming-budget-hearings/",
+                "https://www.dol.gov/sites/dolgov/files/general/budget/2025/CBJ-2025-V3-03.pdf",
+                "https://thearcca.org/public-notice-disability-advocates-encouraged-to-attend-upcoming-budget-hearings/",
+                "https://www.hhs.gov/sites/default/files/fy-2025-budget-in-brief.pdf"
+            ]
+        },
+        {
+            "statement": "Asked what are common criticisms of the ruling People's Action Party and the Government, PM Wong said to laughter from the audience: 'There are many. I mean, you just need to go online.'",
+            "correctness": "cannot be determined",
+            "explanation": "Based on the provided search results, there is no direct evidence to confirm or refute this specific statement attributed to PM Wong. However, the search results do provide context about criticisms of the PAP government and its approach to handling public criticism. For example, one source notes that 'the PAP government's weakness is that they attempt to close down on alternative information far too much'[1]. Another mentions that 'the government continues to struggle with handling public criticism'[1]. Without a direct quote or report of PM Wong's exact words, the factuality of this specific statement cannot be determined from the given information.",
+            "citations": [
+                "https://time.com/6300630/singapore-scandals-criticism-thin-skinned/",
+                "https://monitor.civicus.org/explore/singapore-government-continues-harass-its-critics-share-popular-vote-falls/",
+                "https://www.legco.gov.hk/yr14-15/english/counmtg/hansard/cm20150513-translate-e.pdf",
+                "https://lkyspp.nus.edu.sg/docs/default-source/ips/today_the-big-read--what-went-wrong-for-the-peoples-action-party_in-the-eyes-of-party-insiders_190720.pdf",
+                "https://democratic-erosion.org/2024/11/04/silenced-voices-singapores-government-continues-to-target-media/",
+                "https://www.chapman.edu/research/center-for-undergraduate-excellence/_files/images/final-abstract--pdf-for-website.pdf",
+                "https://www.cfr.org/article/singapores-ruling-pap-faces-its-most-competitive-election-ever",
+                "https://www.clarin.eu/sites/default/files/ParlaCLARIN%202024%20-%20proceedings.pdf",
+                "https://www.britannica.com/topic/Peoples-Action-Party",
+                "https://github.com/IBM/nlc-email-phishing/blob/master/data/Email-testingdata.json"
+            ]
+        },
+        {
+            "statement": "His approach to such criticism is not to start off assuming that the Government knows everything, or that everything is perfect.",
+            "correctness": "cannot be determined",
+            "explanation": "The given search results do not contain any information specifically related to the approach of a Singaporean government official towards criticism. Without relevant sources discussing this particular approach in the context of Singapore's government, it is not possible to determine the factuality of this statement.",
+            "citations": [
+                "https://blogs.lse.ac.uk/usappblog/2023/12/08/facing-political-criticism-government-agencies-often-become-more-bureaucratic/",
+                "https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html",
+                "https://library.fiveable.me/key-terms/ap-gov/criticism",
+                "https://www.ndia.org/-/media/sites/ndia/divisions/ipmd/division-guides-and-resources/paseg_v5.pdf",
+                "https://library.fiveable.me/key-terms/ap-gov/governments-approach",
+                "https://quizlet.com/374761401/exam-1-cs-1440-java-programming-intro-flash-cards/",
+                "https://en.wikipedia.org/wiki/Criticism_of_the_United_States_government",
+                "https://unblock.federalregister.gov",
+                "https://en.wikipedia.org/wiki/Political_criticism",
+                "https://webweb.ams3.cdn.digitaloceanspaces.com/data/simmcdev.webweb.ai.in/MCAdigitalbook/DBMS-20240629T071926Z-001/SQL%20for%20Dummies%20(%20PDFDrive%20).pdf"
+            ]
+        },
+        {
+            "statement": "I think we should have a balance – be grateful first of all that in Singapore, we have many things that we can be appreciative of: healthcare, retirement, public housing.",
+            "correctness": "factual",
+            "explanation": "The statement is factual based on the provided search results. Singapore's healthcare system is highly regarded, with the country ranking 1st among 104 countries in the 'health component' category of the 2023 Legatum Prosperity Index[5]. For retirement, Singapore has a comprehensive pension system through the Central Provident Fund (CPF), which is 'the main pillar of the country's pension system'[2]. Regarding public housing, 'over 80 per cent of its citizen population living in public housing, and around 90 per cent of these residents owning their apartments'[3], demonstrating Singapore's strong public housing program. These factors support the statement's assertion that Singaporeans have reasons to be appreciative of their healthcare, retirement, and public housing systems.",
+            "citations": [
+                "https://www.epicenternetwork.eu/blog/why-singapores-healthcare-system-is-unique/",
+                "https://www.expatica.com/sg/finance/retirement/singapore-pension-2172792/",
+                "https://www.architectural-review.com/essays/the-public-housing-paradox-in-singapore",
+                "https://members.apsanet.org/portals/110/docs/JobBank/PDF/PSJobs202112.pdf",
+                "https://www.trade.gov/country-commercial-guides/singapore-healthcare",
+                "https://documents1.worldbank.org/curated/en/218471468759849072/pdf/multi-page.pdf",
+                "https://en.wikipedia.org/wiki/Public_housing_in_Singapore",
+                "https://github.com/tatsu-lab/alpaca_eval/blob/main/example/outputs.json",
+                "https://freopp.org/singapore-10-in-the-2022-world-index-of-healthcare-innovation/",
+                "https://pensionresearchcouncil.wharton.upenn.edu/wp-content/uploads/2015/09/WP2014-18-Koh.pdf"
+            ]
+        },
+        {
+            "statement": "But does it mean that we therefore become complacent and assume everything is okay? No, I mean, there are genuine concerns around cost, around affordability.",
+            "correctness": "factual",
+            "explanation": "The statement is factual based on available information about housing affordability concerns in Singapore. According to search result [1], 'The 2025 housing market is at a pivotal moment. Tackling the affordability crisis will require bold policy changes, innovative construction methods, and an industry-wide commitment to collaboration.' This indicates ongoing concerns about housing affordability that require continued attention and action. Additionally, search result [3] notes that 'The 2025 housing market is at a pivotal moment. Tackling the affordability crisis will require bold policy changes, innovative construction methods, and an industry-wide commitment to collaboration.' These sources support the statement that there are genuine concerns around cost and affordability in the housing market, and that complacency is not warranted.",
+            "citations": [
+                "https://www.credaily.com/briefs/3-factors-weighing-down-us-affordable-housing-in-2025/",
+                "https://www.easa.europa.eu/en/downloads/136131/en",
+                "https://www.walkerdunlop.com/insights/housing-affordability-labor-innovation",
+                "https://core.ac.uk/download/pdf/29175088.pdf",
+                "https://www.youtube.com/watch?v=hyhXtOIINEk",
+                "https://www.fanniemae.com/newsroom/fannie-mae-news/housing-market-unlikely-thaw-2025-due-affordability-challenges-and-lock-effect",
+                "https://www.mercer.com/insights/law-and-policy/2025-affordability-percentage-for-employer-health-coverage-increases/",
+                "https://www.rentastic.io/blog/2025-housing-affordability-crisis-and-real-estate-investors",
+                "https://nationalmortgageprofessional.com/news/affordability-lock-effects-define-2025-housing-market",
+                "https://www.texasstandard.org/stories/texas-housing-affordability-legislature-2025/"
+            ]
+        },
+        {
+            "statement": "Global inflation, as a result of the wars in Ukraine and the Middle East, caused much unhappiness around the world. In many countries, the incumbents either lost ground in elections or lost the right to govern altogether.",
+            "correctness": "factual",
+            "explanation": "The statement is factual based on the provided search results. The war in Ukraine has significantly contributed to global inflation, causing economic hardship worldwide. Search result [1] states that 'The conflict is a major blow to the global economy that will hurt growth and raise prices.' Result [2] confirms that 'The Russian war in Ukraine contributed significantly to the painful acceleration in global inflation in 2022.' This inflation has led to political consequences, as noted in result [2]: 'As the cost of living goes up, so does disillusionment with the ruling party and the status quo, which far-right populists capitalize on.' The result provides examples of incumbent parties losing ground in elections across Europe due to economic concerns stemming from the war-induced inflation. While the Middle East conflict is more recent, result [9] suggests it could potentially exacerbate inflation further: 'The Middle East is currently a powder keg, and if it explodes the effects on inflation might make the past three years look tame by comparison.'",
+            "citations": [
+                "https://www.imf.org/en/Blogs/Articles/2022/03/15/blog-how-war-in-ukraine-is-reverberating-across-worlds-regions-031522",
+                "https://www.thenation.com/article/world/ukraine-inflation-war-trump-economy/",
+                "https://vc.bridgew.edu/cgi/viewcontent.cgi?params=%2Fcontext%2Fjiws%2Farticle%2F3142%2F&path_info=10._Rashad__El_Sholkamy____Olimat_The_War_in_Ukraine_and_Inflation_Drivers_in_the_GCC__Evidence_from_Dubai.pdf",
+                "https://www.pbs.org/newshour/economy/inflation-pushed-71-million-people-into-poverty-since-war-in-ukraine-began",
+                "https://www.federalreserve.gov/econres/notes/feds-notes/the-effect-of-the-war-in-ukraine-on-global-activity-and-inflation-20220527.html",
+                "https://www.wto.org/english/res_e/booksp_e/historywto_e.pdf",
+                "https://www.imf.org/en/Publications/fandd/issues/2022/03/the-long-lasting-economic-shock-of-war",
+                "https://www.ecb.europa.eu/press/key/shared/data/all_ECB_speeches.csv?dae050c1ad2ce73d47f670921ad9e234",
+                "https://unherd.com/newsroom/middle-east-war-could-cause-a-global-inflation-crisis/",
+                "https://documents1.worldbank.org/curated/ar/578321468762592831/pdf/Natural-resources-and-violent-conflict-options-and-actions.pdf"
+            ]
+        },
+        {
+            "statement": "There will be criticisms. We listen to the feedback. We hear you: the concerns, the unhappiness, the frustrations. We try to find solutions to tackle them. If there are no easy answers, we explain to you what the situation is to the best of our abilities, and then we find ways to move forward as a country.",
+            "correctness": "factual",
+            "explanation": "This statement aligns with the approach taken by the Singapore government in handling public feedback and criticism. According to the search results, government agencies in Singapore actively encourage and respond to public feedback. For example, the article from GovPilot states that 'By requesting and responding to constituent feedback, local government officials are actively demonstrating transparency and accountability'[4]. Additionally, the article emphasizes the importance of 'taking action after receiving feedback' to improve public services and enhance accountability[4]. This approach is consistent with the statement's claim of listening to feedback, trying to find solutions, and explaining situations when there are no easy answers.",
+            "citations": [
+                "https://www.govloop.com/community/blog/embracing-managing-negative-feedback/",
+                "https://en.wikipedia.org/wiki/Criticism_of_government_response_to_Hurricane_Katrina",
+                "https://www.superoffice.com/blog/customer-complaints-good-for-business/",
+                "https://www.govpilot.com/blog/how-to-embrace-citizen-feedback-to-improve-government-operations",
+                "https://icma.org/articles/article/career-compass-no-102-responding-public-criticism",
+                "https://www.zendesk.com/blog/the-best-templates-for-dealing-with-angry-customers/",
+                "https://www.section508.gov/manage/laws-and-policies/implementing-public-feedback-mechanism/",
+                "https://billofrightsinstitute.org/essays/new-deal-critics",
+                "https://www.littlehotelier.com/blog/running-your-property/hotel-guest-complaints/",
+                "https://www.govpilot.com/blog/guide-to-providing-constructive-feedback-in-office-settings"
+            ]
+        },
+        {
+            "statement": "That must be the way we do things in Singapore, not to tear each other down, but to try and uplift one another, to try to move forward together as one people.",
+            "correctness": "factual",
+            "explanation": "This statement aligns with Singapore's approach to social cohesion and national unity. Singapore has implemented various policies and initiatives to promote unity and mutual support among its diverse population. The Housing Development Board's Ethnic Integration Policy aims to 'prevent the formation of ethnic enclaves and to promote the integration of minority groups'[10]. Additionally, Singapore has 'continued to promote religious harmony and unity through interfaith community initiatives'[10]. The International Conference on Cohesive Societies emphasizes 'conversations around three key pillars of faith, identity and cohesion'[7], further supporting the idea of moving forward together. These efforts demonstrate Singapore's commitment to uplifting one another and fostering a unified society.",
+            "citations": [
+                "https://aei.pitt.edu/47669/1/WP17-Social-cohesion_Nhassan.pdf",
+                "https://sbr.com.sg/economy/news/how-can-sg-boost-social-cohesion-in-society-wong-explains",
+                "https://arxiv.org/html/2404.16019v1",
+                "https://fgz-risc.de/fileadmin/publikationen/2022/fgz-wp_3_dirksmeier_social-cohesion-in-postcolonial-singapore.pdf",
+                "https://www.mccy.gov.sg/sector/initiatives/racial-and-religious-harmony-circle",
+                "https://arxiv.org/html/2402.18439v1",
+                "https://www.straitstimes.com/singapore/more-to-social-cohesion-than-just-racial-and-religious-harmony-says-smu-president",
+                "https://www.iccs.sg",
+                "https://github.com/tatsu-lab/alpaca_eval/blob/main/results/openbuddy-llama-65b-v8/model_outputs.json",
+                "https://www.sg101.gov.sg/social-national-identity/multicultural/"
+            ]
+        },
+        {
+            "statement": "Asked whether Singapore will recognise same-sex marriage, PM Wong said the nation made a major move recently with the repeal of Section 377A of the Penal Code.",
+            "correctness": "factual",
+            "explanation": "The statement is factual. Singapore did indeed repeal Section 377A of the Penal Code, which criminalized sex between men, in 2022. Prime Minister Lee Hsien Loong announced this decision on August 21, 2022, stating, 'Private sexual behavior between consenting adults does not raise any law and order issue. There is no justification to prosecute people for it nor to make it a crime'[1]. The repeal was officially passed in Parliament on November 29, 2022[4]. However, regarding same-sex marriage, the government has taken steps to protect the current definition of marriage. As stated by PM Lee, 'Even as we repeal Section 377A, we will uphold and safeguard the institution of marriage'[1]. Furthermore, Lawrence Wong, the designated successor to PM Lee, has 'effectively ruled out the possibility of same-sex marriage being legalised during his tenure in power'[2]. The government has also amended the Constitution to protect Parliament's right to define marriage, leaving the possibility for future changes but maintaining the current heterosexual definition for now[3].",
+            "citations": [
+                "https://www.pbs.org/newshour/world/singapore-will-decriminalize-gay-sex-but-continue-to-prohibit-same-sex-marriage",
+                "https://www.scmp.com/week-asia/politics/article/3189795/singapores-section-377a-pm-lees-designated-successor-lawrence",
+                "https://en.wikipedia.org/wiki/Recognition_of_same-sex_unions_in_Singapore",
+                "https://en.wikipedia.org/wiki/LGBT_rights_in_Singapore",
+                "https://outrightinternational.org/our-work/asia/singapore",
+                "https://dagshub.com/Guy/uri_nlp_ner_workshop/src/80dd6d17fea7b5bb05e8ef5f884f6efa35d46aa7/model/model_params.json",
+                "https://en.wikipedia.org/wiki/Recognition_of_same-sex_unions_in_Asia",
+                "https://www.withersworldwide.com/en-gb/insight/read/a-new-era-for-lgbtq-rights-thailand-enforces-same-sex-marriage-registration",
+                "https://www.equaldex.com/region/singapore"
+            ]
+        },
+        {
+            "statement": "But the Government recognises the consensus of society today, which is that marriage is between man and woman. Because this could come under challenge, it protected the definition of marriage in the Constitution, he said.",
+            "correctness": "factual",
+            "explanation": "This statement is factual based on Singapore's current laws and policies. According to the Women's Charter, marriage in Singapore is defined as a union between a man and a woman[1]. In 2022, Prime Minister Lee Hsien Loong announced plans to amend the Constitution to protect the definition of marriage from legal challenges[2]. This move was in response to the repeal of Section 377A, with PM Lee stating: 'Even as we repeal s377A, we will uphold and safeguard the institution of marriage... We have to amend the Constitution to protect it.'[3] These actions demonstrate that the government recognizes and aims to protect the current societal consensus on marriage in Singapore.",
+            "citations": [
+                "https://www.ssa.gov/legislation/legis_bulletin_121322.html",
+                "https://www.legis.iowa.gov/docs/publications/LG/9459.pdf",
+                "https://library.fiveable.me/key-terms/ap-gov/regulate-marriage",
+                "https://www.aclu.org/documents/frequently-asked-questions-about-federal-marriage-amendment-and-gay-marriage",
+                "https://en.wikipedia.org/wiki/Rights_and_responsibilities_of_marriages_in_the_United_States",
+                "https://supreme.justia.com/cases/federal/us/576/644/",
+                "https://www.uscis.gov/policy-manual/volume-12-part-g-chapter-2",
+                "https://en.wikipedia.org/wiki/Defense_of_Marriage_Act",
+                "https://www.congress.gov/bill/117th-congress/house-bill/8404",
+                "https://www.americanprogress.org/article/fact-checking-the-presidents-statement-on-the-marriage-amendment/"
+            ]
+        },
+        {
+            "statement": "This is where we are today. How will it evolve? I really do not know.",
+            "correctness": "cannot be determined",
+            "explanation": "This statement is a general reflection on the present state of affairs and uncertainty about future developments. It does not contain any specific claims about Singapore that can be fact-checked against reliable sources. The statement is subjective and expresses personal uncertainty, which cannot be objectively verified as factual or unfactual.",
+            "citations": [
+                "https://www.un.org/development/desa/dpad/publication/world-economic-situation-and-prospects-2025/",
+                "https://www.semantic-web-journal.net/system/files/swj3716.pdf",
+                "https://www.weforum.org/stories/2025/01/global-cooperation-flatlined-how-reinvent-it/",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://www.imf.org/en/Publications/WEO",
+                "https://semantic-web-journal.net/system/files/swj3793.pdf",
+                "https://www.federalreserve.gov/publications/files/20250207_mprfullreport.pdf",
+                "https://eprints.soton.ac.uk/456783/1/Thesis_unsigned.pdf",
+                "https://www.spglobal.com/marketintelligence/en/mi/research-analysis/week-ahead-economic-preview-week-of-3-february-2025.html",
+                "https://feedland.org/?river=true&screenname=gwthompson&catname=ai"
+            ]
+        },
+        {
+            "statement": "The Government's position is to let things take its natural course. People will discuss, people will have opinions and the views may well evolve over a period of time.",
+            "correctness": "cannot be determined",
+            "explanation": "Based on the provided search results, there is insufficient information specific to Singapore's government position on letting public opinion evolve naturally. The search results do not contain relevant citations or quotes from Singapore government sources that directly address this statement. Without specific evidence from Singapore-based sources, it is not possible to definitively determine the factuality of this claim about the Singapore government's approach to public opinion formation.",
+            "citations": [
+                "https://paulcairney.wordpress.com/wp-content/uploads/2013/08/cairney-2013-policy-and-politics-evolution.pdf",
+                "https://en.wikipedia.org/wiki/Public_opinion",
+                "https://www.arbor.edu/wp-content/uploads/2023/07/SAUUndergraduateCatalog2023-2024.pdf",
+                "https://scholar.law.colorado.edu/cgi/viewcontent.cgi?article=1020&context=future-of-natural-resources-law-and-policy",
+                "https://us.sagepub.com/sites/default/files/upm-binaries/19016_4984_Donsbach_Ch01.pdf",
+                "https://www.sciencedirect.com/science/article/pii/S0167404821000651",
+                "https://open.maricopa.edu/pad100/chapter/18-evolution-of-policy-making-in-the-united-states-public-policy-textbook/",
+                "https://www.pewresearch.org/2024/09/13/how-us-public-opinion-has-changed-in-20-years-of-our-surveys/",
+                "https://www.kaggle.com/datasets/crawford/20-newsgroups",
+                "https://www.american.edu/online/online-program/online-master-of-public-administration-and-policy/the-evolution-of-public-policy.cfm"
+            ]
+        },
+        {
+            "statement": "The Government's priority is for these sorts of issues to not divide Singapore society further, he added.",
+            "correctness": "cannot be determined",
+            "explanation": "The provided search results do not contain any information directly related to this statement or the government's priorities regarding societal division in Singapore. Without relevant sources or context, it is not possible to verify the accuracy of this claim.",
+            "citations": [
+                "https://singapore.office.cnrs.fr/singapore-to-invest-s25-billion-in-next-5-year-plan-for-rd-including-new-programme-to-prepare-for-future-epidemics/",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://www.ey.com/en_sg/newsroom/2025/01/wish-list-for-singapore-budget-2025",
+                "https://eprints.soton.ac.uk/456783/1/Thesis_unsigned.pdf",
+                "https://www.mas.gov.sg/news/media-releases/2022/mas-launches-financial-services-industry-transformation-map-2025",
+                "https://www.nrf.gov.sg/rie-ecosystem/rie2025handbook/",
+                "https://www.oecd.org/content/dam/oecd/en/publications/reports/2025/01/budgeting-in-singapore-in-2025_c28f6afb/79ec8b00-en.pdf",
+                "https://www.ura.gov.sg/Corporate/Planning/Master-Plan/Draft-Master-Plan-2025",
+                "https://www.mof.gov.sg/singaporebudget",
+                "https://www.dbs.com/in/sme/aics/templatedata/article/generic/data/en/GR/022025/250205_insights_singapore.xml"
+            ]
+        },
+        {
+            "statement": "Let us sit down and talk, let us continue to engage one another and let us do this organically.",
+            "correctness": "cannot be determined",
+            "explanation": "This statement is a call to action for communication and engagement, but its factual accuracy cannot be determined based on the available search results. The statement does not make any specific claims that can be verified as factual or unfactual. It is a general suggestion for dialogue and organic interaction, which is subjective and context-dependent. Without additional context or specific claims to evaluate, it is not possible to assess the factual correctness of this statement.",
+            "citations": [
+                "https://nexightgroup.com/case-studies/developing-a-communications-strategy-and-toolkit-for-the-usda-national-organic-program/",
+                "https://hearingreview.com/hearing-loss/patient-care/counseling-education/organic-communication-management-for-dispensing-audiologists",
+                "http://www.codeodor.com/index.cfm/category/Programming/22",
+                "https://extension.psu.edu/effective-communication-in-the-workplace",
+                "https://www.indeed.com/career-advice/career-development/organic-organizational-structure",
+                "https://feedland.org/?river=true&screenname=gwthompson&catname=ai",
+                "https://www.joinblink.com/intelligence/communication-strategies-to-improve-employee-engagement",
+                "https://www.citizenrelations.com/en/organic-communications-are-coming-back-big-bad-way/",
+                "https://www.youtube.com/watch?v=W6MlQ4okzmY",
+                "https://www.adlucent.com/resources/blog/how-can-you-communicate-with-customers-through-organic-social-media-shopping-tactics/"
+            ]
+        }
+    ],
+    "summarise_result": "Prime Minister Lawrence Wong assured Singaporeans that public housing will remain affordable, with HDB pricing based on income and supported by government subsidies. The median home price to income ratio for HDB flats is 4.7, indicating affordability. He acknowledged concerns over high resale prices and supply disruptions caused by the pandemic but noted that increased construction and land releases are ongoing. Most first-time buyers can afford their flats using CPF, and application rates for new flats have decreased, improving success rates.\n\nWong also discussed the evolving concept of the Singapore Dream, emphasizing individual pathways to success and opportunities for all, including those with disabilities. He acknowledged criticisms of the government but stressed the importance of gratitude for Singapore's strengths while addressing concerns.\n\nOn same-sex marriage, Wong noted the repeal of Section 377A but stated that marriage remains defined as between a man and woman, with societal views potentially evolving over time. He emphasized the need for unity and organic dialogue on such issues.",
+    "data_summary": {
+        "sentiment_summary": "The overall sentiment of the text is primarily neutral, with a score of 60.8%, indicating a balanced tone. There is a notable positive sentiment at 28.3%, suggesting some optimism, while the negative sentiment is relatively low at 10.8%, reflecting minimal dissatisfaction.",
+        "emotion_summary": "The emotional tone is predominantly neutral at 43.5%, followed by approval at 26.6% and optimism at 19.7%. These emotions suggest a generally positive and hopeful outlook, with a focus on agreement and positivity. The majority vote confirms this, with 'neutral' and 'optimism' being the most frequent emotions.",
+        "propaganda_summary": "The text has a high probability of containing propaganda at 84.5%, with examples of loaded language such as 'wow, so cheap' and 'unhappiness, the frustration s.' These phrases are emotionally charged, suggesting an attempt to influence opinions or elicit strong reactions from the audience."
+      }
+  }
+  
+  
+  
+  
+  

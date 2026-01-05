@@ -1,0 +1,52 @@
+name: Manual Deploy 
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  build_image:
+    name: Deploy to GCP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      
+      - name: 'Set up Cloud SDK'
+        uses: google-github-actions/setup-gcloud@v2.1.4
+        with:
+          install_components: "gke-gcloud-auth-plugin, kubectl"
+        
+      - name: Setup gCloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+  
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+
+      - name: Write deployment credentials
+        working-directory: ./infrastructure/tf
+        run: |
+          echo '${{ secrets.GCP_CREDENTIALS }}' > gcp_credentials.json
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          terraform_version:  1.10.5
+
+      - name: Terraform Init
+        working-directory: ./infrastructure/tf
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ./infrastructure/tf
+        env:
+          API_KEY:        ${{ secrets.API_KEY }}
+          API_KEYDS:      ${{ secrets.API_KEYDS }}
+          TELEBOT_TOKEN:  ${{ secrets.TELEBOT_TOKEN }}
+          PRESCRAPE:      ${{ secrets.PRESCRAPE }}
+          MONGO_SERVER:   ${{ secrets.MONGO_SERVER }}
+        run: terraform apply -auto-approve

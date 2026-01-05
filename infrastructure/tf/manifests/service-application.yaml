@@ -1,0 +1,83 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-port-80
+  namespace: service
+spec:
+  podSelector:
+    matchLabels:
+      app: application
+  policyTypes:
+  - Ingress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: application-deployment
+  namespace: service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: application
+  template:
+    metadata:
+      labels:
+        app: application
+    spec:
+      containers:
+      - name: application
+        image: nmywrld/ctrlaltelite-application:latest
+        ports:
+        - containerPort: 8010
+        env:
+        - name: PRESCRAPE
+          valueFrom:
+            secretKeyRef:
+              name: application-secret
+              key: PRESCRAPE
+        - name: ENV
+          value: "production"
+        - name: DATABASE_URL
+          value: "https://service.chfwhitehats2024.games"
+        - name: SENTIMENT_URL
+          value: "https://api.chfwhitehats2024.games"
+        - name: EMOTION_URL
+          value: "https://api.chfwhitehats2024.games"
+        - name: PROPAGANDA_URL
+          value: "https://api.chfwhitehats2024.games"
+        - name: SCRAPER_URL
+          value: "https://api.chfwhitehats2024.games"
+        - name: FACTCHECK_URL
+          value: "https://api.chfwhitehats2024.games"
+
+        # resources:
+        #   requests:
+        #     memory: "64Mi"
+        #     cpu: "250m"
+        #   limits:
+        #     memory: "128Mi"
+        #     cpu: "500m"
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: application-service
+  namespace: service
+  annotations:
+    cloud.google.com/backend-config: '{"default": "service-config"}'
+spec:
+  selector:
+    app: application
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8010
+  type: ClusterIP

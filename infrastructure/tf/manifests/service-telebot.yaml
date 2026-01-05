@@ -1,0 +1,52 @@
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-telegram
+  namespace: service
+spec:
+  podSelector:
+    matchLabels:
+      app: telegram-bot
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}  # Allows DNS resolution
+      ports:
+        - protocol: TCP
+          port: 443  # HTTPS port
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegram-bot
+  namespace: service
+spec:
+  replicas: 1  # Increase if you need multiple instances
+  selector:
+    matchLabels:
+      app: telegram-bot
+  template:
+    metadata:
+      labels:
+        app: telegram-bot
+    spec:
+      containers:
+        - name: telegram-bot
+          image: nmywrld/ctrlaltelite-telebot:latest
+          imagePullPolicy: Always
+          env:
+            - name: TELEBOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: telebot-secret
+                  key: TELEBOT_TOKEN
+
+            - name: APPLICATION_URL
+              value: "https://service.chfwhitehats2024.games"
+
+            - name: WEB_APP_URL
+              value: "https://chfwhitehats2024.games/"
+

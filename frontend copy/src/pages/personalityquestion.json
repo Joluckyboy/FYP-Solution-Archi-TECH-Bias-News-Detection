@@ -1,0 +1,112 @@
+{
+	"quiz": [
+		{
+			"question": "What’s your reaction to stupid news?",
+			"options": [
+				"Share it immediately on social media",
+				"Check a trusted news source for details",
+				"Wait to see how the story develops",
+				"Ignore it unless it impacts you directly"
+			],
+			"answer": [],
+			"question_type": "personality",
+			"id": "67d3d34da1524a3c69581c6c"
+		},
+		{
+			"question": "What’s your reaction to breaking news?",
+			"options": [
+				"Share it immediately on social media",
+				"Check a trusted news source for details",
+				"Wait to see how the story develops",
+				"Ignore it unless it impacts you directly"
+			],
+			"answer": [],
+			"question_type": "personality",
+			"id": "67d3cec05ecd5200473fccac"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568cae9"
+			},
+			"question": "How do you usually get your news?",
+			"options": [
+				"Social media posts, reels, and viral content",
+				"Quick news summaries and short articles",
+				"In-depth news reports and investigative articles",
+				"Conversations with family, friends, or colleagues"
+			],
+			"answer": [],
+			"question_type": "personality"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568caed"
+			},
+			"question": "How do you prefer your news to be presented?",
+			"options": [
+				"Fun, engaging, and entertaining",
+				"Quick and easy to understand",
+				"Detailed, well-researched, and analytical",
+				"Through conversation and discussion"
+			],
+			"answer": [],
+			"question_type": "personality"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568caf2"
+			},
+			"question": "What motivates you to read the news?",
+			"options": [
+				"Entertainment and passing time",
+				"Staying updated but without spending too much time",
+				"Staying well-informed and analyzing key issues",
+				"A specific event or topic sparks my interest"
+			],
+			"answer": [],
+			"question_type": "personality"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568caf1"
+			},
+			"question": "How do you handle controversial news?",
+			"options": [
+				"Post my opinion online immediately",
+				"Observe but avoid debating",
+				"Look for expert opinions and multiple perspectives",
+				"Talk it out with friends or family to form an opinion"
+			],
+			"answer": [],
+			"question_type": "personality"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568caf0"
+			},
+			"question": "Do you subscribe to any news platforms or channels?",
+			"options": [
+				"No, I rely on whatever I come across online",
+				"I follow free online platforms and newsletters",
+				"Yes, I actively subscribe to premium news sites or deep-dive content",
+				"I don’t subscribe, but I stay informed through discussions"
+			],
+			"answer": [],
+			"question_type": "personality"
+		},
+		{
+			"_id": {
+				"$oid": "67d648ce5ac652462568caef"
+			},
+			"question": "When a friend shares news with you, what do you do?",
+			"options": [
+				"Share it immediately if it seems interesting",
+				"Read it but wait to share until verified",
+				"Search for similar stories to confirm accuracy",
+				"Discuss it with friends before deciding what to believe"
+			],
+			"answer": [],
+			"question_type": "personality"
+		}
+	]
+}

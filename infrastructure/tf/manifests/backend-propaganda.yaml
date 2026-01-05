@@ -1,0 +1,66 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-port-80
+  namespace: backend
+spec:
+  podSelector:
+    matchLabels:
+      app: propaganda
+  policyTypes:
+  - Ingress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: propaganda-deployment
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: propaganda
+  template:
+    metadata:
+      labels:
+        app: propaganda
+    spec:
+      containers:
+      - name: propaganda
+        image: nmywrld/ctrlaltelite-propaganda:latest
+        ports:
+        - containerPort: 8014
+        env:
+        - name: ENV
+          value: "production"
+        # resources:
+        #   requests:
+        #     memory: "64Mi"
+        #     cpu: "250m"
+        #   limits:
+        #     memory: "128Mi"
+        #     cpu: "500m"
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: propaganda-service
+  namespace: backend
+  annotations:
+    cloud.google.com/backend-config: '{"default": "backend-config"}'
+spec:
+  selector:
+    app: propaganda
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8014
+  type: ClusterIP

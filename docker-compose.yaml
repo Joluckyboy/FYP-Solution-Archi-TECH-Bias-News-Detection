@@ -1,0 +1,74 @@
+
+services:
+  database:
+    build: 
+      context: ./backend/database
+    ports:
+      - "8011:8011" 
+    environment:
+      - ENV=production
+    restart: always
+
+  sentiment:
+    build:
+      context: ./backend/sentiment
+    ports:
+      - "8012:8012"
+    environment:
+      - ENV=production
+    restart: always
+
+  emotion:
+    build:
+      context: ./backend/emotion
+    ports:
+      - "8013:8013"
+    environment:
+      - ENV=production
+    restart: always
+  
+  propaganda:
+    build:
+      context: ./backend/propaganda
+    ports:
+      - "8014:8014"
+    environment:
+      - ENV=production
+    restart: always
+  
+  factcheck:
+    build:
+      context: ./backend/fact-check
+    ports:
+      - "8016:8016"
+    environment:
+      - ENV=production
+    restart: always
+
+  scraper:
+    build:
+      context: ./backend/scraper
+    ports:
+      - "8015:8015"
+    environment:
+      - ENV=production
+    restart: always
+
+  application:
+    build:
+      context: ./application
+    ports:
+      - "8010:8010"
+    environment:
+      - ENV=production
+    restart: always
+
+  telebot:
+    build:
+      context: ./telebot
+    ports:
+      - "8020:8020"
+    environment:
+      - ENV=production
+    restart: always
+

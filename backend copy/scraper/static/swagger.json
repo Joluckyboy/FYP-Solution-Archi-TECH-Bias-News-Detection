@@ -1,0 +1,147 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Scraper API",
+        "version": "0.1",
+        "description": "API for getting text data from articles or youtube videos"
+    },
+    "paths": {
+        "/scraper/get-article?url={url}": {
+            "get": {
+                "description": "Returns the headline, article body, publish date for an article",
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "url",
+                        "in": "query",
+                        "description": "The URL of the article to scrape",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with article data.",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "body": {
+                                    "type": "string",
+                                    "example": "Singapore playwright Jonathan Lim has died on Jan 23 at age 50. He was found by his close friend and lawyer Luke Kwek in his flat after family members were unable to reach him..."
+                                },
+                                "headline": {
+                                    "type": "string",
+                                    "example": "Singapore playwright Jonathan Lim, known for his comedic genius, dies at age 50"
+                                },
+                                "publish_date": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "Sat, 25 Jan 2025 10:20:00 GMT"
+                                },
+                                "updated_date": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "Sat, 25 Jan 2025 11:15:00 GMT"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "Error": {
+                                    "type": "string",
+                                    "example": "No URL provided"
+                                }
+                            }
+                        }
+                    },
+                    "400-InvalidURL": {
+                        "description": "Bad Request – Invalid URL Format",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "Invalid URL format"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/scraper/get-transcript?url={url}": {
+            "get": {
+                "description": "Returns the transcript of a video from YouTube given a valid URL.",
+                "parameters": [
+                    {
+                        "name": "url",
+                        "in": "query",
+                        "description": "The URL of the YouTube video to retrieve the transcript for.",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with the video transcript.",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "transcript": {
+                                    "type": "string",
+                                    "example": "This is the transcript of the video."
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request – No URL provided",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "No URL provided"
+                                }
+                            }
+                        }
+                    },
+                    "400-InvalidURL": {
+                        "description": "Bad Request – Invalid YouTube URL format",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "Invalid YouTube URL"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error – Could not retrieve transcript",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "Error retrieving the transcript"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+}

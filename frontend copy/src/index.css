@@ -1,0 +1,217 @@
+/* index.css */
+
+/* Import Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme variables */
+:root {
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+
+	--background: 210 20% 98%; /* HSL value for #f9fafb */
+	--foreground: 222.2 84% 4.9%;
+	--card: 0 0% 100%;
+	--card-foreground: 222.2 84% 4.9%;
+	--popover: 0 0% 100%;
+	--popover-foreground: 222.2 84% 4.9%;
+	--primary: 221.2 83.2% 53.3%;
+	--primary-foreground: 210 40% 98%;
+	--secondary: 210 40% 96.1%;
+	--secondary-foreground: 222.2 47.4% 11.2%;
+	--muted: 210 40% 96.1%;
+	--muted-foreground: 215.4 16.3% 46.9%;
+	--accent: 210 40% 96.1%;
+	--accent-foreground: 222.2 47.4% 11.2%;
+	--destructive: 0 84.2% 60.2%;
+	--destructive-foreground: 210 40% 98%;
+	--border: 214.3 31.8% 91.4%;
+	--input: 214.3 31.8% 91.4%;
+	--ring: 221.2 83.2% 53.3%;
+	--radius: 0.5rem;
+	--chart-1: 12 76% 61%;
+	--chart-2: 173 58% 39%;
+	--chart-3: 197 37% 24%;
+	--chart-4: 43 74% 66%;
+	--chart-5: 27 87% 67%;
+}
+
+html,
+body {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	background-color: hsl(var(--background));
+	overscroll-behavior: auto;
+}
+
+.app-container {
+	@apply py-4 px-8;
+}
+
+.checkmate-gradient {
+	background: linear-gradient(to right, #6717cd 0%, #1e5edd 50%, #6498ff 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+.checkmate-gradient-flip {
+	background: linear-gradient(to right, #6498ff 0%, #1e5edd 50%, #6717cd 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+button {
+	border-radius: 8px;
+	border: 0.5px solid transparent;
+	font-size: 1em;
+	font-weight: 500;
+	font-family: inherit;
+	cursor: pointer;
+	transition: border-color 0.25s;
+}
+
+button:hover {
+	border-color: #646cff;
+}
+
+a {
+	word-wrap: break-word; /* Allows long words/URLs to wrap */
+	overflow-wrap: break-word; /* Ensures wrapping within container */
+	word-break: break-word; /* Ensures proper word breaking */
+	white-space: normal; /* Allows text to wrap */
+	display: inline;
+	max-width: 100%; /* Prevents overflow */
+	font-size: 12px; /* size of text */
+	font-weight: 500;
+	color: #646cff;
+	text-decoration: inherit;
+}
+
+a:hover {
+	color: #535bf2;
+}
+
+.logo {
+	height: 6em;
+	padding: 1.5em;
+	will-change: filter;
+	transition: filter 300ms;
+}
+
+.logo:hover {
+	filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+	filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+.img-bg {
+	background-size: cover;
+	background-position: center;
+	background-repeat: repeat;
+	background-color: rgba(0, 0, 0, 0.5); /* Darken Overlay */
+	background-blend-mode: overlay;
+}
+
+.read-the-docs {
+	color: #888;
+}
+
+/* Animation */
+@keyframes logo-spin {
+	from {
+		transform: rotate(0deg);
+	}
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	a:nth-of-type(2) .logo {
+		animation: logo-spin infinite 20s linear;
+	}
+}
+
+/* Slide In From Left Animation */
+.slide-in-left {
+	animation-name: slideInLeft;
+	animation-duration: 1s;
+}
+
+@keyframes slideInLeft {
+	from {
+		transform: translateX(-100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+/* Slide In From Right Animation */
+.slide-in-right {
+	animation-name: slideInRight;
+	animation-duration: 1s;
+}
+
+@keyframes slideInRight {
+	from {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+/* Slide In From Top Animation */
+.slide-in-top {
+	animation-name: slideInTop;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+}
+
+@keyframes slideInTop {
+	from {
+		transform: translateY(-100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+/* Slide In From Bottom Animation */
+.slide-in-bottom {
+	animation-name: slideInBottom;
+	animation-duration: 1s;
+	animation-fill-mode: forwards;
+}
+
+@keyframes slideInBottom {
+	from {
+		transform: translateY(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}

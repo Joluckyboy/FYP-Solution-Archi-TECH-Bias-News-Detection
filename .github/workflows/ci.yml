@@ -1,0 +1,96 @@
+name: CI Pipeline
+
+on:
+#   push:
+    # branches: [ main ]
+    # paths:
+    # - "backend/fact-check/**"
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-factcheck-${{ hashFiles('backend/fact-check/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-factcheck-
+
+    - name: database unit tests
+      working-directory: backend/database
+      env:
+        PYTHONPATH: backend/database
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+
+    - name: fact check unit tests
+      working-directory: backend/fact-check
+      env:
+        PYTHONPATH: backend/fact-check
+        API_KEY: ${{ secrets.API_KEY || 'PLACEHOLDER' }}
+        API_KEYDS: ${{ secrets.API_KEYDS || 'PLACEHOLDER' }}
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+
+    
+    - name: sentiment unit tests
+      working-directory: backend/sentiment
+      env:
+        PYTHONPATH: backend/sentiment
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+
+    - name: emotion unit tests
+      working-directory: backend/emotion
+      env:
+        PYTHONPATH: backend/emotion
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+
+    - name: propaganda unit tests
+      working-directory: backend/propaganda
+      env:
+        PYTHONPATH: backend/propaganda
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+
+    - name: application unit tests
+      working-directory: application
+      env:
+        PYTHONPATH: backend/application
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+    
+    - name: scraper unit tests
+      working-directory: backend/scraper
+      env:
+        PYTHONPATH: backend/scraper
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio httpx pytest-mock
+        PYTHONPATH=$(pwd) pytest
+    

@@ -1,0 +1,39 @@
+# Stage 1: Build stage
+FROM python:3.11-slim AS build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Production stage
+FROM python:3.11-slim 
+
+# Set the working directory
+WORKDIR /app
+
+
+# Copy the dependencies from the build stage
+COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=build /usr/local/bin /usr/local/bin
+
+
+# Copy only app.py and model.py to the application folder
+COPY . . 
+
+# Expose the port the app runs on
+EXPOSE 8016
+
+# Command to run the application
+# CMD ["uvicorn", "app.main:app", "--port", "8016"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8016", "--workers", "4"]

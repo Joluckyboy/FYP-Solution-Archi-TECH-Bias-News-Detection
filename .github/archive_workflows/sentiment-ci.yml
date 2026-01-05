@@ -1,0 +1,41 @@
+name: Sentiment service CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+    - "backend/sentiment/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-sentiment-${{ hashFiles('backend/sentiment/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-sentiment-
+
+    - name: Install dependencies
+      working-directory: backend/sentiment
+      run: pip install -r requirements.txt
+    
+    - name: Run Unit Tests
+      working-directory: backend/sentiment
+      env:
+        PYTHONPATH: backend/sentiment
+      run: |
+        pip install pytest pytest-cov pytest-asyncio
+        PYTHONPATH=$(pwd) pytest
