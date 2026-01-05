@@ -1,2 +1,0 @@
-0000000000000000000000000000000000000000 2ad2900844547b726407fc652f7eae9defb061ef Joluckyboy <joel.foo.2023@scis.smu.edu.sg> 1766134665 +0800	clone: from https://github.com/CtrlAltElite-SMU/CheckMate_by_CtrlAltElite.git
-2ad2900844547b726407fc652f7eae9defb061ef ed2f5da092b5b7588e80fc97220da3dfdff37e9e Joluckyboy <joel.foo.2023@scis.smu.edu.sg> 1767460346 +0800	commit: Commented out libgconf-2-4 so that docker-compose up --build works

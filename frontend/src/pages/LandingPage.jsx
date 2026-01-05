@@ -53,13 +53,14 @@ const LandingPage = () => {
 			setIsMobile(window.innerWidth < 768);
 		};
 
-		checkScreenSize();
+			checkScreenSize();
 		window.addEventListener("resize", checkScreenSize);
-		return () => window.removeEventListener("resize", checkScreenSize);
-	}, []);
 
-	if (typeof chrome !== "undefined" && typeof chrome.runtime !== "undefined") {
-		useEffect(() => {
+		// Check if running as a Chrome extension
+		if (typeof chrome !== "undefined" && 
+		    chrome.runtime && 
+		    chrome.runtime.id && 
+		    typeof chrome.tabs !== "undefined") {
 			// Gets current url of active tab. Done by service worker
 			chrome.runtime.sendMessage({ action: "getTabUrl" }, (response) => {
 				if (response && response.tabUrl) {
@@ -81,11 +82,14 @@ const LandingPage = () => {
 			chrome.tabs.onUpdated.addListener(tabUrlChangeListener);
 
 			return () => {
+				window.removeEventListener("resize", checkScreenSize);
 				chrome.tabs.onActivated.removeListener(tabUrlChangeListener);
 				chrome.tabs.onUpdated.removeListener(tabUrlChangeListener);
 			};
-		}, []);
-	}
+		}
+
+		return () => window.removeEventListener("resize", checkScreenSize);
+	}, []);
 
 	const handleInputChange = (event) => {
 		setArticleURL(event.target.value);

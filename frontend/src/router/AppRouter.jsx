@@ -19,7 +19,12 @@ export const AppRouter = () => {
 
     return (
         <>
-            <HashRouter>
+            <HashRouter
+                future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                }}
+            >
                 <Suspense fallback={<Skeleton />}>
                     <Routes>
                         <Route element={<Layout />}>
