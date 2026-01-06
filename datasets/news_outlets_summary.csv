@@ -1,0 +1,298 @@
+Country,Outlet,Bias Distribution,Unique Topics,First Article,Last Article,Total Articles
+USA,Fox News Digital,{'right': 1707},57,2014-05-20,2025-07-10,1707
+USA,Washington Examiner,{'leaning-right': 939},58,2016-11-30,2025-07-09,939
+USA,CNN Digital,{'leaning-left': 901},58,2014-01-15,2025-07-08,901
+UK,BBC News,{'center': 609},52,2014-04-25,2025-07-10,609
+USA,Associated Press,{'left': 571},53,2018-05-31,2025-07-10,571
+USA,NBC News Digital,{'leaning-left': 400},48,2014-09-23,2025-07-09,400
+USA,USA TODAY,{'leaning-left': 375},52,2014-01-16,2025-07-10,375
+USA,HuffPost,{'left': 375},46,2014-01-04,2025-06-05,375
+USA,Townhall,{'right': 322},39,2014-01-10,2025-06-12,322
+USA,NPR (Online News),{'leaning-left': 297},47,2014-01-07,2025-07-09,297
+UK,The Guardian,{'left': 288},52,2014-11-03,2025-07-01,288
+USA,Fox Business,{'leaning-right': 283},35,2022-01-07,2025-07-10,283
+USA,Breitbart News,{'right': 257},47,2014-05-03,2025-07-08,257
+USA,CBS News (Online),{'leaning-left': 215},46,2014-04-29,2025-07-10,215
+USA,Forbes,{'center': 198},44,2016-05-16,2025-07-01,198
+USA,ABC News (Online),{'leaning-left': 175},40,2014-01-07,2025-07-08,175
+USA,Daily Beast,{'left': 145},38,2014-12-25,2025-07-10,145
+USA,The Daily Wire,{'right': 137},39,2019-10-23,2025-07-08,137
+UK,Daily Mail,{'right': 128},38,2017-03-29,2025-07-02,128
+USA,CBN,{'right': 123},24,2015-01-14,2025-01-08,123
+USA,The Epoch Times,{'leaning-right': 102},37,2020-01-22,2025-07-03,102
+USA,CNN Business,{'leaning-left': 102},23,2022-01-18,2025-07-09,102
+USA,Christian Science Monitor,{'center': 88},29,2014-04-28,2025-06-17,88
+Qatar,Al Jazeera,{'leaning-left': 81},16,2019-02-15,2025-07-03,81
+USA,Business Insider,{'leaning-left': 72},27,2016-11-12,2025-04-07,72
+USA,Reason,{'center': 68},30,2016-08-04,2025-06-05,68
+USA,The Daily Caller,{'right': 67},30,2023-10-20,2025-06-19,67
+USA,The Atlantic,{'left': 58},22,2015-12-31,2025-05-10,58
+USA,CNN (Opinion),{'left': 55},24,2018-02-09,2025-03-27,55
+USA,MSNBC,{'left': 54},24,2017-09-02,2025-07-04,54
+USA,Fox News (Opinion),{'right': 49},28,2018-02-12,2025-05-26,49
+USA,Newsmax (News),{'right': 49},22,2015-01-31,2025-04-24,49
+USA,Salon,{'left': 48},19,2014-04-29,2025-06-24,48
+USA,Slate,{'left': 48},27,2014-06-11,2025-04-03,48
+USA,Time Magazine,{'leaning-left': 48},26,2014-09-22,2025-07-06,48
+USA,Guest Writer - Right,{'leaning-right': 44},18,2015-07-17,2022-12-06,44
+USA,Just The News,{'leaning-right': 41},25,2020-07-26,2025-07-09,41
+USA,Washington Free Beacon,{'right': 38},20,2017-08-10,2025-04-02,38
+USA,Daily Kos,{'left': 33},14,2017-01-24,2025-03-19,33
+USA,Associated Press Fact Check,{'leaning-left': 32},12,2020-09-22,2024-05-24,32
+USA,Straight Arrow News,{'center': 28},11,2024-04-12,2025-07-09,28
+USA,Fortune,{'center': 27},19,2018-09-04,2025-05-05,27
+USA,Roll Call,{'center': 26},13,2019-04-09,2025-06-18,26
+USA,Mother Jones,{'left': 26},17,2017-03-30,2025-04-14,26
+USA,UnHerd,{'center': 26},12,2023-10-08,2025-06-23,26
+USA,BuzzFeed News,{'left': 26},16,2017-10-19,2023-03-02,26
+USA,ZeroHedge,{'leaning-right': 25},15,2024-09-18,2025-06-27,25
+USA,538 (ABC News),{'center': 24},7,2018-11-06,2024-01-15,24
+USA,New York Magazine,{'left': 24},18,2017-01-21,2025-07-03,24
+USA,The Daily Signal,{'right': 22},13,2020-07-17,2025-06-13,22
+USA,SCOTUSblog,{'center': 22},4,2020-10-20,2025-05-22,22
+Europe,Euronews,{'center': 22},10,2024-08-22,2025-07-09,22
+USA,New Republic,{'left': 21},10,2018-08-30,2025-06-05,21
+USA,RollingStone.com,{'left': 20},13,2018-10-11,2025-06-30,20
+USA,Politico,{'leaning-left': 20},8,2016-04-16,2025-04-24,20
+USA,New York Times (News),{'leaning-left': 20},8,2014-11-04,2025-03-31,20
+USA,Deutsche Welle,{'center': 19},10,2022-02-02,2025-06-25,19
+USA,Vice,{'left': 19},17,2019-11-27,2024-09-26,19
+USA,The Texas Tribune,{'leaning-left': 17},7,2019-11-02,2024-02-29,17
+USA,Vanity Fair,{'leaning-left': 17},12,2016-02-20,2025-07-05,17
+USA,South China Morning Post,{'center': 17},7,2022-01-30,2025-03-04,17
+USA,Voice of America (VOA),{'center': 16},11,2022-01-31,2024-12-16,16
+USA,The Intercept,{'left': 16},9,2016-12-04,2025-06-04,16
+USA,The Jerusalem Post,{'center': 15},3,2020-10-23,2025-05-28,15
+USA,The Week - News,{'leaning-left': 15},10,2016-06-10,2025-02-12,15
+USA,PolitiFact,{'leaning-left': 15},7,2020-08-22,2025-02-18,15
+USA,Guest Writer - Left,{'leaning-left': 14},8,2016-11-07,2025-03-31,14
+USA,Deseret News,{'center': 14},11,2020-02-04,2025-06-17,14
+USA,Matt Lewis,{'center': 13},7,2022-10-21,2024-04-09,13
+USA,The Kyiv Independent,{'center': 13},4,2022-06-30,2025-03-31,13
+USA,WIRED,{'left': 12},8,2020-04-01,2025-07-10,12
+USA,CNET,{'center': 11},10,2018-05-24,2025-01-07,11
+USA,The Economist,{'leaning-left': 11},9,2018-04-30,2025-05-20,11
+USA,Pew Research Center,{'center': 11},9,2014-06-12,2025-04-16,11
+USA,Snopes,{'leaning-left': 11},7,2020-11-16,2025-05-13,11
+USA,The Dispatch,{'leaning-right': 11},9,2020-05-22,2025-05-29,11
+USA,Guest Writer - Center,{'center': 11},9,2020-10-12,2024-12-16,11
+USA,The Boston Globe,{'left': 11},9,2020-04-22,2025-03-31,11
+USA,FactCheck.org,{'leaning-left': 11},6,2020-03-16,2024-09-12,11
+USA,Semafor,{'leaning-left': 10},8,2023-07-06,2025-06-09,10
+USA,TechCrunch,{'center': 10},6,2020-03-12,2025-04-16,10
+USA,The Dallas Morning News,{'center': 10},6,2020-01-02,2024-12-23,10
+USA,ThinkProgress,{'left': 10},10,2017-10-30,2019-01-08,10
+USA,United Press International,{'center': 10},8,2022-07-29,2025-06-08,10
+USA,Independent Journal Review,{'right': 10},8,2020-01-28,2025-06-30,10
+USA,CNN Fact Check,{'left': 9},3,2022-11-03,2025-01-21,9
+USA,Gallup,{'center': 9},7,2016-03-31,2025-02-07,9
+USA,STAT,{'center': 9},5,2022-05-05,2025-03-11,9
+Canada,The Globe and Mail,{'center': 8},7,2023-02-17,2025-04-07,8
+USA,David Rothkopf,{'leaning-left': 7},6,2022-03-24,2024-02-13,7
+USA,The Nation,{'left': 7},5,2020-05-01,2024-12-05,7
+USA,Byron York,{'right': 7},5,2022-04-12,2024-03-06,7
+USA,The New Yorker,{'left': 7},7,2018-03-25,2024-09-25,7
+USA,ProPublica,{'leaning-left': 7},4,2020-04-05,2025-07-01,7
+USA,The Free Press,{'leaning-right': 7},5,2022-12-26,2025-06-13,7
+USA,Detroit News,{'center': 6},5,2020-02-16,2024-03-20,6
+USA,Defense One,{'center': 6},3,2018-07-31,2022-08-19,6
+USA,Middle East Eye,{'left': 6},2,2024-01-23,2025-07-01,6
+USA,The Philadelphia Inquirer,{'leaning-left': 6},6,2019-12-16,2024-04-19,6
+USA,Breitbart Fact Check,{'right': 6},2,2023-05-11,2025-03-05,6
+USA,Jacobin,{'left': 5},5,2019-09-26,2023-08-15,5
+USA,The National Desk,{'right': 5},4,2025-05-03,2025-07-10,5
+USA,Tucker Carlson,{'right': 5},5,2020-11-19,2022-11-03,5
+USA,Ars Technica,{'center': 5},3,2022-06-06,2024-05-24,5
+USA,Chicago Sun-Times,{'leaning-left': 5},4,2019-06-13,2020-09-03,5
+USA,The Western Journal,{'right': 5},5,2023-04-27,2025-01-08,5
+USA,Mashable,{'left': 5},5,2017-10-27,2024-11-05,5
+USA,Bustle,{'leaning-left': 5},3,2017-08-10,2018-08-27,5
+USA,The Forward,{'leaning-left': 4},3,2023-09-30,2024-10-07,4
+USA,Haaretz,{'leaning-left': 4},3,2023-12-19,2024-07-30,4
+USA,Tampa Bay Times,{'center': 4},4,2022-07-09,2024-10-10,4
+USA,Heavy.com,{'center': 4},4,2020-02-18,2023-08-18,4
+USA,Milwaukee Journal Sentinel,{'center': 4},3,2022-10-26,2024-11-05,4
+USA,One America News Network (OAN),{'right': 4},4,2024-10-28,2025-06-23,4
+USA,PinkNews,{'left': 4},2,2022-03-08,2025-06-09,4
+USA,CalMatters,{'center': 4},4,2022-05-25,2024-08-22,4
+UK,Reuters,{'center': 3},3,2022-05-31,2023-08-16,3
+USA,Tallahassee Democrat,{'center': 3},3,2020-03-14,2025-01-09,3
+USA,Check Your Fact,{'center': 3},2,2023-07-15,2024-07-25,3
+USA,BBC Fact Check,{'center': 3},3,2022-02-28,2025-05-02,3
+USA,David Marcus,{'right': 3},3,2022-01-17,2024-12-03,3
+USA,Catholic News Agency,{'right': 3},2,2023-11-29,2025-03-28,3
+USA,Tiana Lowe Doescher,{'right': 3},3,2022-02-23,2022-06-27,3
+USA,Steve Benen,{'left': 3},2,2022-01-05,2023-01-24,3
+USA,New York Post (News),{'leaning-right': 3},3,2020-12-15,2020-12-31,3
+USA,Nature.com,{'center': 3},3,2022-08-10,2023-07-27,3
+USA,Jeff Jacoby,{'right': 3},2,2016-01-25,2020-03-08,3
+USA,Hayes Brown,{'left': 3},3,2023-06-09,2024-04-10,3
+USA,Education Week,{'center': 3},2,2023-12-15,2025-01-22,3
+USA,The New York Sun,{'right': 3},3,2023-11-21,2025-04-22,3
+USA,Tangle,{'center': 3},3,2022-12-06,2025-06-14,3
+USA,Anne Applebaum,{'center': 3},3,2023-02-21,2024-04-22,3
+USA,Variety,{'leaning-left': 3},2,2022-07-27,2025-02-24,3
+USA,WBUR,{'center': 3},2,2022-08-22,2023-05-31,3
+USA,Military Times,{'center': 3},3,2020-09-01,2023-05-28,3
+USA,AZ Central,{'center': 3},3,2022-07-18,2023-04-11,3
+USA,The Palm Beach Post,{'center': 2},2,2022-08-18,2023-01-12,2
+USA,The Spectator World,{'right': 2},2,2024-05-13,2024-12-16,2
+USA,The Salt Lake Tribune,{'leaning-left': 2},2,2023-03-24,2023-09-14,2
+USA,Zeeshan Aleem,{'left': 2},2,2023-08-01,2025-05-14,2
+USA,USA TODAY Fact Check,{'leaning-left': 2},2,2023-12-07,2025-01-31,2
+Canada,CBC News,{'leaning-left': 2},2,2023-06-30,2025-06-13,2
+USA,The Tennessean,{'center': 2},2,2020-12-26,2023-08-18,2
+USA,The Times,{'center': 2},2,2024-06-27,2025-02-26,2
+USA,City Journal,{'right': 2},2,2022-11-13,2024-12-06,2
+USA,Christianity Today,{'center': 2},2,2023-01-05,2024-12-24,2
+USA,Chris Cillizza,{'leaning-left': 2},2,2022-04-12,2022-11-10,2
+USA,Trains.com,{'center': 2},2,2022-09-13,2023-03-09,2
+USA,The Week - Opinion,{'leaning-left': 2},2,2020-04-14,2022-07-27,2
+USA,Timothy P. Carney,{'leaning-right': 2},2,2023-05-17,2023-07-02,2
+USA,The Wrap,{'center': 2},1,2024-12-16,2025-06-01,2
+USA,Boston Herald,{'leaning-right': 2},2,2018-05-08,2024-10-02,2
+USA,Brookings Institution,{'center': 2},2,2020-10-07,2023-11-21,2
+USA,Bloomberg,{'leaning-left': 2},2,2018-12-03,2024-05-06,2
+USA,Bonnie Kristian,{'center': 2},2,2023-01-11,2023-10-17,2
+USA,Michael Goodwin,{'right': 2},1,2020-08-18,2020-08-25,2
+USA,Taipei Times,{'center': 2},2,2022-08-02,2024-05-23,2
+USA,The Columbus Dispatch,{'center': 2},2,2022-07-22,2023-12-29,2
+USA,The Christian Post,{'leaning-right': 2},2,2024-03-27,2025-02-28,2
+USA,John Fund,{'leaning-right': 2},2,2020-01-01,2022-10-26,2
+USA,Jill Filipovic,{'left': 2},2,2023-04-28,2024-02-22,2
+USA,Howard Kurtz,{'center': 2},1,2019-05-02,2025-02-18,2
+USA,Grover Norquist,{'right': 2},1,2022-04-18,2023-01-24,2
+USA,Hungarian Conservative,{'leaning-right': 2},2,2024-09-29,2025-04-03,2
+USA,Detroit Free Press,{'leaning-left': 2},2,2020-03-09,2024-10-22,2
+USA,Donald Trump,{'right': 2},2,2018-10-10,2020-11-03,2
+USA,Florida Politics,{'center': 2},1,2022-07-12,2022-08-24,2
+USA,The Heritage Foundation,{'right': 2},2,2018-04-28,2025-06-11,2
+USA,The Hill,{'center': 2},2,2019-02-23,2022-01-10,2
+USA,The Hollywood Reporter,{'leaning-left': 2},2,2020-07-17,2022-03-11,2
+USA,The Dispatch Fact Check,{'center': 2},2,2024-11-21,2025-02-06,2
+USA,Gizmodo,{'leaning-left': 2},2,2022-11-16,2023-06-06,2
+USA,Rex Huppke,{'left': 2},2,2022-07-19,2025-07-01,2
+USA,Robby Soave,{'leaning-right': 2},2,2023-10-28,2024-03-02,2
+USA,Multiple Writers - Lean Left,{'leaning-left': 2},2,2022-01-17,2024-10-29,2
+USA,NBC Today Show,{'leaning-left': 2},2,2019-01-23,2022-08-02,2
+USA,Matt Taibbi,{'center': 2},2,2024-08-13,2024-10-23,2
+USA,Lifehacker,{'center': 2},2,2017-05-25,2023-01-05,2
+USA,San Diego Union-Tribune,{'leaning-left': 2},2,2025-05-12,2025-06-08,2
+USA,RedState,{'right': 2},2,2017-11-06,2022-09-14,2
+USA,OilPrice.com,{'center': 2},2,2022-07-05,2024-01-29,2
+USA,RealClearPolitics (Aggregator),{'center': 2},2,2022-07-07,2024-10-17,2
+USA,Orange County Register,{'leaning-right': 2},2,2019-10-29,2019-11-14,2
+USA,Newt Gingrich,{'right': 2},2,2023-05-30,2024-01-23,2
+USA,American Thinker,{'right': 2},1,2018-02-08,2018-05-11,2
+USA,AARP,{'center': 2},1,2020-04-15,2022-04-08,2
+USA, Karol Markowicz,{'right': 2},2,2022-09-16,2025-01-14,2
+UK,Sky News,{'leaning-left': 1},1,2024-10-01,2024-10-01,1
+UK,The Sun,{'center': 1},1,2025-03-20,2025-03-20,1
+USA,ABC 7 New York,{'center': 1},1,2025-04-11,2025-04-11,1
+USA,ACLU,{'leaning-left': 1},1,2020-06-26,2020-06-26,1
+USA,Alyssa Milano,{'left': 1},1,2023-11-09,2023-11-09,1
+USA,Andrew C. McCarthy,{'right': 1},1,2022-05-04,2022-05-04,1
+USA,Annafi Wahed,{'leaning-left': 1},1,2018-10-31,2018-10-31,1
+USA,Vogue,{'left': 1},1,2022-05-27,2022-05-27,1
+USA,Voz Media,{'right': 1},1,2025-06-25,2025-06-25,1
+USA,WTOP,{'center': 1},1,2024-08-19,2024-08-19,1
+USA,Washington Post,{'leaning-left': 1},1,2018-12-17,2018-12-17,1
+USA,Washington Times,{'leaning-right': 1},1,2020-12-14,2020-12-14,1
+USA,New York Times (Opinion),{'left': 1},1,2020-06-25,2020-06-25,1
+USA,NewsNation,{'center': 1},1,2024-09-12,2024-09-12,1
+USA,Newsmax (Opinion),{'right': 1},1,2024-12-24,2024-12-24,1
+USA,Not The Bee,{'leaning-right': 1},1,2025-06-09,2025-06-09,1
+USA,OutKick,{'leaning-right': 1},1,2023-05-27,2023-05-27,1
+USA,PBS NewsHour,{'leaning-left': 1},1,2018-02-05,2018-02-05,1
+USA,Pacific Standard,{'leaning-left': 1},1,2017-09-21,2017-09-21,1
+USA,Philadelphia Gay News,{'leaning-left': 1},1,2023-10-26,2023-10-26,1
+USA,Psych Central,{'center': 1},1,2022-04-16,2022-04-16,1
+USA,Public,{'leaning-right': 1},1,2024-07-22,2024-07-22,1
+USA,Quin Hillyer,{'leaning-right': 1},1,2022-12-09,2022-12-09,1
+USA,Rahm Emanuel,{'leaning-left': 1},1,2019-05-24,2019-05-24,1
+USA,Rand Paul,{'leaning-right': 1},1,2025-07-03,2025-07-03,1
+USA,Rem Reider,{'center': 1},1,2014-09-18,2014-09-18,1
+USA,Rich Logis,{'center': 1},1,2025-01-24,2025-01-24,1
+USA,Robert F. Kennedy Jr.,{'center': 1},1,2025-03-04,2025-03-04,1
+USA,Military.com,{'leaning-left': 1},1,2025-02-18,2025-02-18,1
+USA,Multiple Writers - Left,{'left': 1},1,2022-06-25,2022-06-25,1
+USA,NBC 5 Chicago,{'center': 1},1,2025-06-11,2025-06-11,1
+USA,NPR (Opinion) ,{'leaning-left': 1},1,2025-07-08,2025-07-08,1
+USA,Scientific American,{'leaning-left': 1},1,2017-09-08,2017-09-08,1
+USA,Scripps News,{'center': 1},1,2025-02-05,2025-02-05,1
+USA,Spiked,{'leaning-right': 1},1,2024-02-26,2024-02-26,1
+USA,Star Tribune,{'leaning-left': 1},1,2025-03-11,2025-03-11,1
+USA,Staten Island Advance,{'center': 1},1,2025-02-24,2025-02-24,1
+USA,Las Vegas Sun,{'leaning-left': 1},1,2016-01-25,2016-01-25,1
+USA,Lead Stories,{'leaning-left': 1},1,2024-09-14,2024-09-14,1
+USA,Los Angeles Daily News,{'center': 1},1,2025-01-12,2025-01-12,1
+USA,Luke Winkie,{'left': 1},1,2022-10-26,2022-10-26,1
+USA,Marc A. Thiessen,{'right': 1},1,2018-07-29,2018-07-29,1
+USA,Merrick Garland,{'leaning-left': 1},1,2022-04-11,2022-04-11,1
+USA,Mexico News Daily,{'center': 1},1,2023-01-12,2023-01-12,1
+USA,Michael Arceneaux,{'left': 1},1,2022-10-21,2022-10-21,1
+USA,Michael Graham,{'right': 1},1,2018-08-17,2018-08-17,1
+USA,Michael Shellenberger,{'leaning-right': 1},1,2025-04-29,2025-04-29,1
+USA,Steven Petrow,{'center': 1},1,2020-12-17,2020-12-17,1
+USA,Teen Vogue,{'left': 1},1,2024-04-22,2024-04-22,1
+USA,The American Prospect,{'left': 1},1,2024-11-27,2024-11-27,1
+USA,The Californian,{'center': 1},1,2022-05-03,2022-05-03,1
+USA,The Colorado Sun,{'leaning-left': 1},1,2020-07-07,2020-07-07,1
+USA,Jed Shugerman,{'leaning-left': 1},1,2022-09-03,2022-09-03,1
+USA,Jerome Adams,{'center': 1},1,2023-03-01,2023-03-01,1
+USA,Joan Blades,{'left': 1},1,2017-12-31,2017-12-31,1
+USA,Joe Biden,{'leaning-left': 1},1,2020-11-03,2020-11-03,1
+USA,"John Gable, AllSides Co-founder",{'leaning-right': 1},1,2016-08-30,2016-08-30,1
+USA,John Nichols,{'left': 1},1,2022-08-04,2022-08-04,1
+USA,John Stossel,{'leaning-right': 1},1,2017-11-22,2017-11-22,1
+USA,Joseph Curl,{'right': 1},1,2022-11-11,2022-11-11,1
+USA,KQED,{'center': 1},1,2025-04-02,2025-04-02,1
+USA,KSL,{'center': 1},1,2015-05-07,2015-05-07,1
+USA,Kaiser Family Foundation,{'center': 1},1,2022-01-13,2022-01-13,1
+USA,Greg Gutfeld,{'leaning-right': 1},1,2023-07-28,2023-07-28,1
+USA,Grist,{'leaning-left': 1},1,2020-06-24,2020-06-24,1
+USA,Gus Carlson,{'leaning-right': 1},1,2025-03-19,2025-03-19,1
+USA,Human Rights Watch,{'center': 1},1,2023-08-21,2023-08-21,1
+USA,Inside Higher Ed,{'leaning-left': 1},1,2022-07-07,2022-07-07,1
+USA,The Denver Gazette,{'center': 1},1,2025-01-03,2025-01-03,1
+USA,The Georgia Sun,{'center': 1},1,2025-04-02,2025-04-02,1
+USA,The Japan Times,{'center': 1},1,2023-04-17,2023-04-17,1
+USA,Esquire,{'left': 1},1,2020-03-15,2020-03-15,1
+USA,Foreign Affairs,{'center': 1},1,2024-12-31,2024-12-31,1
+USA,Fox News Latino,{'right': 1},1,2016-02-20,2016-02-20,1
+USA,Free Beacon Fact Check,{'right': 1},1,2023-07-06,2023-07-06,1
+USA,Glenn Greenwald,{'center': 1},1,2020-10-30,2020-10-30,1
+USA,Glenn Harlan Reynolds,{'leaning-right': 1},1,2020-07-16,2020-07-16,1
+USA,Gothamist,{'center': 1},1,2022-08-08,2022-08-08,1
+USA,David Petraeus,{'center': 1},1,2020-06-10,2020-06-10,1
+USA,Deadline,{'leaning-left': 1},1,2024-11-06,2024-11-06,1
+USA,Ed Yong,{'center': 1},1,2022-03-18,2022-03-18,1
+USA,El Paso Times,{'center': 1},1,2022-04-14,2022-04-14,1
+USA,Elizabeth Bruenig,{'left': 1},1,2025-06-19,2025-06-19,1
+USA,Elizabeth Warren,{'left': 1},1,2015-06-28,2015-06-28,1
+USA,Emily Oster,{'center': 1},1,2022-11-02,2022-11-02,1
+USA,Eric Boehm,{'leaning-right': 1},1,2023-04-20,2023-04-20,1
+USA,The Oklahoman,{'center': 1},1,2024-01-30,2024-01-30,1
+USA,The Oregonian,{'center': 1},1,2020-09-06,2020-09-06,1
+USA,Cleveland Plain Dealer,{'center': 1},1,2025-05-10,2025-05-10,1
+USA,Committee to Protect Journalists,{'center': 1},1,2025-06-16,2025-06-16,1
+USA,Conor Friedersdorf,{'center': 1},1,2019-06-18,2019-06-18,1
+USA,Council on Foreign Relations,{'left': 1},1,2025-06-26,2025-06-26,1
+USA,Daniel DePetris,{'center': 1},1,2023-12-04,2023-12-04,1
+USA,Dave Zirin,{'leaning-left': 1},1,2023-06-07,2023-06-07,1
+USA,David Frum,{'leaning-right': 1},1,2023-03-21,2023-03-21,1
+USA,CNSNews.com,{'right': 1},1,2020-10-22,2020-10-22,1
+USA,Center for Public Integrity,{'leaning-left': 1},1,2019-12-22,2019-12-22,1
+USA,Chalkbeat,{'center': 1},1,2023-04-07,2023-04-07,1
+USA,Arkansas Democrat-Gazette,{'left': 1},1,2019-11-20,2019-11-20,1
+USA,BET,{'leaning-left': 1},1,2020-02-27,2020-02-27,1
+USA,Barstool Sports - Blog,{'center': 1},1,2025-04-14,2025-04-14,1
+USA,Brad Parscale,{'right': 1},1,2020-06-09,2020-06-09,1
+USA,Brad Polumbo,{'leaning-right': 1},1,2023-07-14,2023-07-14,1
+USA,Brennan Center for Justice,{'leaning-left': 1},1,2022-11-10,2022-11-10,1
+USA,Thomas Sowell,{'leaning-right': 1},1,2015-09-08,2015-09-08,1
+USA,Tim Scott,{'leaning-right': 1},1,2022-09-02,2022-09-02,1
+USA,Tom Rogan,{'center': 1},1,2025-03-27,2025-03-27,1
+USA,Tonya Russell,{'leaning-left': 1},1,2020-12-17,2020-12-17,1
+Ireland,The Irish Times,{'center': 1},1,2023-11-24,2023-11-24,1
+USA,inquisitr,{'leaning-left': 1},1,2025-04-08,2025-04-08,1
