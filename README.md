@@ -82,7 +82,8 @@ SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 
 ```bash
 # Build and start all services
-docker-compose up --build
+docker compose build
+docker compose up -d
 ```
 
 Wait for all services to initialize. You should see:
