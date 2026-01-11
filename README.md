@@ -10,6 +10,7 @@ A comprehensive AI-powered news bias detection system built with microservices a
 - [Quick Start](#-quick-start)
 - [Configuration](#-configuration)
 - [Services Overview](#-services-overview)
+- [Telegram Bot Setup](#telegram-bot-port-8020)
 - [API Documentation](#-api-documentation)
 
 ## ✨ Features
@@ -67,15 +68,38 @@ cd FYP-Solution-Archi-TECH-Bias-News-Detection
 
 ### 2. Environment Configuration
 
-Create a `.env` file in the `backend/` directory with the following credentials:
+Create environment files with the following credentials:
 
-#### Required Environment Variables
+#### Root `.env` File (for Telegram Bot)
+
+Create `.env` in the project root:
+
+```env
+# Telegram Bot Configuration
+TELEBOT_TOKEN=your_telegram_bot_token_here
+APPLICATION_URL=http://application:8010
+WEB_APP_URL=http://localhost:5173
+```
+
+**Getting Your Telegram Bot Token:**
+1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` and follow instructions
+3. Choose a name (e.g., "FYP News Analyzer")
+4. Choose a username (must end with `_bot`, e.g., `@fyp_news_bot`)
+5. Copy the token provided (format: `123456789:ABCdefGHI...`)
+6. Paste it as `TELEBOT_TOKEN` in your `.env`
+
+#### Backend `.env` File (for Analysis Services)
+
+Create `.env` in the `backend/` directory:
 
 ```env
 # Supabase Configuration (Database)
-SUPABASE_URL=https://vlykqnkkmtjfjjqncchb.supabase.co
-SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+
+# LLM API Keys (for fact-checking and analysis)
 API_KEY=pplx-xxxxxxxxxxxxx                    # Perplexity API Key (optional, for alternative LLM)
 API_KEYDS=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxx     # Groq API Key (REQUIRED for fact-checking)
 
@@ -185,6 +209,23 @@ Verifies claims and cross-references information.
 
 ### Telegram Bot (Port 8020)
 Provides a conversational interface for news analysis via Telegram.
+
+**Quick Setup:**
+1. Get bot token from [@BotFather](https://t.me/BotFather) on Telegram
+2. Add to root `.env`:
+   ```env
+   TELEBOT_TOKEN=your_bot_token_here
+   APPLICATION_URL=http://application:8010
+   WEB_APP_URL=http://localhost:5173
+   ```
+3. Rebuild: `docker-compose up -d --build telebot`
+4. Test: Send `/start` to your bot
+
+**Features:**
+- Submit article URLs for instant analysis
+- Get complete results: sentiment, emotion, propaganda, fact-checking
+- Receive formatted summaries with percentages
+- Direct links to detailed web reports
 
 ## 📚 API Documentation
 
