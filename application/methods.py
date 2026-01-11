@@ -5,8 +5,11 @@ import requests
 from flask import abort 
 
 import pprint
+import logging
 
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -99,50 +102,59 @@ def create_news (url, title, content):
     return news
 
 def get_sentiment (text, url, title: str):
+    try:
+        query_url = vars.sentiment_url + "/sentiment/analyze_sentiment"
+        data = {"text": text}
 
-    query_url = vars.sentiment_url + "/sentiment/analyze_sentiment"
-    data = {"text": text}
+        response = requests.post(query_url, json=data, timeout=30)
+        sentiment = response.json()
 
-    response = requests.post(query_url, json=data)
-    sentiment = response.json()
+        # save to db
+        db_url = vars.database_url + "/database/sentiment/"
+        data = {"url": url, "sentiment_result": sentiment["sentiment_result"]}
 
-    # save to db
-    db_url = vars.database_url + "/database/sentiment/"
-    data = {"url": url, "sentiment_result": sentiment["sentiment_result"]}
+        response = requests.put(db_url, json=data, timeout=30)
 
-    response = requests.put(db_url, json=data)
-
-    return sentiment
+        return sentiment
+    except Exception as e:
+        logger.error(f"[app] Sentiment service error: {e}")
+        return {}
 
 def get_emotion (text, url, title: str):
-    
-    query_url = vars.emotion_url + "/emotion/analyze_emotion"
-    data = {"text": text}
+    try:
+        query_url = vars.emotion_url + "/emotion/analyze_emotion"
+        data = {"text": text}
 
-    response = requests.post(query_url, json=data)
-    emotion = response.json()
+        response = requests.post(query_url, json=data, timeout=30)
+        emotion = response.json()
 
-    # save to db
-    db_url = vars.database_url + "/database/emotion/"
-    data = {"url": url, "emotion_result": emotion["emotion_result"]}
-    response = requests.put(db_url, json=data)
+        # save to db
+        db_url = vars.database_url + "/database/emotion/"
+        data = {"url": url, "emotion_result": emotion["emotion_result"]}
+        response = requests.put(db_url, json=data, timeout=30)
 
-    return emotion
+        return emotion
+    except Exception as e:
+        logger.error(f"[app] Emotion service error: {e}")
+        return {}
 
 def get_propaganda (text, url, title: str):
-    
-    query_url = vars.propaganda_url + "/propaganda/analyze_propaganda"
-    data = {"text": text}
+    try:
+        query_url = vars.propaganda_url + "/propaganda/analyze_propaganda"
+        data = {"text": text}
 
-    response = requests.post(query_url, json=data)
-    propaganda = response.json()
+        response = requests.post(query_url, json=data, timeout=30)
+        propaganda = response.json()
 
-    # save to db
-    db_url = vars.database_url + "/database/propaganda/"
-    data = {"url": url, "propaganda_result": propaganda["propaganda_result"]}
-    response = requests.put(db_url, json=data)
+        # save to db
+        db_url = vars.database_url + "/database/propaganda/"
+        data = {"url": url, "propaganda_result": propaganda["propaganda_result"]}
+        response = requests.put(db_url, json=data, timeout=30)
 
-    return propaganda
+        return propaganda
+    except Exception as e:
+        logger.error(f"[app] Propaganda service error: {e}")
+        return {}
 
 def get_fact_check(article_content: str, url: str, title: str ):
     query_url = vars.factcheck_url + "/factcheck/predict/fact-check"
@@ -151,18 +163,32 @@ def get_fact_check(article_content: str, url: str, title: str ):
         "content": article_content
     }
     
-    response = requests.post(query_url, json=payload)
-    response_json = response.json()
-    data = response_json["response"]
+    try:
+        response = requests.post(query_url, json=payload)
+        response_json = response.json()
+        
+        # Check if response contains the expected data
+        if "response" not in response_json:
+            # Return empty list if API keys are not configured
+            print(f"[app] Fact-check service error: {response_json}")
+            return []
+            
+        data = response_json["response"]
+        sanitized_data = sanitize_factcheck_data(data)
+    except Exception as e:
+        print(f"[app] Error calling fact-check service: {e}")
+        return []
 
-    sanitized_data = sanitize_factcheck_data(data)
     # print ("[app] Fact check response: ", sanitized_data)
 
     db_url = vars.database_url + "/database/factcheck/"
     db_payload = {"url": url, "factcheck_result": sanitized_data}
     
     # save to db
-    response = requests.put(db_url, json=db_payload)
+    try:
+        response = requests.put(db_url, json=db_payload)
+    except Exception as e:
+        print(f"[app] Error saving fact-check to database: {e}")
 
     return sanitized_data
     
@@ -172,14 +198,28 @@ def get_summarise(article_content: str, url: str, title: str) -> Dict:
         "content": article_content
     }
     
-    response = requests.post(query_url, json=payload)
-    response_json = response.json()
-    data = response_json["response"]
+    try:
+        response = requests.post(query_url, json=payload)
+        response_json = response.json()
+        
+        # Check if response contains the expected data
+        if "response" not in response_json:
+            # Return empty string if API keys are not configured
+            print(f"[app] Summarise service error: {response_json}")
+            return ""
+            
+        data = response_json["response"]
+    except Exception as e:
+        print(f"[app] Error calling summarise service: {e}")
+        return ""
     
     db_url = vars.database_url + "/database/summarise/"
     db_payload = {"url": url, "summarise_result": data}
     
-    response = requests.put(db_url, json=db_payload)
+    try:
+        response = requests.put(db_url, json=db_payload)
+    except Exception as e:
+        print(f"[app] Error saving summarise to database: {e}")
     
     return data
 
@@ -194,14 +234,28 @@ def get_data_summary(text, url, title: str):
         "summarise_result": data["summarise_result"]
     }
 
-    response = requests.post(query_url, json=payload)
-    response_json = response.json()
-    data = response_json["response"]
+    try:
+        response = requests.post(query_url, json=payload)
+        response_json = response.json()
+        
+        # Check if response contains the expected data
+        if "response" not in response_json:
+            # Return empty string if API keys are not configured
+            print(f"[app] Data summary service error: {response_json}")
+            return ""
+            
+        data = response_json["response"]
+    except Exception as e:
+        print(f"[app] Error calling data summary service: {e}")
+        return ""
 
     db_url = vars.database_url + "/database/ModelDataSummary/"
     db_payload = {"url": url, "data_summary": data}
 
-    response = requests.put(db_url, json=db_payload)
+    try:
+        response = requests.put(db_url, json=db_payload)
+    except Exception as e:
+        print(f"[app] Error saving data summary to database: {e}")
 
     return data
 

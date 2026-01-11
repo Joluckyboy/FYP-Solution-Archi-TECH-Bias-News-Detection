@@ -55,12 +55,14 @@ async def predict(json_payload: DataPayload):
         statement_list = await getStatement(json_payload)
         logger.info(f"[Factcheck Service] Statements extracted: {statement_list}")
         if not statement_list:
-            raise HTTPException(status_code=400, detail="No statements found in the payload.")
+            logger.warning("[Factcheck Service] No statements found; returning empty list.")
+            return {"response": []}
         
         facts = await fact_check(statement_list, original_article_title)
         logger.info(f"[Factcheck Service] Facts extracted: {facts}")
         if not facts:
-            raise HTTPException(status_code=400, detail="No facts found in the payload.")
+            logger.warning("[Factcheck Service] No facts returned; returning empty list.")
+            return {"response": []}
         
         return {"response": facts}
         

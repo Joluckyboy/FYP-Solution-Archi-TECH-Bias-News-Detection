@@ -43,6 +43,8 @@ services:
       context: ./backend/fact-check
     ports:
       - "8016:8016"
+    env_file:
+      - ./backend/.env
     environment:
       - ENV=production
     restart: always

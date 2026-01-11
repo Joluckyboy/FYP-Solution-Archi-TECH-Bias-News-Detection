@@ -19,7 +19,7 @@ def processStatement(content):
 
 async def summarise(text: str) -> str:
     try:
-        MODEL = "deepseek-r1-distill-llama-70b"
+        MODEL = "llama-3.3-70b-versatile"
         payload = {
             "model": f"{MODEL}",
             "messages": [
@@ -34,16 +34,22 @@ async def summarise(text: str) -> str:
             ]
         }
         
-        response_data = requests.post(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=payload).json()
+        response = requests.post(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=payload)
+        print(f"Summarise API status: {response.status_code}")
+        if response.status_code != 200:
+            print(f"Summarise API error response: {response.text}")
+            raise Exception(f"API returned status {response.status_code}: {response.text}")
+        
+        response_data = response.json()
         content = response_data['choices'][0]['message']['content']
-        cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-        return cleaned_content
+        return content.strip()
     except Exception as e:
+        print(f"⚠️ Summarise exception: {str(e)}")
         raise Exception(f"Failed to summarise article: {str(e)}")
     
 async def summarise_data (json_payload: ModelDataPayload):
     try:
-        MODEL = "deepseek-r1-distill-llama-70b"
+        MODEL = "llama-3.3-70b-versatile"
         payload = {
             "model": f"{MODEL}",
             "messages": [
@@ -61,15 +67,19 @@ async def summarise_data (json_payload: ModelDataPayload):
                 }
             ],
             "response_format": {
-                "type": "json_object",
-                "json_schema": {"schema": ModelDataFormat.model_json_schema()}
+                "type": "json_object"
             }
         }
 
-        response_data = requests.post(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=payload).json()
+        response = requests.post(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=payload)
+        print(f"Summarise data API status: {response.status_code}")
+        if response.status_code != 200:
+            print(f"Summarise data API error response: {response.text}")
+            raise Exception(f"API returned status {response.status_code}: {response.text}")
+        
+        response_data = response.json()
         content = response_data['choices'][0]['message']['content']
-        cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-        return cleaned_content
+        return content.strip()
     except Exception as e:
         raise Exception(f"Failed to summarise data: {str(e)}")
 
@@ -78,9 +88,9 @@ async def getStatement(json_payload: DataPayload):
     try:
         content = json_payload.content
         # model = "sonar"
-        model = "deepseek-r1-distill-llama-70b"
+        model = "llama-3.3-70b-versatile"
         if Config.MODEL == "deepseek":
-            model = "deepseek-r1-distill-llama-70b"
+            model = "llama-3.3-70b-versatile"
         
         if model == "sonar":
             payload = {
@@ -115,25 +125,30 @@ async def getStatement(json_payload: DataPayload):
                 ],
                 "model": f"{model}",
                 "temperature": 0,
-                "stream": False,
-                "reasoning_format": "raw",
+                "stream": False
             }
         
         CHATURL = Config.PERPLEXITY_URL if model == "sonar" else Config.DEEPSEEK_URL
         HEADER = Config.HEADERS if model == "sonar" else Config.HEADERS_DS
         
-        response_data = requests.post(CHATURL, headers=HEADER, json=payload).json()
+        response = requests.post(CHATURL, headers=HEADER, json=payload)
+        print(f"GetStatement API status: {response.status_code}")
+        if response.status_code != 200:
+            print(f"GetStatement API error response: {response.text}")
+            raise Exception(f"API returned status {response.status_code}: {response.text}")
+            
+        response_data = response.json()
         if model == "sonar":
             raw_content = response_data["choices"][0]["message"]["content"]
             statements_list = processStatement(raw_content)
             return statements_list
         else:
             content = response_data['choices'][0]['message']['content']
-            cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-            statements_list = processStatement(cleaned_content)
+            statements_list = processStatement(content.strip())
             return statements_list
             
     except Exception as e:
+        print(f"⚠️ GetStatement exception: {str(e)}")
         raise Exception(f"Failed to retrieve statements while processing article: {str(e)}")
 
 async def fact_check(statements, original_article):
@@ -159,7 +174,14 @@ async def fact_check(statements, original_article):
                     "json_schema": {"schema": PredictFormat.model_json_schema()},
                 },
             }
-            response_data = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload).json() 
+            response = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload)
+            print(f"Fact-check API status for statement '{statement[:50]}...': {response.status_code}")
+            if response.status_code != 200:
+                print(f"Fact-check API error response: {response.text}")
+                print(f"⚠️ Skipping statement due to API error")
+                continue
+                
+            response_data = response.json() 
             raw_content = response_data["choices"][0]["message"]["content"]
             cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
             statement_json = json.loads(cleaned_content)

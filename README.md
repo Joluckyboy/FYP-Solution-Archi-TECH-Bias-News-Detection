@@ -67,16 +67,51 @@ cd FYP-Solution-Archi-TECH-Bias-News-Detection
 
 ### 2. Environment Configuration
 
-Create a `.env` file in the `backend/` directory with your Supabase credentials:
+Create a `.env` file in the `backend/` directory with the following credentials:
+
+#### Required Environment Variables
 
 ```env
-# Supabase Configuration
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+# Supabase Configuration (Database)
+SUPABASE_URL=https://vlykqnkkmtjfjjqncchb.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+API_KEY=pplx-xxxxxxxxxxxxx                    # Perplexity API Key (optional, for alternative LLM)
+API_KEYDS=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxx     # Groq API Key (REQUIRED for fact-checking)
+
+# Model Configuration
+MODEL=deepseek                                # Uses Groq API with Llama model (deepseek is a label)
 ```
 
-> 💡 **Tip:** Get these credentials from your [Supabase Dashboard](https://app.supabase.com) → Settings → API
+#### Variable Details
+
+| Variable | Purpose | Source | Status |
+|----------|---------|--------|--------|
+| `SUPABASE_URL` | Database endpoint | [Supabase Dashboard](https://app.supabase.com) → Settings → API | ✅ Required |
+| `SUPABASE_KEY` | Anonymous key for client authentication | Supabase Dashboard → API | ✅ Required |
+| `SUPABASE_SERVICE_KEY` | Service role key for admin operations | Supabase Dashboard → API | ✅ Required |
+| `API_KEYDS` | Groq API key for LLM inference (fact-checking) | [Groq Console](https://console.groq.com) | ✅ **CRITICAL** |
+| `API_KEY` | Perplexity API key (alternative LLM) | [Perplexity API](https://www.perplexity.ai/) | ⚠️ Optional |
+| `MODEL` | Model identifier | Set to `deepseek` | ✅ Fixed |
+
+#### Getting Your API Keys
+
+1. **Supabase Keys:**
+   - Go to https://app.supabase.com
+   - Select your project
+   - Navigate to Settings → API
+   - Copy `Project URL`, `Anon Key`, and `Service Role Key`
+
+2. **Groq API Key (ESSENTIAL):**
+   - Visit https://console.groq.com
+   - Create an account or sign in
+   - Go to API Keys section
+   - Generate a new API key
+   - Paste it as `API_KEYDS` in your `.env`
+
+3. **Perplexity API Key (Optional):**
+   - Visit https://www.perplexity.ai/ (if needed)
+   - This is optional; Groq key is the primary one
 
 ### 3. Start All Services
 
