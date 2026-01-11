@@ -244,8 +244,7 @@ const ResultsPage = () => {
 								</CardHeader>
 
 								<Separator className="mb-4" />
-								{Array.isArray(data.factcheck_result) &&
-								data.factcheck_result.length === 0 ? (
+								{!Array.isArray(data.factcheck_result) || data.factcheck_result.length === 0 ? (
 									<CardContent>
 										<div className="text-center flex flex-col items-center">
 											<br />

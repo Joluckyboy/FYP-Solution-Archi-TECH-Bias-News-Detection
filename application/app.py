@@ -73,7 +73,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -219,8 +224,10 @@ def process_url(url: str, return_news: bool = False, background: bool = True):
     except Exception as error:
         logger.error(f"Error processing {url}: {error}")
         if return_news:
-            # return {"error": str(error)}
-            if str(error.description) == "Invalid URL format":
+            # Check if the error is an HTTPException with a description
+            if hasattr(error, 'description') and str(error.description) == "Invalid URL format":
                 raise HTTPException(status_code=400, detail="Invalid URL")
             else:
-                raise HTTPException(status_code=500, detail="Internal Server Error")
+                # Handle other errors including ConnectionError
+                error_message = str(error) if str(error) else "Internal Server Error"
+                raise HTTPException(status_code=500, detail=error_message)

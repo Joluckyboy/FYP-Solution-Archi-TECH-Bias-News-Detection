@@ -63,6 +63,19 @@ services:
       - "8010:8010"
     environment:
       - ENV=production
+      - DATABASE_URL=http://database:8011
+      - SENTIMENT_URL=http://sentiment:8012
+      - EMOTION_URL=http://emotion:8013
+      - PROPAGANDA_URL=http://propaganda:8014
+      - SCRAPER_URL=http://scraper:8015
+      - FACTCHECK_URL=http://factcheck:8016
+    depends_on:
+      - database
+      - sentiment
+      - emotion
+      - propaganda
+      - scraper
+      - factcheck
     restart: always
 
   telebot:
