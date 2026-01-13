@@ -2,6 +2,9 @@
 
 A comprehensive AI-powered news bias detection system built with microservices architecture, featuring sentiment analysis, emotion detection, propaganda identification, and fact-checking capabilities.
 
+![CI Pipeline](https://github.com/<your-org>/<your-repo>/actions/workflows/ci.yml/badge.svg)
+![Deploy](https://github.com/<your-org>/<your-repo>/actions/workflows/deploy.yml/badge.svg)
+
 ## 📋 Table of Contents
 
 - [Features](#-features)
