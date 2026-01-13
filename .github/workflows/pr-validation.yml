@@ -18,10 +18,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           types: |
-            feat
+            feature
             fix
             docs
             refactor
+            test
           requireScope: false
 
       - name: Check for merge conflicts
