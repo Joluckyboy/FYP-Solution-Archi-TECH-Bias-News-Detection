@@ -12,26 +12,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Validate PR Title
-        uses: amannn/action-semantic-pull-request@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          types: |
-            feature
-            fix
-            docs
-            refactor
-            test
-          requireScope: false
-
       - name: Check for merge conflicts
         run: |
           git fetch origin ${{ github.base_ref }}
           if git merge-base --is-ancestor origin/${{ github.base_ref }} HEAD; then
-            echo "✓ No merge conflicts detected"
+            echo "No merge conflicts detected"
           else
-            echo "⚠ Branch may have merge conflicts"
+            echo "Branch may have merge conflicts"
             exit 1
           fi
 

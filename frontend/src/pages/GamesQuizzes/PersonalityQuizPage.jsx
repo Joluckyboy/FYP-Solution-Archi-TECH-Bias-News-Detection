@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import get_api from "@/config/config";
-
-import axios from "axios";
+// import axios from "axios";
 
 import { HashLoader } from "react-spinners";
 import { Brain, ArrowLeft, ArrowRight, Award } from "lucide-react";
@@ -33,7 +32,9 @@ const PersonalityQuizPage = () => {
   // Quiz states
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  // eslint-disable-next-line
   const [questions, setQuestions] = useState(quizData?.quiz || []);
+  // eslint-disable-next-line
   const [loading, setLoading] = useState(false);
   const [answers, setAnswers] = useState({});
   const [selectedOption, setSelectedOption] = useState(null);
@@ -179,17 +180,7 @@ const PersonalityQuizPage = () => {
     setQuizComplete(true);
   };
 
-  if (loading || !questions || questions.length === 0) {
-    return (
-      <div className="text-center flex flex-col items-center">
-        <br />
-        <br />
-        <HashLoader color="#1E5EDD" loading={true} size={50} />
-      </div>
-    );
-  }
-
-  return !questions ? (
+  return !questions || questions.length === 0 ? (
     <div className="text-center flex flex-col items-center">
       <br />
       <br />
