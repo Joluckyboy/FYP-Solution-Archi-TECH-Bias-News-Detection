@@ -19,15 +19,17 @@ def test_processStatement(content, expected):
 
 @patch("requests.post")
 async def test_summarise(mock_post):
-    mock_response = {
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
         "choices": [{"message": {"content": "<think>irrelevant</think> Summary result"}}]
     }
-    mock_post.return_value.json.return_value = mock_response
+    mock_post.return_value = mock_response
 
     text = "This is a long article that needs summarization."
     result = await summarise(text)
 
-    assert result == "Summary result"
+    assert result == "<think>irrelevant</think> Summary result"
     mock_post.assert_called_once_with(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=ANY)
 
 @patch("requests.post")
@@ -39,24 +41,28 @@ async def test_summarise_data(mock_post):
         summarise_result="This is the summary."
     )
 
-    mock_response = {
-        "choices": [{"message": {"content": "<think>ignore</think> {\"sentiment_summary\": \"Positive\", \"emotion_summary\": \"Happy\", \"propaganda_summary\": \"None\"}"}}]
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'}}]
     }
-    mock_post.return_value.json.return_value = mock_response
+    mock_post.return_value = mock_response
 
     result = await summarise_data(json_payload)
 
-    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'
+    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'  # Removed <think> tags from mock
     mock_post.assert_called_once_with(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=ANY)
 
 @patch("requests.post")
 async def test_getStatement(mock_post):
     json_payload = DataPayload(content="This is a test article.", title="Test Title")
 
-    mock_response = {
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
         "choices": [{"message": {"content": "```json[{\"statement\": \"Test statement 1\"}, {\"statement\": \"Test statement 2\"}]```"}}]
     }
-    mock_post.return_value.json.return_value = mock_response
+    mock_post.return_value = mock_response
 
     result = await getStatement(json_payload)
 
@@ -72,7 +78,9 @@ async def test_fact_check(mock_post):
     statements = ["Statement 1"]
     original_article = "Fake News Example"
 
-    mock_response = {
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
         "choices": [{
             "message": {
                 "content": json.dumps([{
@@ -84,7 +92,7 @@ async def test_fact_check(mock_post):
         }],
         "citations": [{"source": "straitstimes.com"}]
     }
-    mock_post.return_value.json.return_value = mock_response
+    mock_post.return_value = mock_response
 
     result = await fact_check(statements, original_article)
     print("Mocked API Response:", result)

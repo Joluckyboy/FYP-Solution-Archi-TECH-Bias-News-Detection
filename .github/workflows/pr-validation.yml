@@ -15,7 +15,7 @@ jobs:
       - name: Check for merge conflicts
         run: |
           git fetch origin ${{ github.base_ref }}
-          if git merge-base --is-ancestor origin/${{ github.base_ref }} HEAD; then
+          if git merge-base --is-ancestor HEAD origin/${{ github.base_ref }}; then
             echo "No merge conflicts detected"
           else
             echo "Branch may have merge conflicts"
