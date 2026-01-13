@@ -113,7 +113,9 @@ def new_query(input: URLwithBG):
     """
     Processes a news article URL, retrieving or extracting news data.
     """
-    return process_url(input.url, return_news=True, background=input.background)
+    if input.url is None:
+        raise HTTPException(status_code=400, detail="URL is required")
+    return process_url(input.url, return_news=True, background=input.background if input.background is not None else True)
 
 @app.get("/application/retrieve_exisiting")
 async def retrieve_query(news_id: str):
@@ -144,7 +146,7 @@ async def stream_news(news_id: str):
     return StreamingResponse(event_stream(news_id), media_type="text/event-stream")
 
 @app.get("/application/get_all_quiz")
-async def get_all_quiz(question_type: str = None):
+async def get_all_quiz(question_type: str = Query(None, description="Type of questions")):
     quiz = methods.get_all_quiz(question_type=question_type)
     return quiz
 

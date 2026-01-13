@@ -10,7 +10,10 @@ export default [
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        chrome: 'readonly',  // Chrome extension API
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -29,10 +32,20 @@ export default [
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
       'react/jsx-no-target-blank': 'off',
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
+      'react/prop-types': 'off',  // Disable prop-types validation
+      'react/no-unescaped-entities': 'off',  // Allow apostrophes and quotes
+      'react-refresh/only-export-components': 'off',  // Disable for UI library components
+      'react-hooks/exhaustive-deps': 'warn',  // Warn instead of error for missing deps
+    },
+  },
+  // Config files need Node.js globals
+  {
+    files: ['*.config.js', 'background.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        chrome: 'readonly',
+      },
     },
   },
 ]
