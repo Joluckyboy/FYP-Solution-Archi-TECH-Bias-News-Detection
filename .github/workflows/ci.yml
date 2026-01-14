@@ -53,6 +53,7 @@ jobs:
           PYTHONPATH: ${{ matrix.service.path }}
           API_KEY: ${{ secrets.API_KEY }}
           API_KEYDS: ${{ secrets.API_KEYDS }}
+          MODEL: ${{ secrets.MODEL }}
         run: |
           if [ -d tests ]; then
             pytest tests/ -v --cov=. --cov-report=xml --cov-report=term
