@@ -51,7 +51,7 @@ feedfinder2==0.0.4
 feedparser==6.0.11
 filelock==3.17.0
 Flask==2.2.5
-Flask-AppBuilder==4.5.3
+Flask-AppBuilder==4.8.1
 Flask-Babel==2.0.0
 Flask-Caching==2.3.1
 Flask-Cors==4.0.0
