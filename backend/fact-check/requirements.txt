@@ -49,7 +49,7 @@ exceptiongroup==1.2.2
 fastapi==0.115.6
 feedfinder2==0.0.4
 feedparser==6.0.11
-filelock==3.17.0
+filelock==3.20.3
 Flask==2.2.5
 Flask-AppBuilder==4.5.3
 Flask-Babel==2.0.0
