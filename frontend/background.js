@@ -17,31 +17,28 @@ chrome.runtime.onInstalled.addListener(() => {
 console.log("Background script loaded");
 
 // Gets the tab URL when you switch tabs
-chrome.tabs.onActivated.addListener( function(activeInfo){
+chrome.tabs.onActivated.addListener( function(){
     (async () => {
         // see the note below on how to choose currentWindow or lastFocusedWindow
         const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
         // console.log(tab.id);
         tabUrl = tab.url;
-        tabID = tab.id;
     })();
     
 });
 
 // Gets the tab URL when you go to a new link in the same tab
-chrome.tabs.onUpdated.addListener( function(activeInfo){
+chrome.tabs.onUpdated.addListener( function(){
     (async () => {
         // see the note below on how to choose currentWindow or lastFocusedWindow
         const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
         // console.log(tab.id);
         tabUrl = tab.url;
-        tabID = tab.id;
     })();
     
 });
 
 let tabUrl = null;
-let tabID = null;
 
 // Listen for messages from your React component and send back the tabUrl
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

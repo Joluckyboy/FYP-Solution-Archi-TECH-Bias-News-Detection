@@ -1,7 +1,7 @@
 import vars as vars
 from typing import Dict, List, Any
 
-import requests
+import requests  # type: ignore
 from flask import abort 
 
 import pprint
@@ -206,12 +206,12 @@ def get_summarise(article_content: str, url: str, title: str) -> Dict:
         if "response" not in response_json:
             # Return empty string if API keys are not configured
             print(f"[app] Summarise service error: {response_json}")
-            return ""
+            return {}
             
         data = response_json["response"]
     except Exception as e:
         print(f"[app] Error calling summarise service: {e}")
-        return ""
+        return {}
     
     db_url = vars.database_url + "/database/summarise/"
     db_payload = {"url": url, "summarise_result": data}
@@ -270,7 +270,7 @@ def get_latest_urls(max_num: int) -> Dict:
     
     return deserialised_response
 
-def get_all_quiz(question_type: str = None) :
+def get_all_quiz(question_type: str | None = None):
     query_url = vars.database_url + "/database/quiz/getAll"
     payload = {
         "question_type": question_type
