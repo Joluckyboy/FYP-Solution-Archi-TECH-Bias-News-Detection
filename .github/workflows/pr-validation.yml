@@ -5,23 +5,6 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  pr-checks:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Check for merge conflicts
-        run: |
-          git fetch origin ${{ github.base_ref }}
-          if git merge-base --is-ancestor HEAD origin/${{ github.base_ref }}; then
-            echo "No merge conflicts detected"
-          else
-            echo "Branch may have merge conflicts"
-            exit 1
-          fi
-
   security-scan:
     runs-on: ubuntu-latest
 
