@@ -2,7 +2,7 @@
 
 A comprehensive AI-powered news bias detection system built with microservices architecture, featuring sentiment analysis, emotion detection, propaganda identification, and fact-checking capabilities.
 
-![CI Pipeline Status](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/blob/main/.github/workflows/ci.yml)
+[![CI status](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml)
 
 ## 📋 Table of Contents
 
@@ -10,6 +10,7 @@ A comprehensive AI-powered news bias detection system built with microservices a
 - [Architecture](#-architecture)
 - [Prerequisites](#-prerequisites)
 - [Quick Start](#-quick-start)
+- [Chrome Extension Setup](#-chrome-extension-setup)
 - [Configuration](#-configuration)
 - [Services Overview](#-services-overview)
 - [Telegram Bot Setup](#telegram-bot-port-8020)
@@ -164,6 +165,77 @@ Wait for all services to initialize. You should see:
 | 🕷️ **Scraper API** | http://localhost:8015/docs | Web scraping service |
 | ✅ **Fact-Check API** | http://localhost:8016/docs | Fact-checking service |
 
+## 🧩 Chrome Extension Setup
+
+The FYP system includes a **Chrome extension** for analyzing news directly from your browser.
+
+### Installation
+
+#### 1. Build the Extension
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+This generates the `dist` folder with all compiled extension files.
+
+#### 2. Load Extension in Chrome
+
+1. Open Chrome and navigate to: **`chrome://extensions/`**
+2. Enable **"Developer mode"** (toggle switch in top right corner)
+3. Click **"Load unpacked"** button
+4. Navigate to and select: `frontend/dist` folder
+5. Click **"Select Folder"**
+
+✅ The extension should now appear in your Chrome toolbar!
+
+#### 3. Using the Extension
+
+- **Click the extension icon** in your Chrome toolbar to open the side panel
+- The extension displays:
+  - Quiz system for media literacy
+  - Bias detection analysis
+  - Real-time article analysis
+- **Current URL is automatically captured** when you switch tabs
+
+### Development Workflow
+
+When you make code changes:
+
+```bash
+# Rebuild the extension
+npm run build
+
+# Then reload the extension:
+# 1. Go to chrome://extensions/
+# 2. Click the Reload icon (⟳) on the extension
+```
+
+### ⚠️ Important Notes
+
+- **DO NOT use `npm run dev`** - The dev server causes WebSocket errors with the CRX plugin
+- Always use **`npm run build`** and load the `dist` folder
+- After building, reload the extension in Chrome to see changes
+
+### Extension Features
+
+- 📚 **Quiz Generation** - Auto-generated media literacy quizzes
+- 🔍 **Bias Detection** - Analyze current article for bias
+- 💾 **Quiz Data** - Store and track quiz responses
+- 🎯 **Real-time Analysis** - Instant analysis of web content
+- 📊 **Side Panel UI** - Seamless Chrome integration
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Extension shows white screen | Run `npm run build` and reload extension in Chrome |
+| Extension doesn't appear | Verify you loaded the `dist/` folder (not `frontend/`) |
+| Extension not responding | Check browser console (F12) for errors; rebuild and reload |
+| "Cannot interact with extension" | Ensure services are running on correct ports |
+
 ## ⚙️ Configuration
 
 ### Frontend Configuration
@@ -180,6 +252,8 @@ The app uses React Router with v7 future flags enabled for better performance:
 ### Chrome Extension Support
 
 The application can run as both a web app and a Chrome extension. Extension-specific features are automatically disabled when running in browser mode.
+
+---
 
 ## 🔍 Services Overview
 
@@ -307,7 +381,7 @@ This project is part of a Final Year Project (FYP) for academic purposes.
 
 ## 👥 Team
 
-**Archi-TECH Team**
+**Solution Archi TECH Team**
 
 ---
 

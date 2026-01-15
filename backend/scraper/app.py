@@ -208,12 +208,31 @@ class ArticleScraper(Resource):
 def straits(url):
     res = requests.get(url)
     soup = bs(res.content, "html.parser")
-    headline = soup.find("div", class_="headline-container").text
-    body = "".join([para.text for para in soup.find_all("p", "paragraph-base")])
+    
+    # Try multiple selectors for headline (Straits Times changes their HTML structure)
+    headline_elem = (
+        soup.find("div", class_="headline-container") or
+        soup.find("h1", class_="headline") or
+        soup.find("h1") or
+        soup.find("div", class_="article-headline")
+    )
+    headline = headline_elem.text if headline_elem else "Headline not found"
+    
+    # Try multiple selectors for body paragraphs
+    body_paras = soup.find_all("p", "paragraph-base")
+    if not body_paras:
+        body_paras = soup.find_all("p", class_="article-content-p")
+    if not body_paras:
+        body_paras = soup.find_all("p")
+    body = "".join([para.text for para in body_paras])
+    
+    # Try multiple selectors for publish date
     if soup.find("button", class_="updated-timestamp"):
         publish_date = soup.find("button", class_="updated-timestamp").text.replace("UPDATED ", "")
-    else:
+    elif soup.find("div", class_="font-primary text-xs uppercase block mt-2.5"):
         publish_date = soup.find("div", class_="font-primary text-xs uppercase block mt-2.5").text
+    else:
+        publish_date = "Date not found"
     
     return {
         "headline": headline.strip().replace("\n", " "),
