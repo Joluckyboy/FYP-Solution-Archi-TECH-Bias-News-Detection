@@ -24,3 +24,4 @@ web_url = os.getenv("WEB_APP_URL") or "http://localhost:5173"
 # web_url = os.getenv("WEB_APP_URL") or "https://chfwhitehats2024.games"
 
 telebot_token = os.getenv("TELEBOT_TOKEN") or "YOUR_TELEGRAM"
+tinyurl_token = os.getenv("TINYURL_API_TOKEN")

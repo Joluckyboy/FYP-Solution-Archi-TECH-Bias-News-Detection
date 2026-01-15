@@ -1,49 +1,71 @@
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-import pyshorteners
-
-import requests
+from telegram import Update
+from telegram.ext import ContextTypes
+import requests  # type: ignore
 import vars as vars
 
-TINY_URL = pyshorteners.Shortener().tinyurl.short
 
-##########################
-##########################
-##########################
-# Define a few command handlers. These usually take the two arguments update and
-# context.
+def shorten_url(url: str) -> str:
+    """Shorten URL using TinyURL API v3"""
+    if not vars.tinyurl_token:
+        return url
+
+    try:
+        response = requests.post(
+            "https://api.tinyurl.com/create",
+            headers={
+                "Authorization": f"Bearer {vars.tinyurl_token}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "url": url,
+                "domain": "tinyurl.com"
+            },
+            timeout=5
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("data", {}).get("tiny_url", url)
+        else:
+            return url
+    except Exception:
+        return url
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
-    await update.message.reply_html(
-        rf"Hi {user.mention_html()}!",
-    )
+    if update.message and user:
+        await update.message.reply_html(
+            rf"Hi {user.mention_html()}! Send me a news article URL and I will analyze it for you!",
+        )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text("Help!")
+    if update.message:
+        await update.message.reply_text("Help!")
 
-
-##########################
-##########################
-##########################
 
 async def non_url_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
-    await update.message.reply_text("Please only send URLs")
+    if update.message:
+        await update.message.reply_text("Please only send URLs")
 
 # Function to handle messages
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # send message to user "processing..."
+    if not update.message:
+        return
+
     await update.message.reply_text("Processing...")
-    await update.message.reply_text("This might take a few mintues! Unmute us and we will let you know when the results are ready!")
+    await update.message.reply_text("This might take a few minutes! Unmute us and we will let you know when the results are ready!")
 
     url = update.message.text
 
     data = {"url": url, "background": False}
     try:
-        response = requests.post(vars.application_url + "/application/new_query", json=data)
+        response = requests.post(
+            vars.application_url + "/application/new_query", json=data)
         if response.status_code == 400 and ('detail' in response.json().keys()):
             await update.message.reply_text("SORRY! I am unable to process this URL. Ensure that it is not empty and is a URL from a valid news site. If this keeps happening, try again later!")
             return
@@ -54,21 +76,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     results = response.json()
     # pprint.pprint(results)
-    news_id = results.get('id', 'No ID available')  if results.get('id') else 'No ID available'
-    title = results.get('title', 'No title available') if results.get('title') else 'No title available'
-    sentiment_result = results.get('sentiment_result', {}) if results.get('sentiment_result') else {}
-    emotion_result = results.get('emotion_result', {}).get('weighted_avg', {}) if results.get('emotion_result') else {}
-    propaganda_result = results.get('propaganda_result', {}).get('propaganda_probability', 0) if results.get('propaganda_result') else 0
-    factcheck_result = results.get('factcheck_result') if results.get('factcheck_result') else []
-    summarise_result = results.get("summarise_result") if results.get("summarise_result") else "No summary available"
-
+    news_id = results.get('id', 'No ID available') if results.get(
+        'id') else 'No ID available'
+    title = results.get('title', 'No title available') if results.get(
+        'title') else 'No title available'
+    sentiment_result = results.get(
+        'sentiment_result', {}) if results.get('sentiment_result') else {}
+    emotion_result = results.get('emotion_result', {}).get(
+        'weighted_avg', {}) if results.get('emotion_result') else {}
+    propaganda_result = results.get('propaganda_result', {}).get(
+        'propaganda_probability', 0) if results.get('propaganda_result') else 0
+    factcheck_result = results.get(
+        'factcheck_result') if results.get('factcheck_result') else []
+    summarise_result = results.get("summarise_result") if results.get(
+        "summarise_result") else "No summary available"
 
     # get the sentiment result with the highest score + keep the score
-    sentiment_result = dict(sorted(sentiment_result.items(), key=lambda item: item[1], reverse=True))
+    sentiment_result = dict(
+        sorted(sentiment_result.items(), key=lambda item: item[1], reverse=True))
 
     # get the top 5 emotions
-    emotion_result = sorted(emotion_result.items(), key=lambda x: x[1], reverse=True)[:5]    ##[('joy', 0.6033682227134705), ('sadness', 0.6033682227134705), ('fear', 0.6033682227134705), ('anger', 0.6033682227134705), ('surprise', 0.6033682227134705)]
-    
+    # [('joy', 0.6033682227134705), ('sadness', 0.6033682227134705), ('fear', 0.6033682227134705), ('anger', 0.6033682227134705), ('surprise', 0.6033682227134705)]
+    emotion_result = sorted(emotion_result.items(),
+                            key=lambda x: x[1], reverse=True)[:5]
+
     # get the fact-check result
     compiled_factcheck_result = {"total": 0}
     for factcheck in factcheck_result:
@@ -77,9 +108,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         compiled_factcheck_result[factcheck["correctness"]] += 1
         compiled_factcheck_result["total"] += 1
 
-    # print(compiled_factcheck_result)        ## {'total': 11, 'factual': 6, 'cannot be determined': 3, 'unfactual': 2}
-
-    redirect_url = TINY_URL(f"{vars.web_url}/#/results/{news_id}?redirect=true")
+    # Create the full URL and try to shorten it
+    full_url = f"{vars.web_url}/#/results/{news_id}?redirect=true"
+    try:
+        redirect_url = shorten_url(full_url)
+    except Exception as e:
+        # If shortening fails, use the full URL
+        redirect_url = full_url
 
     reply_text = (
         f"\U0001F4F0 Title:\n {title}\n\n"
@@ -89,13 +124,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         + "\n"
         + "Analysis Results:\n"
         "-------------------------------------\n"
-        f"\u2705 Fact-Checking ({compiled_factcheck_result['total']} statements made):\n"\
+        f"\u2705 Fact-Checking ({compiled_factcheck_result['total']} statements made):\n"
         + "\n".join([f"• {compiled_factcheck_result[factcheck]} {factcheck}" for factcheck in compiled_factcheck_result if factcheck != 'total'])
         + "\n"
         + "\n"
         f"\U0001F44D\U0001F3FB Sentiment Analysis:\n"
         # + f"{sentiment_result[0]} ({sentiment_result[1]*100:.2f}%)\n"
-        + "\n".join([f"• {sentiment}: {score*100:.2f}%" for sentiment, score in sentiment_result.items()])
+        + "\n".join([f"• {sentiment}: {score*100:.2f}%" for sentiment,
+                    score in sentiment_result.items()])
         + "\n"
         + "\n"
         "\U0001F914 Emotion Analysis (Top 5 Emotions):\n"
@@ -107,6 +143,5 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "-------------------------------------\n"
         f"See full article breakdown at {redirect_url}"
     )
-    
+
     await update.message.reply_text(reply_text)
-    
