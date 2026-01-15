@@ -4,3 +4,4 @@ uvicorn
 python-dotenv
 httpx
 websockets
+openai>=1.0.0,<2.0.0

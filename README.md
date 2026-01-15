@@ -367,6 +367,43 @@ npm install
 npm run dev
 ```
 
+## 🎯 Quiz Generation
+
+The system includes an AI-powered quiz generator that creates media literacy questions for 5 categories: bias, sentiment, emotion, propaganda, and personality.
+
+### Generating Quiz Questions
+
+**Prerequisites:**
+- Database service must be running (`docker compose up -d database`)
+- Groq API key must be configured in `backend/.env` (API_KEYDS)
+
+**Run the generator:**
+
+```bash
+# From project root
+python backend/database/generate_quiz.py
+```
+
+**What it does:**
+- Generates 10 questions per category (50 total)
+- Uses Groq's `llama-3.1-8b-instant` model for efficient token usage
+- Automatically saves questions to Supabase database
+- Provides detailed progress output with success/failure tracking
+
+```
+
+**Quiz Categories:**
+
+| Category | Focus | Question Format |
+|----------|-------|-----------------|
+| 🎯 **Bias** | Political bias, selective reporting | Compare 2-3 headlines |
+| 💭 **Sentiment** | Emotional tone (positive/negative/neutral) | Identify tone differences |
+| 😊 **Emotion** | Emotional manipulation, fear appeals | Detect emotional hooks |
+| 📢 **Propaganda** | Propaganda techniques (bandwagon, authority) | Recognize manipulation |
+| 👤 **Personality** | News consumption habits | 4-option personality assessment |
+
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository
