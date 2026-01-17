@@ -26,7 +26,7 @@ const LandingPage = () => {
   const [articleURL, setArticleURL] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState(false);
-  const [forceReanalyze, setForceReanalyze] = useState(false);
+  const [forceReanalyze] = useState(false);
 
   useEffect(() => {
     get_api().then((url) => {
