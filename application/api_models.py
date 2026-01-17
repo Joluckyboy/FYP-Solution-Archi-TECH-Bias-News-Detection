@@ -18,6 +18,7 @@ class URLItem(BaseModel):
 
 class URLwithBG(URLItem):
     background: Optional[bool] = True
+    force: Optional[bool] = False
 
 # class inherited from URLItem
 class NewsItem(URLItem):

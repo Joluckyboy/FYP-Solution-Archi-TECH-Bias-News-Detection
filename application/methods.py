@@ -23,11 +23,22 @@ def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     sanitized_data = []
     for item in data:
+        # Prefer new "correctness" field but keep backward compatibility with legacy "accuracy".
+        raw_correctness = (item.get("correctness") or item.get("accuracy") or "").lower()
+        if raw_correctness not in {"factual", "unfactual", "cannot be determined"}:
+            raw_correctness = "cannot be determined"
+
+        raw_citations = item.get("citations") or []
+        if isinstance(raw_citations, str):
+            raw_citations = [raw_citations]
+        elif not isinstance(raw_citations, list):
+            raw_citations = []
+
         sanitized_item = {
             "statement": item.get("statement", ""),
-            "correctness": item.get("accuracy", "").lower(),  # Map 'accuracy' to 'correctness'
+            "correctness": raw_correctness,
             "explanation": item.get("explanation", ""),
-            "citations": item.get("citations", [])
+            "citations": raw_citations,
         }
         # Ensure all required fields are present and valid
         if isinstance(sanitized_item["statement"], str) and \

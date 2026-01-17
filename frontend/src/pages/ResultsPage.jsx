@@ -164,13 +164,30 @@ const ResultsPage = () => {
             </CardHeader>
 
             <CardContent>
-              <ul className="list-disc ml-6 space-y-2">
-                {(data?.summarise_result ?? "No summary available")
-                  .split("\n\n")
-                  .map((paragraph, index) => (
-                    <li key={index}>{paragraph}</li>
-                  ))}
-              </ul>
+              {data?.summarise_result && 
+               typeof data.summarise_result === "string" &&
+               data.summarise_result.trim() !== "" ? (
+                <ul className="list-disc ml-6 space-y-2">
+                  {data.summarise_result
+                    .split("\n\n")
+                    .filter(p => p.trim() !== "")
+                    .map((paragraph, index) => (
+                      <li key={index}>{paragraph}</li>
+                    ))}
+                </ul>
+              ) : data?.summarise_result === null || data?.summarise_result === undefined ? (
+                <div className="text-center flex flex-col items-center">
+                  <br />
+                  Analysis in progress
+                  <br />
+                  <br />
+                  <HashLoader color="#1E5EDD" loading={true} size={50} />
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  No summary available
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -229,6 +246,7 @@ const ResultsPage = () => {
 
                 <Separator className="mb-4" />
                 {!Array.isArray(data.factcheck_result) ||
+                !data.factcheck_result ||
                 data.factcheck_result.length === 0 ? (
                   <CardContent>
                     <div className="text-center flex flex-col items-center">
