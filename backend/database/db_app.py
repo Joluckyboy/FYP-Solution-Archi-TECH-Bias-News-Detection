@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from api_models import NewsItem, QuizItem
 import news_driver as news_methods
 import quiz_driver as quiz_methods
+import quiz_templates as quiz_templates
 
 from typing import List
 
@@ -479,3 +480,92 @@ def get_random_quiz(number: int = Query(..., description="Number of random quiz 
     if not quiz:
         raise HTTPException(status_code=400, detail="get random quiz failed")
     return JSONResponse(status_code=200, content={"quiz": quiz})
+
+
+@app.post("/database/quiz/generate-and-save")
+def generate_and_save_quiz(question_type: str = "bias"):
+    """Generate a batch of general-knowledge quiz questions and persist to DB."""
+    print(f"Generating questions for category: {question_type}")
+    try:
+        questions = quiz_templates.generate_quiz_from_analysis(question_type=question_type)
+        print(f"Generated {len(questions)} questions")
+    except Exception as e:
+        print(f"Error generating questions: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"generation failed: {str(e)}")
+
+    quiz_ids = []
+    for q in questions:
+        try:
+            question_text = q.get("question")
+            options = q.get("options") or []
+
+            # Determine answer indices; prefer provided indices, else map from correct_answer
+            answer = q.get("answer")
+            if not answer:
+                correct = q.get("correct_answer")
+                if correct in options:
+                    answer = [options.index(correct)]
+                else:
+                    # fallback to first option if mapping fails
+                    answer = [0] if options else []
+
+            payload = {
+                "question": question_text,
+                "options": options,
+                "answer": answer,
+                "question_type": question_type,
+                "debrief": q.get("debrief") or q.get("explanation")
+            }
+
+            quiz_id = quiz_methods.add_quiz_data(payload)
+            if quiz_id:
+                quiz_ids.append(quiz_id)
+        except Exception as e:
+            # Skip problematic question, continue with the rest
+            print(f"Error saving question: {e}")
+            continue
+
+    if not quiz_ids:
+        raise HTTPException(status_code=500, detail="no questions saved")
+
+    return JSONResponse(status_code=200, content={"quiz_ids": quiz_ids, "count": len(quiz_ids)})
+
+
+@app.post("/database/quiz/seed/{category}", responses={
+    200: {
+        "description": "Seeded quiz questions for category",
+        "content": {
+            "application/json": {
+                "example": {
+                    "quiz_ids": ["uuid-1", "uuid-2"],
+                    "category": "emotion"
+                }
+            }
+        }
+    }
+})
+def seed_quiz_category(category: str):
+    """Generate AI questions for any category."""
+    category = category.lower()
+    # All categories now use AI generation with explicit category parameter
+    questions = quiz_templates.generate_ai_quiz_questions(num_questions=20, question_type=category)
+
+    quiz_ids = []
+    for q in questions:
+        question_text = q.get("question")
+        options = q.get("options") or []
+        answer = q.get("answer") or []
+        payload = {
+            "question": question_text,
+            "options": options,
+            "answer": answer,
+            "question_type": category,
+            "debrief": q.get("debrief")
+        }
+        quiz_id = quiz_methods.add_quiz_data(payload)
+        if quiz_id:
+            quiz_ids.append(quiz_id)
+
+    return JSONResponse(status_code=200, content={"quiz_ids": quiz_ids, "category": category})

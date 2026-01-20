@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import get_api from "@/config/config";
-// import axios from "axios";
+import axios from "axios";
 
 import { HashLoader } from "react-spinners";
 import { Brain, ArrowLeft, ArrowRight, Award } from "lucide-react";
@@ -58,22 +58,21 @@ const PersonalityQuizPage = () => {
   useEffect(() => {
     if (!API_URL) return;
 
-    // Temporarily disabled - using local quizData
-    // setLoading(true);
-    // axios
-    //   .get(`${API_URL}/application/get_quiz?number=5&question_type=personality`)
-    //   .then((response) => {
-    //     setQuestions(response.data.quiz || []);
-    //     console.log("Questions: ", response.data.quiz);
-    //   })
-    //   .catch((error) => {
-    //     console.error("Error fetching quiz data: ", error);
-    //     console.log("Using fallback quizData");
-    //     setQuestions(quizData?.quiz || []);
-    //   })
-    //   .finally(() => {
-    //     setLoading(false);
-    //   });
+    setLoading(true);
+    axios
+      .get(`${API_URL}/application/get_quiz?number=5&question_type=personality`)
+      .then((response) => {
+        setQuestions(response.data.quiz || []);
+        console.log("Questions: ", response.data.quiz);
+      })
+      .catch((error) => {
+        console.error("Error fetching quiz data: ", error);
+        console.log("Using fallback quizData");
+        setQuestions(quizData?.quiz || []);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [API_URL]);
 
   const handleOptionSelect = (optionIndex) => {

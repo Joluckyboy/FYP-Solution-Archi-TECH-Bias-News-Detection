@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import get_api from "@/config/config";
-// import axios from "axios";
+import axios from "axios";
 
 import { HashLoader } from "react-spinners";
 import {
@@ -110,24 +110,23 @@ const GamesQuizPage = () => {
   useEffect(() => {
     if (!API_URL) return;
 
-    // Temporarily disabled - using local quizData
-    // setLoading(true);
-    // axios
-    //   .get(
-    //     `${API_URL}/application/get_quiz?number=${numberOfQuestions}&question_type=${gameMode}`
-    //   )
-    //   .then((response) => {
-    //     setQuestions(response.data.quiz || []);
-    //     console.log("Questions: ", response.data.quiz);
-    //   })
-    //   .catch((error) => {
-    //     console.error("Error fetching quiz data: ", error);
-    //     console.log("Using fallback quizData");
-    //     setQuestions(quizData?.quiz || []);
-    //   })
-    //   .finally(() => {
-    //     setLoading(false);
-    //   });
+    setLoading(true);
+    axios
+      .get(
+        `${API_URL}/application/get_quiz?number=${numberOfQuestions}&question_type=${gameMode}`
+      )
+      .then((response) => {
+        setQuestions(response.data.quiz || []);
+        console.log("Questions: ", response.data.quiz);
+      })
+      .catch((error) => {
+        console.error("Error fetching quiz data: ", error);
+        console.log("Using fallback quizData");
+        setQuestions(quizData?.quiz || []);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [API_URL, gameMode, numberOfQuestions]);
 
   const handleOptionSelect = (optionIndex) => {
@@ -197,13 +196,17 @@ const GamesQuizPage = () => {
       return null; // Return nothing if text is undefined, null, or not a string
     }
 
-    const parts = text.split("\\n"); // Split the text by literal "\n"
+    // Handle both literal "\n" and actual newline characters
+    let parts = text.includes("\\n") 
+      ? text.split("\\n") 
+      : text.split("\n");
+    
     const firstPart = parts[0]; // The overarching question
     const blockquoteParts = parts.slice(1); // The rest of the lines
 
     return (
       <>
-        <p>{firstPart.trim()}</p>
+        <p className="font-semibold mb-4">{firstPart.trim()}</p>
         {blockquoteParts.map((line, index) => (
           <blockquote
             key={index}

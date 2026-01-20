@@ -15,7 +15,7 @@ from api_models import URLInput, NewsItem, URLwithBG
 import methods as methods
 
 logging.basicConfig(
-    level=logging.INFO,  # or DEBUG
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 
@@ -57,12 +57,9 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown logic
-    # If needed, you can add code here to stop or clean up resources.
-    # However, since your thread is daemon, it will stop when the main application exits.
+    # Thread is daemon, will stop when main application exits
     
 # ------------------------ BACKGROUND THREAD TO PRE-SCRAPE AND ANALYSE ----------------------- #
-
-logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Application layer API",
@@ -86,12 +83,10 @@ app.add_middleware(
 
 @app.get("/")
 def health_check():
-    # return 200
     return {"status": "ok"}
 
 @app.get("/application")
 def health_check2():
-    # return 200
     return {"status": "ok"}
 
 @app.get("/application/check_query")
@@ -108,14 +103,19 @@ async def check_query():
     400:{
         "description": "Invalid URL"
     }
-    })
+})
 def new_query(input: URLwithBG):
     """
     Processes a news article URL, retrieving or extracting news data.
     """
     if input.url is None:
         raise HTTPException(status_code=400, detail="URL is required")
-    return process_url(input.url, return_news=True, background=input.background if input.background is not None else True)
+    return process_url(
+        input.url,
+        return_news=True,
+        background=input.background if input.background is not None else True,
+        force_reanalyze=input.force if hasattr(input, 'force') and input.force is not None else False,
+    )
 
 @app.get("/application/retrieve_exisiting")
 async def retrieve_query(news_id: str):
@@ -125,23 +125,23 @@ async def retrieve_query(news_id: str):
 @app.get("/application/stream_news")
 async def stream_news(news_id: str):
     """
-    Streams updates for a single news document by ID and stops after 5 minutes.
+    Streams updates for a single news document by ID and stops after 4 minutes.
     """
     async def event_stream(news_id):
-        last_data = None  # Store last known state to prevent redundant updates
-        start_time = time.time()  # Record the start time
-        timeout = 4 * 60  # multiplier x sec
+        last_data = None
+        start_time = time.time()
+        timeout = 4 * 60  # 4 minutes
 
-        while time.time() - start_time < timeout:  # Run for 5 minutes
-            news = methods.get_news_by_id(news_id)  # Fetch latest data
+        while time.time() - start_time < timeout:
+            news = methods.get_news_by_id(news_id)
 
-            if news and news != last_data:  # Send only if data has changed
+            if news and news != last_data:
                 last_data = news
                 yield f"data: {json.dumps(news)}\n\n"
 
-            await asyncio.sleep(5)  # Polling interval (adjust if needed)
+            await asyncio.sleep(5)
 
-        yield "event: close\ndata: Stream timeout\n\n"  # Signal client to close
+        yield "event: close\ndata: Stream timeout\n\n"
 
     return StreamingResponse(event_stream(news_id), media_type="text/event-stream")
 
@@ -150,86 +150,206 @@ async def get_all_quiz(question_type: str = Query(None, description="Type of que
     quiz = methods.get_all_quiz(question_type=question_type)
     return quiz
 
-
 @app.get("/application/get_quiz")
 async def get_quiz(number: int = Query(..., description="Number of questions"), 
                    question_type: str = Query(..., description="Type of questions")):
     quiz = methods.get_quiz(number=number, question_type=question_type)
     return quiz
 
-def process_url(url: str, return_news: bool = False, background: bool = True):
+def process_url(url: str, return_news: bool = False, background: bool = True, force_reanalyze: bool = False):
     """
-    Core function that processes a news URL.
-    If `return_news` is True, it returns the news data (for API responses).
-    If `return_news` is False, it only performs data extraction & analysis.
+    Core function that processes a news URL with smart retry logic.
+    
+    Args:
+        url: Article URL
+        return_news: Whether to return news data (for API responses)
+        background: Whether to run analysis in background thread
+        force_reanalyze: Force re-analysis of all services
+    
+    Smart Retry Logic:
+        - If article exists with complete data -> return cached
+        - If article exists with missing data -> retry ONLY missing services
+        - If force_reanalyze=True -> re-run ALL services
+        - If new article -> run ALL services
     """
     try:
-        logger.info("Checking if article exists...")
+        logger.info(f"Processing URL: {url}")
         exists = methods.check_exists(url)
 
         if exists["exists"]:
-            logger.info(f"News already exists for {url}")
-            if return_news:
-                return methods.get_news(url)
-            return  # If called from the background task, no return is needed.
+            existing = methods.get_news(url)
+            
+            # Identify which analyses are missing
+            missing_analyses = []
+            if not existing.get("sentiment_result"):
+                missing_analyses.append("sentiment")
+            if not existing.get("emotion_result"):
+                missing_analyses.append("emotion")
+            if not existing.get("propaganda_result"):
+                missing_analyses.append("propaganda")
+            if not existing.get("factcheck_result"):
+                missing_analyses.append("factcheck")
+            if not existing.get("summarise_result"):
+                missing_analyses.append("summarise")
+            if not existing.get("data_summary"):
+                missing_analyses.append("data_summary")
+            
+            # All analyses complete and no force re-analyze
+            if not missing_analyses and not force_reanalyze:
+                logger.info(f"Article exists with complete results for {url} - returning cached data")
+                if return_news:
+                    return existing
+                return
+            
+            # Get content for retry/re-analysis
+            text = existing.get("content", "")
+            title = existing.get("title", "")
+            
+            # Fallback to scrape if stored content is missing
+            if not text or not title:
+                logger.warning(f"Stored content missing for {url}, re-scraping...")
+                data = methods.extract_news(url)
+                text = data.get("body", "")
+                title = data.get("headline", "")
+                if not text or not title:
+                    raise HTTPException(status_code=400, detail="Invalid URL")
+            
+            # AUTO-RETRY: Only retry missing analyses
+            if missing_analyses and not force_reanalyze:
+                logger.info(f"Auto-retrying {len(missing_analyses)} missing service(s): {', '.join(missing_analyses)}")
+                
+                def selective_retry():
+                    """Only re-run the failed/missing analyses"""
+                    retry_count = 0
+                    
+                    if "sentiment" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying sentiment analysis for {url}")
+                            methods.get_sentiment(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Sentiment retry failed: {e}")
+                    
+                    if "emotion" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying emotion analysis for {url}")
+                            methods.get_emotion(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Emotion retry failed: {e}")
+                    
+                    if "propaganda" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying propaganda analysis for {url}")
+                            methods.get_propaganda(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Propaganda retry failed: {e}")
+                    
+                    if "summarise" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying summarise for {url}")
+                            methods.get_summarise(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Summarise retry failed: {e}")
+                    
+                    if "factcheck" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying fact-check for {url}")
+                            methods.get_fact_check(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Fact-check retry failed: {e}")
+                    
+                    # Data summary depends on other analyses, run last
+                    if "data_summary" in missing_analyses:
+                        try:
+                            logger.info(f"Retrying data summary for {url}")
+                            methods.get_data_summary(text, url, title)
+                            retry_count += 1
+                        except Exception as e:
+                            logger.error(f"Data summary retry failed: {e}")
+                    
+                    logger.info(f"Selective retry complete: {retry_count}/{len(missing_analyses)} services re-run for {url}")
+                
+                if background:
+                    threading.Thread(target=selective_retry, daemon=True).start()
+                    logger.info(f"Background selective retry started for {url}")
+                    if return_news:
+                        return existing
+                    return
+                else:
+                    selective_retry()
+                    if return_news:
+                        return methods.get_news(url)
+                    return
+            
+            # FORCE RE-ANALYZE: User explicitly requested full re-analysis
+            if force_reanalyze:
+                logger.info(f"Force re-analyzing ALL services for {url}")
+                # Continue to full analysis below
+                initial_save = existing
+            
+        else:
+            # NEW ARTICLE: Scrape and save content
+            logger.info(f"New article detected: {url}")
+            data = methods.extract_news(url)
+            text = data.get("body", "")
+            title = data.get("headline", "")
+            
+            if not text or not title:
+                raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
+            
+            # Save article content to database
+            initial_save = methods.create_news(url, title, text)
+            logger.info(f"Article content saved for {url}")
 
-        logger.info("New article, processing...")
-
-        # Extract article content
-        data = methods.extract_news(url)
-        text = data.get("body", "")
-        title = data.get("headline", "")
-        
-        if text == "" or title == "":
-            raise HTTPException(status_code=400, detail="Invalid URL")
-
-        # Save article content
-        initial_save = methods.create_news(url, title, text)
-
-        # Define the remaining processing as a separate function
-        def remaining_processing():
+        # FULL ANALYSIS: Run all services (for new articles or force re-analyze)
+        def full_analysis():
+            """Run all analysis services"""
             analysis_methods = [
                 (methods.get_sentiment, "sentiment"),
                 (methods.get_emotion, "emotion"),
                 (methods.get_propaganda, "propaganda"),
                 (methods.get_summarise, "summary"),
-                (methods.get_data_summary, "data summary"),
-                (methods.get_fact_check, "fact check")
+                (methods.get_fact_check, "fact check"),
+                (methods.get_data_summary, "data summary")
             ]
 
             for analysis_method, label in analysis_methods:
                 try:
+                    logger.info(f"Running {label} analysis for {url}")
                     result = analysis_method(text, url, title)
                     if not result:
-                        logger.warning(f"No result returned for {label}.")
+                        logger.warning(f"⚠️ No result returned for {label}")
                 except Exception as e:
-                    logger.error(f"Error getting {label} for {url}: {e}")
-                    return {"error": f"Failed at {label}: {str(e)}"}
+                    logger.error(f"Error during {label} analysis for {url}: {e}")
 
-            logger.info(f"Finished processing {url}")
-
-            if return_news:
-                return methods.get_news(url)
+            logger.info(f"Full analysis complete for {url}")
 
         if background:
-            # Run the remaining processing in a separate thread
-            threading.Thread(target=remaining_processing).start()
-            # Return the initial save result immediately
-            return initial_save
+            # Run analysis in background thread
+            threading.Thread(target=full_analysis, daemon=True).start()
+            logger.info(f"Background full analysis started for {url}")
+            if return_news:
+                return initial_save
+            return
         else:
-            # Perform the remaining processing synchronously
-            result = remaining_processing()
+            # Run analysis synchronously
+            full_analysis()
             if return_news:
                 return methods.get_news(url)
-            return result
+            return
 
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as error:
-        logger.error(f"Error processing {url}: {error}")
+        logger.error(f"Error processing {url}: {error}", exc_info=True)
         if return_news:
-            # Check if the error is an HTTPException with a description
             if hasattr(error, 'description') and str(error.description) == "Invalid URL format":
                 raise HTTPException(status_code=400, detail="Invalid URL")
             else:
-                # Handle other errors including ConnectionError
                 error_message = str(error) if str(error) else "Internal Server Error"
                 raise HTTPException(status_code=500, detail=error_message)

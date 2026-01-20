@@ -26,6 +26,7 @@ const LandingPage = () => {
   const [articleURL, setArticleURL] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState(false);
+  const [forceReanalyze] = useState(false);
 
   useEffect(() => {
     get_api().then((url) => {
@@ -94,6 +95,7 @@ const LandingPage = () => {
         // let res = await axios.get(`${API_URL}/application/new_query`);
         let res = await axios.post(`${API_URL}/application/new_query`, {
           url: articleURL,
+          force: forceReanalyze,
         });
         let data = res.data;
 
