@@ -7,11 +7,19 @@ const Header = () => {
 				<img src="/checkmate.svg" alt="checkmatelogo" />
 				<h2 className="ml-2 checkmate-gradient text-lg">CheckMate</h2>
 			</Link>
-            <Link to="/games">
-                <div className="m-2 pr-4">
-                    <img src="/game.svg" alt="gamelogo" />
-                </div>
-			</Link>
+
+			<div className="flex">
+				<Link to="/outlet-bias">
+					<div className="m-2 pr-1">
+						<img src="/bias.svg" alt="biaslogo" />
+					</div>
+				</Link>
+				<Link to="/games">
+					<div className="m-2 pr-4">
+						<img src="/game.svg" alt="gamelogo" />
+					</div>
+				</Link>
+			</div>
 		</div>
 	);
 };
