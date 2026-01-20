@@ -8,8 +8,18 @@ import requests
 from urllib.parse import urlparse
 from datetime import datetime
 from urllib.parse import urljoin
+import pandas as pd
+import os
+import sys
+
+# Add current directory to path to import mappings
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from mappings import outlet_geography
+
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 api = Api(
     app,
@@ -51,90 +61,6 @@ error_model = api.model("Error", {"error": fields.String(description="Error mess
 class HealthCheck(Resource):
     def get(self):
         return jsonify({"status": "ok"})
-
-
-# # NO LONGER IN USE, MERGED WITH get-article
-# Endpoint to get YouTube transcript
-# @ns.route('/get-transcript')
-# class Transcript(Resource):
-#     # Using the marshalling breaks the unit tests since the error response don't appear as they should
-#     @api.doc(description="Get transcript of a YouTube video.",
-#               responses={
-#             200: ('Success', transcript_model),
-#             400: 'Bad Request',
-#             500: 'Internal Server Error'
-#         })
-#     @api.param('url', 'YouTube video URL', required=True)
-#     # @api.marshal_with(transcript_model, code=200)
-#     def get(self):
-#         video_url = request.args.get('url')
-#         if not video_url:
-#             return {'error': 'No URL provided'}, 400
-
-#         try:
-#             # This is getting the video ID
-#             if 'youtube.com' in video_url:
-#                 video_id = video_url.split('v=')[-1]
-#                 if '&' in video_id:
-#                     video_id = video_id.split('&')[0]  # Clean video ID if it has additional parameters
-#             # This is checking for shortened links. You get these when you click on share on the youtube video
-#             elif 'youtu.be' in video_url:
-#                 video_id = video_url.split('/')[-1].split('?')[0]
-#         except Exception as e:
-#             return {'error': 'Invalid YouTube URL'}, 400
-
-#         try:
-#             # Get the title of the youtube video
-#             res = requests.get(video_url)
-#             soup = bs(res.text, 'html.parser')
-#             title = str(soup.title.text)
-#             # The title will have - Youtube at the end, this will remove it
-#             title = title.split("-")[:-1]
-
-#             # Join to turn it back into an unbroken string
-#             title = "-".join(title)
-
-#             # Get the transcript for the video, need to build it since it comes as a list of dictionaries
-#             transcript = YouTubeTranscriptApi.get_transcript(video_id)
-#             full_text = " ".join([segment['text'] for segment in transcript])
-#             # return {'transcript': full_text}
-#             return marshal({'headline': title,
-#                             'body': full_text}, transcript_model), 200
-#         except Exception as e:
-#             return {'error': str(e)}, 500
-
-# Endpoint to get article from a given URL using Newspaper3k
-# @ns.route('/get-article3k')
-# class Article3k(Resource):
-#     @api.doc(description="Extract article data using Newspaper3k.",
-#             responses={
-#             200: ('Success', article_model),
-#             400: 'Bad Request - Missing URL or Invalid URL',
-#             500: 'Internal Server Error - Issue with Newspaper3k'
-#         })
-#     @api.param('url', 'Article URL', required=True)
-#     # @api.marshal_with(article_model)
-#     def get(self):
-#         url = request.args.get('url')
-#         if not url:
-#             return {'error': 'No URL provided'}, 400
-
-#         article = Article(url)
-#         article.download()
-#         article.parse()
-#         article.nlp()
-
-#         publish_date = article.publish_date.strftime('%Y-%m-%d') if article.publish_date else None
-#         body = article.text
-#         summary = article.summary
-#         headline = article.title
-
-#         return {
-#             'headline': headline.strip().replace("\n", " "),
-#             'body': body.strip().replace("\n", " "),
-#             'publish_date': publish_date,
-#             'summary': summary.strip().replace("\n", " ")
-#         }
 
 
 # Endpoint to retrieve the latest articles from CNA and Straitstimes
@@ -273,18 +199,8 @@ def cna(url):
     soup = bs(res.content, "html.parser")
     headline = soup.find("h1", class_="h1--page-title").text
     body = "".join([div.text for div in soup.find_all("div", "text")])
-    # #  Not in use anymore
-    # For loop line is just removing the SEO stuff
-    # to_remove = soup.find_all("div", ["desktop-liner","mobile-liner"])
-    # for seg in to_remove:
-    #     seg.decompose()
 
     full = body
-
-    # # Used previously to escape reading photo captions, no needed anymore
-    # for divs in body:
-    #     if not divs.find("strong"):
-    #         full += divs.text
 
     publish_date = soup.find("div", class_="article-publish").text.strip()
 
@@ -293,10 +209,6 @@ def cna(url):
     publish_date = date_info.contents[0].strip()  # This retuns a string
     publish_date_obj = datetime.strptime(publish_date, "%d %b %Y %I:%M%p")
     publish_date_str = publish_date_obj.strftime("%Y-%m-%d")
-
-    # updated_date_str = date_info.span.text # Returns something like this (Updated: 25 Jan 2025 11:15AM)
-    # updated_date = updated_date_str.strip("()").replace("Updated: ", "") # It's still a string here, just removed the paranthesis and Updated:
-    # updated_date_obj = datetime.strptime(updated_date, "%d %b %Y %I:%M%p")
 
     return {
         "headline": headline.strip().replace("\n", " "),
@@ -567,68 +479,6 @@ class DashboardAnalytics(Resource):
                 },
                 "chart_data": chart_data,
             }, 200
-
-        except Exception as e:
-            return {"error": str(e)}, 500
-
-
-@ns.route("/dashboard/topics")
-class TopicsDashboard(Resource):
-    def get(self):
-        """Get topics (articles) for the dashboard from the Kaggle dataset"""
-        try:
-            if not os.path.exists(DATASET_PATH):
-                return {"error": "Dataset not found"}, 404
-
-            df = pd.read_csv(DATASET_PATH)
-
-            # Take a sample of latest/top articles.
-            # Since dataset might not be sorted by date, we just take head or sample.
-            # Assuming 'date' column exists, we could sort.
-            # df.columns likely: [date, site, title, article_content, bias, ...]
-            # Let's verify existing column usage in existing endpoint:
-            # df['site'], df['bias'].
-
-            # We will take the top 50, shuffle them for variety if needed, or just head.
-            # Let's just take the first 50 for stability.
-            subset = df.head(50).fillna("")
-
-            topics = []
-            for index, row in subset.iterrows():
-                # Map bias to distribution
-                bias_val = str(row.get("bias", "center")).lower()
-                distribution = {"left": 0, "center": 0, "right": 0}
-
-                if "left" in bias_val:
-                    distribution["left"] = 100
-                elif "right" in bias_val:
-                    distribution["right"] = 100
-                else:
-                    distribution["center"] = 100
-
-                # Construct placeholder image with title text
-                headline = str(row.get("title", "No Title"))
-                # Truncate headline for image url
-                short_headline = (
-                    (headline[:30] + "..") if len(headline) > 30 else headline
-                )
-                import urllib.parse
-
-                encoded_text = urllib.parse.quote(short_headline)
-                image_url = f"https://placehold.co/600x400?text={encoded_text}"
-
-                topics.append(
-                    {
-                        "id": index,  # Use index as ID
-                        "title": headline,
-                        "image": image_url,
-                        "sourceCount": 1,  # Single source for now
-                        "biasDistribution": distribution,
-                        "date": str(row.get("date", "")),
-                    }
-                )
-
-            return {"topics": topics}, 200
 
         except Exception as e:
             return {"error": str(e)}, 500
