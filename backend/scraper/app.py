@@ -484,5 +484,118 @@ class DashboardAnalytics(Resource):
             return {"error": str(e)}, 500
 
 
+@ns.route("/dashboard/topics")
+class TopicsDashboard(Resource):
+    def get(self):
+        """Get topics (articles) for the dashboard from the Kaggle dataset"""
+        try:
+            if not os.path.exists(DATASET_PATH):
+                return {"error": "Dataset not found"}, 404
+
+            df = pd.read_csv(DATASET_PATH)
+
+            # Take a larger sample to find matches
+            subset = df.head(200).fillna("")
+
+            # --- Grouping Logic ---
+            groups = []  # List of dicts: { 'title': '...', 'articles': [...], 'bias_counts': {...} }
+
+            def calculate_similarity(text1, text2):
+                # Simple Jaccard similarity on lowercased words
+                set1 = set(text1.lower().split())
+                set2 = set(text2.lower().split())
+                intersection = len(set1.intersection(set2))
+                union = len(set1.union(set2))
+                return intersection / union if union > 0 else 0
+
+            for index, row in subset.iterrows():
+                title = str(row.get("title", ""))
+                if not title.strip():
+                    continue
+
+                bias_val = str(row.get("bias", "center")).lower()
+
+                # Check if this article belongs to an existing group
+                match_found = False
+                for group in groups:
+                    # Check similarity with the group's "representative" title (the first one)
+                    sim = calculate_similarity(title, group["title"])
+                    if sim > 0.3:  # Threshold for similarity
+                        group["articles"].append(row)
+                        group["source_count"] += 1
+
+                        # Update bias counts
+                        if "left" in bias_val:
+                            group["bias_counts"]["left"] += 1
+                        elif "right" in bias_val:
+                            group["bias_counts"]["right"] += 1
+                        else:
+                            group["bias_counts"]["center"] += 1
+
+                        match_found = True
+                        break
+
+                if not match_found:
+                    # Create new group
+                    new_group = {
+                        "title": title,
+                        "articles": [row],
+                        "source_count": 1,
+                        "bias_counts": {"left": 0, "center": 0, "right": 0},
+                        "date": str(row.get("date", "")),
+                    }
+                    if "left" in bias_val:
+                        new_group["bias_counts"]["left"] += 1
+                    elif "right" in bias_val:
+                        new_group["bias_counts"]["right"] += 1
+                    else:
+                        new_group["bias_counts"]["center"] += 1
+                    groups.append(new_group)
+
+            # Format groups for frontend
+            topics = []
+            for i, group in enumerate(groups):
+                # Sort groups by size (interesting ones first) or date? Let's just take top ones.
+                # Actually, loop is already running.
+
+                # Calculate percentages
+                total = group["source_count"]
+                distribution = {
+                    "left": (group["bias_counts"]["left"] / total) * 100,
+                    "center": (group["bias_counts"]["center"] / total) * 100,
+                    "right": (group["bias_counts"]["right"] / total) * 100,
+                }
+
+                # Construct placeholder image
+                headline = group["title"]
+                short_headline = (
+                    (headline[:30] + "..") if len(headline) > 30 else headline
+                )
+                import urllib.parse
+
+                encoded_text = urllib.parse.quote(short_headline)
+                image_url = f"https://placehold.co/600x400?text={encoded_text}"
+
+                topics.append(
+                    {
+                        "id": i,
+                        "title": headline,
+                        "image": image_url,
+                        "sourceCount": group["source_count"],
+                        "biasDistribution": distribution,
+                        "date": group["date"],
+                    }
+                )
+
+            # Filter solely single-source topics to reduce noise if desired?
+            # For now, return all, but maybe sort by sourceCount descending
+            topics.sort(key=lambda x: x["sourceCount"], reverse=True)
+
+            return {"topics": topics[:50]}, 200  # Return top 50 topics
+
+        except Exception as e:
+            return {"error": str(e)}, 500
+
+
 if __name__ == "__main__":
     app.run(debug=True)
