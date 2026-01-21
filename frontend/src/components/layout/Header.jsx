@@ -8,20 +8,23 @@ const Header = () => {
 				<h2 className="ml-2 checkmate-gradient text-lg">CheckMate</h2>
 			</Link>
 
-			<div className="flex">
-				<Link to="/outlet-bias">
-					<div className="m-2 pr-1">
-						<img src="/bias.svg" alt="biaslogo" />
-					</div>
-				</Link>
-				<Link to="/games">
-					<div className="m-2 pr-4">
-						<img src="/game.svg" alt="gamelogo" />
-					</div>
-				</Link>
-			</div>
+      <div className="flex items-center gap-2">
+        <Link
+          to="/dashboard"
+          className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium"
+        >
+          Dashboard
+        </Link>
+
+        <Link to="/games">
+          <div className="m-2 pr-4">
+            <img src="/game.svg" alt="gamelogo" />
+          </div>
+        </Link>
+      </div>
 		</div>
 	);
 };
 
 export default Header;
+
