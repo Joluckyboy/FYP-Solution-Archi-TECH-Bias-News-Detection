@@ -11,6 +11,8 @@ const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
 const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQuizPage"));
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
 
+// Dashboard
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
@@ -19,5 +21,6 @@ export const PUBLIC_ROUTES = [
     { path: "/games/quizzes", element: <GamesQuizPage /> },
     { path: "/games/personality-quiz", element: <PersonalityQuizPage /> },
     { path: "/*", element: <Navigate to="/" /> },
+    { path: "/dashboard", element: <DashboardPage /> },
 ];
 
