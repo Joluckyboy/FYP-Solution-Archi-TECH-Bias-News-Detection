@@ -13,6 +13,7 @@ import logging
 
 from api_models import URLInput, NewsItem, URLwithBG
 import methods as methods
+import dashboard_methods as dashboard_methods
 
 logging.basicConfig(
     level=logging.INFO,
@@ -92,6 +93,20 @@ def health_check2():
 @app.get("/application/check_query")
 async def check_query():
     return {"status": "ok"}
+
+@app.get("/application/bias_dashboard")
+def get_bias_dashboard():
+    """
+    Returns aggregated bias metrics for the frontend dashboard (Sprint 1 MVP).
+    Data is loaded from datasets/news_outlets_summary.csv via dashboard_methods.py
+    """
+    try:
+        return dashboard_methods.load_dashboard_data()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        logger.exception("Failed to load bias dashboard data")
+        raise HTTPException(status_code=500, detail="Failed to load bias dashboard data")
 
 @app.post("/application/new_query", response_model=NewsItem, responses={
     200: {

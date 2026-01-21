@@ -5,12 +5,15 @@ import { lazy } from "react";
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ResultsPage = lazy(() => import("@/pages/ResultsPage"));
 const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
+const OutletBiasPage = lazy(() => import("@/pages/OutletBiasPage"));
 
 // Indiv Games and Quizzes Pages
 /* const BrainBoostersPage = lazy(() => import("@/pages/GamesQuizzes/BrainBoostersPage")); */
 const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQuizPage"));
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
 
+// Dashboard
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
@@ -18,6 +21,8 @@ export const PUBLIC_ROUTES = [
     { path: "/games", element: <GamesPage /> },
     { path: "/games/quizzes", element: <GamesQuizPage /> },
     { path: "/games/personality-quiz", element: <PersonalityQuizPage /> },
+    { path: "/outlet-bias", element: <OutletBiasPage /> },
     { path: "/*", element: <Navigate to="/" /> },
+    { path: "/dashboard", element: <DashboardPage /> },
 ];
 
