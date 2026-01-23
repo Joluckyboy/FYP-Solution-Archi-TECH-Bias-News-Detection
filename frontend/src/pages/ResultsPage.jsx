@@ -332,7 +332,7 @@ const ResultsPage = () => {
                                           const numberMatches = explanation.match(/\[(\d+)]/g);
                                           if (numberMatches) {
                                             numberMatches.forEach(match => {
-                                              const num = parseInt(match.replace(/[\[\]]/g, ''));
+                                              const num = parseInt(match.replace(/[[\]]/g, ''));
                                               if (!mentionedNumbers.includes(num)) {
                                                 mentionedNumbers.push(num);
                                               }
