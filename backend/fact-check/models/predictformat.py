@@ -2,5 +2,5 @@ from pydantic import BaseModel
 
 class PredictFormat(BaseModel):
     statement: str
-    accuracy: str
+    correctness: str
     explanation: str
