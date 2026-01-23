@@ -1,7 +1,7 @@
 import React from 'react';
 import TopicFeed from '@/components/TopicFeed';
 
-const GroundNewsDemo = () => {
+const LatestNewsPage = () => {
     return (
         <div className="min-h-screen bg-gray-50/50">
             <div className="p-8">
@@ -15,4 +15,4 @@ const GroundNewsDemo = () => {
     );
 };
 
-export default GroundNewsDemo;
+export default LatestNewsPage;
