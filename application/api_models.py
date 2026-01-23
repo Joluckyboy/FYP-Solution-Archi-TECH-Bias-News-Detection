@@ -10,7 +10,7 @@ class FactCheckItem(BaseModel):
 class URLInput(BaseModel):
     url: str = Field(
         ...,
-        example="https://www.example.com"
+        json_schema_extra={"example": "https://www.example.com"}
     )
 
 class URLItem(BaseModel):

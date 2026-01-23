@@ -49,10 +49,8 @@ const GamesQuizPage = () => {
   // Quiz states
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  // eslint-disable-next-line
   const [questions, setQuestions] = useState(quizData?.quiz || []);
-  // eslint-disable-next-line
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [answers, setAnswers] = useState({});
   const [selectedOption, setSelectedOption] = useState(null);
   const [quizComplete, setQuizComplete] = useState(false);
