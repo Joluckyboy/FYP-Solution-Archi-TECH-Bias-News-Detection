@@ -329,7 +329,7 @@ const ResultsPage = () => {
                                           const mentionedNumbers = [];
                                           
                                           // Find all [number] patterns in the explanation
-                                          const numberMatches = explanation.match(/\[(\d+)\]/g);
+                                          const numberMatches = explanation.match(/\[(\d+)]/g);
                                           if (numberMatches) {
                                             numberMatches.forEach(match => {
                                               const num = parseInt(match.replace(/[\[\]]/g, ''));
