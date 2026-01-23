@@ -12,17 +12,15 @@ const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQ
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
 
 
-import DashboardPage from "../pages/DashboardPage";
 import GroundNewsDemo from "../pages/GroundNewsDemo";
 
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
     { path: "/results/:id?", element: <ResultsPage /> },
-    { path: "/dashboard", element: <DashboardPage /> },
     { path: "/games", element: <GamesPage /> },
     { path: "/games/quizzes", element: <GamesQuizPage /> },
     { path: "/games/personality-quiz", element: <PersonalityQuizPage /> },
-    { path: "/ground-news-demo", element: <GroundNewsDemo /> },
+    { path: "/latest-news-coverage", element: <GroundNewsDemo /> },
     { path: "/*", element: <Navigate to="/" /> },
 ];
 
