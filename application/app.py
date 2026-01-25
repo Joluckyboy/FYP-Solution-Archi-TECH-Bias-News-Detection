@@ -10,9 +10,11 @@ import time
 import json
 import asyncio
 import logging
+import concurrent.futures
 
 from api_models import URLInput, NewsItem, URLwithBG
 import methods as methods
+import dashboard_methods as dashboard_methods
 
 logging.basicConfig(
     level=logging.INFO,
@@ -92,6 +94,20 @@ def health_check2():
 @app.get("/application/check_query")
 async def check_query():
     return {"status": "ok"}
+
+@app.get("/application/bias_dashboard")
+def get_bias_dashboard():
+    """
+    Returns aggregated bias metrics for the frontend dashboard (Sprint 1 MVP).
+    Data is loaded from datasets/news_outlets_summary.csv via dashboard_methods.py
+    """
+    try:
+        return dashboard_methods.load_dashboard_data()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        logger.exception("Failed to load bias dashboard data")
+        raise HTTPException(status_code=500, detail="Failed to load bias dashboard data")
 
 @app.post("/application/new_query", response_model=NewsItem, responses={
     200: {
@@ -214,64 +230,50 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 if not text or not title:
                     raise HTTPException(status_code=400, detail="Invalid URL")
             
-            # AUTO-RETRY: Only retry missing analyses
+            # AUTO-RETRY: Only retry missing analyses IN PARALLEL
             if missing_analyses and not force_reanalyze:
                 logger.info(f"Auto-retrying {len(missing_analyses)} missing service(s): {', '.join(missing_analyses)}")
                 
                 def selective_retry():
-                    """Only re-run the failed/missing analyses"""
-                    retry_count = 0
+                    """Only re-run the failed/missing analyses in parallel"""
+                    retry_tasks = []
                     
                     if "sentiment" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying sentiment analysis for {url}")
-                            methods.get_sentiment(text, url, title)
-                            retry_count += 1
-                        except Exception as e:
-                            logger.error(f"Sentiment retry failed: {e}")
-                    
+                        retry_tasks.append((methods.get_sentiment, "sentiment"))
                     if "emotion" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying emotion analysis for {url}")
-                            methods.get_emotion(text, url, title)
-                            retry_count += 1
-                        except Exception as e:
-                            logger.error(f"Emotion retry failed: {e}")
-                    
+                        retry_tasks.append((methods.get_emotion, "emotion"))
                     if "propaganda" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying propaganda analysis for {url}")
-                            methods.get_propaganda(text, url, title)
-                            retry_count += 1
-                        except Exception as e:
-                            logger.error(f"Propaganda retry failed: {e}")
-                    
+                        retry_tasks.append((methods.get_propaganda, "propaganda"))
                     if "summarise" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying summarise for {url}")
-                            methods.get_summarise(text, url, title)
-                            retry_count += 1
-                        except Exception as e:
-                            logger.error(f"Summarise retry failed: {e}")
-                    
+                        retry_tasks.append((methods.get_summarise, "summarise"))
                     if "factcheck" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying fact-check for {url}")
-                            methods.get_fact_check(text, url, title)
-                            retry_count += 1
-                        except Exception as e:
-                            logger.error(f"Fact-check retry failed: {e}")
+                        retry_tasks.append((methods.get_fact_check, "fact check"))
+                    
+                    # Run retry tasks in parallel (except data_summary which depends on others)
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                        futures = {}
+                        for task_method, label in retry_tasks:
+                            future = executor.submit(task_method, text, url, title)
+                            futures[future] = label
+                        
+                        for future in concurrent.futures.as_completed(futures):
+                            label = futures[future]
+                            try:
+                                future.result()
+                                logger.info(f"✓ Successfully retried {label} for {url}")
+                            except Exception as e:
+                                logger.error(f"✗ {label.capitalize()} retry failed: {e}")
                     
                     # Data summary depends on other analyses, run last
                     if "data_summary" in missing_analyses:
                         try:
                             logger.info(f"Retrying data summary for {url}")
                             methods.get_data_summary(text, url, title)
-                            retry_count += 1
+                            logger.info(f"✓ Successfully retried data summary for {url}")
                         except Exception as e:
-                            logger.error(f"Data summary retry failed: {e}")
+                            logger.error(f"✗ Data summary retry failed: {e}")
                     
-                    logger.info(f"Selective retry complete: {retry_count}/{len(missing_analyses)} services re-run for {url}")
+                    logger.info(f"Selective retry complete for {url}")
                 
                 if background:
                     threading.Thread(target=selective_retry, daemon=True).start()
@@ -305,28 +307,49 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             initial_save = methods.create_news(url, title, text)
             logger.info(f"Article content saved for {url}")
 
-        # FULL ANALYSIS: Run all services (for new articles or force re-analyze)
+        # FULL ANALYSIS: Run all services IN PARALLEL (for new articles or force re-analyze)
         def full_analysis():
-            """Run all analysis services"""
-            analysis_methods = [
+            """Run all analysis services in parallel for maximum speed"""
+            
+            # Group 1: Independent analyses that can run simultaneously
+            independent_tasks = [
                 (methods.get_sentiment, "sentiment"),
                 (methods.get_emotion, "emotion"),
                 (methods.get_propaganda, "propaganda"),
                 (methods.get_summarise, "summary"),
-                (methods.get_fact_check, "fact check"),
-                (methods.get_data_summary, "data summary")
+                (methods.get_fact_check, "fact check"),  # Now optimized to 1 API call per article!
             ]
+            
+            # Run all independent analyses in parallel using ThreadPoolExecutor
+            logger.info(f"Starting parallel analysis for {url} ({len(independent_tasks)} services)")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = {}
+                for analysis_method, label in independent_tasks:
+                    future = executor.submit(analysis_method, text, url, title)
+                    futures[future] = label
+                
+                # Wait for all to complete and log results
+                for future in concurrent.futures.as_completed(futures):
+                    label = futures[future]
+                    try:
+                        result = future.result()
+                        if not result:
+                            logger.warning(f"⚠️ No result returned for {label}")
+                        else:
+                            logger.info(f"✓ Completed {label} analysis for {url}")
+                    except Exception as e:
+                        logger.error(f"✗ Error during {label} analysis for {url}: {e}")
+            
+            # Group 2: Data summary depends on other analyses, run last
+            try:
+                logger.info(f"Running data summary analysis for {url}")
+                result = methods.get_data_summary(text, url, title)
+                if result:
+                    logger.info(f"✓ Completed data summary for {url}")
+            except Exception as e:
+                logger.error(f"✗ Error during data summary analysis for {url}: {e}")
 
-            for analysis_method, label in analysis_methods:
-                try:
-                    logger.info(f"Running {label} analysis for {url}")
-                    result = analysis_method(text, url, title)
-                    if not result:
-                        logger.warning(f"⚠️ No result returned for {label}")
-                except Exception as e:
-                    logger.error(f"Error during {label} analysis for {url}: {e}")
-
-            logger.info(f"Full analysis complete for {url}")
+            logger.info(f"✓ Full analysis complete for {url}")
 
         if background:
             # Run analysis in background thread

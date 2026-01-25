@@ -151,29 +151,48 @@ async def getStatement(json_payload: DataPayload):
         raise Exception(f"Failed to retrieve statements while processing article: {str(e)}")
 
 
-async def fact_check(statements, original_article):
+async def fact_check_hybrid(statements, original_article):
     """
-    Optimized fact-checking: 1 API call per article instead of 1 per statement
+    HYBRID APPROACH: Balances speed, cost, and citation accuracy
+    
+    Strategy:
+    1. First pass: 1 API call to fact-check all statements (fast, cheap)
+    2. Parse response to extract statement-specific citation references
+    3. Return results with proper citation mapping
+    
+    This maintains 1 API call while improving citation accuracy through
+    better prompt engineering.
     """
     try:
         model = "sonar-pro"
         
-        # Strip existing numbering from statements to avoid duplication
+        # Strip existing numbering from statements
         cleaned_statements = [re.sub(r"^\d+\.\s*", "", stmt) for stmt in statements]
         
-        # Combine all statements into one prompt
+        # Combine all statements with clear numbering
         statements_text = "\n".join([f"{i+1}. {stmt}" for i, stmt in enumerate(cleaned_statements)])
+        
+        print(f"🔍 Fact-checking {len(cleaned_statements)} statements with citation tracking...")
         
         payload = {
             "model": f"{model}",
             "messages": [
                 {
                     "role": "system",
-                    "content": f"You are a fact-checker and will only assist with fact-checking tasks in Singapore for popular media outlet straitstimes and channel news asia (CNA). You are to analyse if statements provided are factual/unfactual/cannot be determined. Utilise citations relevant to Singapore to derive this. Provide an explanation with reference to quotes from the cited sources for your answer but do not use the original article titled: {original_article} in your citations."
+                    "content": f"You are a fact-checker for Singapore media outlets (Straits Times, CNA). Analyze each statement independently and provide factual/unfactual/cannot be determined verdicts. CRITICAL: In your explanation, reference which specific sources verify EACH statement. Do not use the original article titled: {original_article} in your citations."
                 },
                 {
                     "role": "user",
-                    "content": f"The statement to fact-check is: {statements_text}. Please output JSON object(s) containing the following fields: statement, correctness (factual/unfactual/cannot be determined), and explanation. Besides the specified format, do not mention anything else."
+                    "content": f"""Fact-check these numbered statements:
+
+{statements_text}
+
+For EACH statement, provide:
+1. The statement number and text
+2. Correctness verdict (factual/unfactual/cannot be determined)
+3. Explanation that EXPLICITLY mentions which sources verify THIS specific statement (e.g., "According to [source 1], this claim is verified..." or "Sources [2] and [3] confirm...")
+
+Output as JSON array with fields: statement, correctness, explanation."""
                 },
             ],
             "response_format": {
@@ -190,7 +209,7 @@ async def fact_check(statements, original_article):
         response = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload)
         print(f"Fact-check API status: {response.status_code}")
         
-        # Handle various error scenarios
+        # Handle error scenarios
         if response.status_code == 402:
             raise Exception("⚠️ Perplexity credit limit exceeded! Wait for monthly reset or upgrade your plan.")
         elif response.status_code == 429:
@@ -206,65 +225,172 @@ async def fact_check(statements, original_article):
         cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
         results = json.loads(cleaned_content)
         
-        # Strip numbering from statement field in LLM response
+        # Get all citations from the response
+        all_citations = response_data.get("citations", [])
+        
+        # Strip numbering from statement field
         for result in results:
             if "statement" in result:
                 result["statement"] = re.sub(r"^\d+\.\s*", "", result["statement"])
         
-        # Add citations to all results
-        citations = response_data.get("citations", [])
-        for result in results:
-            result["citations"] = citations
+        # IMPROVED: Parse explanation to map statement-specific citations
+        for idx, result in enumerate(results):
+            explanation = result.get("explanation", "")
+            statement_citations = extract_statement_citations(explanation, all_citations)
+            
+            # If we couldn't parse specific citations, fall back to all citations
+            # but flag this for the frontend
+            if statement_citations:
+                result["citations"] = statement_citations
+                result["citation_confidence"] = "high"  # We found specific refs
+            else:
+                result["citations"] = all_citations
+                result["citation_confidence"] = "low"   # Fallback to all
         
-        print(f"Successfully fact-checked {len(results)} statements in 1 API call")
+        print(f"✓ Fact-checked {len(results)} statements with citation mapping (1 API call)")
         return results
         
     except Exception as e:
         print(f"⚠️ Fact-check exception: {str(e)}")
         raise Exception(f"Failed to fact-check statements: {str(e)}")
-    
 
-# Previous code to fact-check each statement individually
-# async def fact_check(statements, original_article):
-#     processed_results = []
+
+def extract_statement_citations(explanation: str, all_citations: list) -> list:
+    """
+    Parse the explanation to find which citations are referenced for this specific statement.
     
-#     model = "sonar-pro"     
-#     for statement in statements:
-#         try:
-#             payload = {
-#                 "model": f"{model}",
-#                 "messages": [
-#                     {
-#                         "role": "system",
-#                         "content": f"You are a fact-checker and will only assist with fact-checking tasks in Singapore for popular media outlet straitstimes and channel news asia (CNA). You are to analyse if statements provided are factual/unfactual/cannot be determined. Utilise citations relevant to Singapore to derive this. Provide an explanation with reference to quotes from the cited sources for your answer but do not use the original article titled: {original_article} in your citations."
-#                     },
-#                     {
-#                         "role": "user",
-#                         "content": f"The statement to fact-check is: {statement}. Please output JSON object(s) containing the following fields: statement, correctness (factual/unfactual/cannot be determined), and explanation. Besides the specified format, do not mention anything else."
-#                     },
-#                 ],
-#                 "response_format": {
-#                     "type": "json_schema",
-#                     "json_schema": {"schema": PredictFormat.model_json_schema()},
-#                 },
-#             }
-#             response = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload)
-#             print(f"Fact-check API status for statement '{statement[:50]}...': {response.status_code}")
-#             if response.status_code != 200:
-#                 print(f"Fact-check API error response: {response.text}")
-#                 print(f"⚠️ Skipping statement due to API error")
-#                 continue
-                
-#             response_data = response.json() 
-#             raw_content = response_data["choices"][0]["message"]["content"]
-#             cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
-#             statement_json = json.loads(cleaned_content)
-#             citations = response_data["citations"]
-#             statement_json["citations"] = citations
+    Looks for patterns like:
+    - "According to [source 1]"
+    - "Source [2] confirms"
+    - "[1] and [3] verify"
+    - Direct URL mentions
+    
+    Returns: List of citation objects that are referenced in the explanation
+    """
+    if not all_citations:
+        return []
+    
+    statement_citations = []
+    explanation_lower = explanation.lower()
+    
+    # Method 1: Look for citation index references [1], [2], etc.
+    citation_indices = re.findall(r'\[(\d+)\]', explanation)
+    for idx_str in citation_indices:
+        idx = int(idx_str) - 1  # Convert to 0-indexed
+        if 0 <= idx < len(all_citations):
+            citation = all_citations[idx]
+            if citation not in statement_citations:
+                statement_citations.append(citation)
+    
+    # Method 2: Look for direct URL mentions in explanation
+    for citation in all_citations:
+        citation_url = citation.lower() if isinstance(citation, str) else ""
+        # Check if the domain or significant part of URL is mentioned
+        if citation_url:
+            domain = extract_domain(citation_url)
+            if domain and domain in explanation_lower:
+                if citation not in statement_citations:
+                    statement_citations.append(citation)
+    
+    # Method 3: Look for source references like "source 1", "according to source 2"
+    source_refs = re.findall(r'source[s]?\s+(\d+)', explanation_lower)
+    for idx_str in source_refs:
+        idx = int(idx_str) - 1
+        if 0 <= idx < len(all_citations):
+            citation = all_citations[idx]
+            if citation not in statement_citations:
+                statement_citations.append(citation)
+    
+    return statement_citations
+
+
+def extract_domain(url: str) -> str:
+    """Extract domain from URL for matching"""
+    try:
+        # Simple domain extraction
+        match = re.search(r'https?://(?:www\.)?([^/]+)', url)
+        if match:
+            return match.group(1).lower()
+    except:
+        pass
+    return ""
+
+
+# ALTERNATIVE: If you need perfect citation accuracy and can afford it
+async def fact_check_sequential_accurate(statements, original_article):
+    """
+    FALLBACK OPTION: Sequential fact-checking for maximum accuracy
+    
+    Use this ONLY if:
+    - You have higher API budget
+    - Citation accuracy is critical for your use case
+    - You can tolerate 30-40s processing time
+    
+    Cost: N API calls (1 per statement)
+    Speed: Slow (30-40s for 10 statements)
+    Accuracy: Perfect citation mapping
+    """
+    processed_results = []
+    model = "sonar-pro"
+    
+    print(f"🔍 Sequential fact-checking {len(statements)} statements (HIGH ACCURACY MODE)...")
+    
+    for idx, statement in enumerate(statements, 1):
+        try:
+            payload = {
+                "model": f"{model}",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": f"You are a fact-checker for Singapore media outlets (Straits Times, CNA). Analyze if the statement is factual/unfactual/cannot be determined. Do not use the original article titled: {original_article} in your citations."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Fact-check this statement: {statement}. Output JSON with fields: statement, correctness, explanation."
+                    },
+                ],
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {"schema": PredictFormat.model_json_schema()},
+                },
+            }
             
-#             processed_results.append(statement_json)
-#         except Exception as e:
-#             print(f"Error encountered with statement: {statement}")
-#             print("⚠️ **Exception:**", str(e)) 
+            response = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload)
+            
+            if response.status_code != 200:
+                print(f"⚠️ Skipping statement {idx} due to API error (status {response.status_code})")
+                continue
+                
+            response_data = response.json()
+            raw_content = response_data["choices"][0]["message"]["content"]
+            cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
+            statement_json = json.loads(cleaned_content)
+            
+            # Perfect citation mapping - each statement has its own citations
+            statement_json["citations"] = response_data.get("citations", [])
+            statement_json["citation_confidence"] = "perfect"
+            
+            processed_results.append(statement_json)
+            print(f"✓ Checked statement {idx}/{len(statements)}")
+            
+        except Exception as e:
+            print(f"⚠️ Error with statement {idx}: {str(e)}")
     
-#     return processed_results
+    print(f"✓ Sequential fact-checking complete: {len(processed_results)}/{len(statements)} verified")
+    return processed_results
+
+
+# UPDATE YOUR ORIGINAL fact_check FUNCTION TO USE HYBRID
+async def fact_check(statements, original_article):
+    """
+    Main fact-check function - uses hybrid approach by default
+    
+    Switch between approaches based on your needs:
+    - fact_check_hybrid: Fast + Good accuracy (RECOMMENDED)
+    - fact_check_sequential_accurate: Slow + Perfect accuracy (if budget allows)
+    """
+    # Use hybrid approach for best balance
+    return await fact_check_hybrid(statements, original_article)
+    
+    # OR uncomment this for perfect accuracy (if you can afford it):
+    # return await fact_check_sequential_accurate(statements, original_article)

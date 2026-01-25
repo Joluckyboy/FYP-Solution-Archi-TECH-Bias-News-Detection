@@ -7,13 +7,24 @@ const Header = () => {
 				<img src="/checkmate.svg" alt="checkmatelogo" />
 				<h2 className="ml-2 checkmate-gradient text-lg">CheckMate</h2>
 			</Link>
-            <Link to="/games">
-                <div className="m-2 pr-4">
-                    <img src="/game.svg" alt="gamelogo" />
-                </div>
-			</Link>
+
+      <div className="flex items-center gap-2">
+        <Link
+          to="/dashboard"
+          className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium"
+        >
+          Dashboard
+        </Link>
+
+        <Link to="/games">
+          <div className="m-2 pr-4">
+            <img src="/game.svg" alt="gamelogo" />
+          </div>
+        </Link>
+      </div>
 		</div>
 	);
 };
 
 export default Header;
+

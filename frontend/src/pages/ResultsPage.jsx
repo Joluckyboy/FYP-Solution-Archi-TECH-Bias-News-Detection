@@ -91,6 +91,28 @@ const ResultsPage = () => {
     unfactual: "bg-rose-100 text-rose-900",
   };
 
+  // Helper function to determine if we should show citations
+  const shouldShowCitations = (fact) => {
+    // If no citations at all
+    if (!fact.citations || fact.citations.length === 0) {
+      return false;
+    }
+    
+    // If explanation says "no sources" or similar
+    const explanationLower = (fact.explanation || "").toLowerCase();
+    if (
+      explanationLower.includes("no sources") ||
+      explanationLower.includes("no source") ||
+      explanationLower.includes("sources do not") ||
+      explanationLower.includes("do not mention") ||
+      explanationLower.includes("does not mention")
+    ) {
+      return false;
+    }
+    
+    return true;
+  };
+
   return data ? (
     <div className="app-container">
       {/* Article Details */}
@@ -99,7 +121,7 @@ const ResultsPage = () => {
           <CardTitle className="text-3xl font-bold">
             {data?.title ?? "No title available"}
           </CardTitle>
-          {/* Article Addtional Details */}
+          {/* Article Additional Details */}
           <div className="flex items-center space-x-2 mt-2 card-subtitle">
             <GlobeLock className="w-4 h-4" />
             <a
@@ -111,18 +133,6 @@ const ResultsPage = () => {
               {new URL(data.url).hostname.replace("www.", "")}
             </a>
           </div>
-          {/* <div className="flex items-center space-x-2 mt-2 card-subtitle">
-						<Separator orientation="vertical" className="h-4" />
-						<div className="flex items-center space-x-2">
-							<Building2 className="w-4 h-4" />
-							<span>The Straits Times</span>
-						</div>
-						<Separator orientation="vertical" className="h-4" />
-						<div className="flex items-center space-x-2">
-							<CalendarFold className="w-4 h-4" />
-							<span>22 Jan 2025</span>
-						</div>
-					</div> */}
         </CardHeader>
       </Card>
 
@@ -265,55 +275,112 @@ const ResultsPage = () => {
                     <CardContent>
                       {/* Fact Check Content */}
                       <div className="space-y-4">
-                        {data.factcheck_result.map((fact, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center space-x-2"
-                          >
-                            <Accordion type="single" collapsible>
-                              <AccordionItem value={`item-${index}`}>
-                                <AccordionTrigger
-                                  className={`p-3 rounded-md ${
-                                    factuality_mapping[fact.correctness]
-                                  }`}
-                                >
-                                  <div className="flex items-start">
-                                    <span className="mr-2 font-semibold">
-                                      {index + 1}.
-                                    </span>
-                                    <span className="text-left">
-                                      {fact.statement}
-                                    </span>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <div className="p-4">
-                                    <blockquote className="border-l-2 px-4 py-2 italic text-left">
-                                      <span className="">
-                                        {fact.explanation}
+                        {data.factcheck_result.map((fact, index) => {
+                          const showCitations = shouldShowCitations(fact);
+                          const hasLowConfidence = fact.citation_confidence === "low";
+
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center space-x-2"
+                            >
+                              <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value={`item-${index}`}>
+                                  <AccordionTrigger
+                                    className={`p-3 rounded-md ${
+                                      factuality_mapping[fact.correctness]
+                                    }`}
+                                  >
+                                    <div className="flex items-start">
+                                      <span className="mr-2 font-semibold">
+                                        {index + 1}.
                                       </span>
-                                    </blockquote>
-                                    <br />
-                                    <p>Sources:</p>
-                                    <ul className="list-disc ml-6 space-y-2 text-gray-700">
-                                      {fact.citations.map((citation, idx) => (
-                                        <li key={idx}>
-                                          <a
-                                            href={citation}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            {citation}
-                                          </a>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-                          </div>
-                        ))}
+                                      <span className="text-left">
+                                        {fact.statement}
+                                      </span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="p-4">
+                                      <blockquote className="border-l-2 px-4 py-2 italic text-left">
+                                        <span className="">
+                                          {fact.explanation}
+                                        </span>
+                                      </blockquote>
+                                      
+                                      <br />
+                                      
+                                      {/* Citation Confidence Warning */}
+                                      {showCitations && hasLowConfidence && (
+                                        <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                                          <p className="text-sm text-amber-700">
+                                            ⚠️ Multiple sources shown - manual verification recommended
+                                          </p>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Sources Section */}
+                                      <p className="font-semibold mb-2">Sources:</p>
+                                      {showCitations ? (
+                                        (() => {
+                                          // Extract all source numbers mentioned in the explanation
+                                          // e.g., "Sources [5], [6], [9] confirm..." → [5, 6, 9]
+                                          const explanation = fact.explanation || "";
+                                          const mentionedNumbers = [];
+                                          
+                                          // Find all [number] patterns in the explanation
+                                          const numberMatches = explanation.match(/\[(\d+)]/g);
+                                          if (numberMatches) {
+                                            numberMatches.forEach(match => {
+                                              const num = parseInt(match.replace(/[[\]]/g, ''));
+                                              if (!mentionedNumbers.includes(num)) {
+                                                mentionedNumbers.push(num);
+                                              }
+                                            });
+                                          }
+                                          
+                                          // Sort the numbers to match order in explanation
+                                          mentionedNumbers.sort((a, b) => a - b);
+                                          
+                                          return (
+                                            <ul className="list-none ml-0 space-y-2 text-gray-700">
+                                              {fact.citations.map((citation, idx) => {
+                                                // Use the mentioned number if available, otherwise use sequential
+                                                const sourceNumber = mentionedNumbers[idx] || (idx + 1);
+                                                
+                                                return (
+                                                  <li key={idx} className="flex items-start space-x-2">
+                                                    <span className="font-semibold text-blue-600 shrink-0 min-w-[2.5rem]">
+                                                      [{sourceNumber}]
+                                                    </span>
+                                                    <a
+                                                      href={citation}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-blue-600 hover:underline break-all"
+                                                    >
+                                                      {citation}
+                                                    </a>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          );
+                                        })()
+                                      ) : (
+                                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                          <p className="text-sm text-gray-600 italic">
+                                            No verifying sources found for this statement
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
+                            </div>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </div>

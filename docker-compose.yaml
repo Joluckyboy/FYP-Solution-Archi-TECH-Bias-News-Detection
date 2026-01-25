@@ -75,6 +75,8 @@ services:
       context: ./application
     ports:
       - "8010:8010"
+    volumes:
+      - ./datasets:/datasets:ro
     environment:
       - ENV=production
       - DATABASE_URL=http://database:8011
