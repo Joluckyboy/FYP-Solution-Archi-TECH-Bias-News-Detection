@@ -57,7 +57,7 @@ class TopicClusteredService:
 
             # Simple bias aggregation
             # We want 5 buckets: Left, Leaning Left, Center, Leaning Right, Right
-            # Check dataset values usually: left, right, center, left-center, right-center
+            # Check dataset values usually: left, right, center, leaning-left, leaning-right
             bias_counts = {
                 "left": 0,
                 "leaning_left": 0,
@@ -74,9 +74,9 @@ class TopicClusteredService:
                     bias_counts["right"] += 1
                 elif b == "center":
                     bias_counts["center"] += 1
-                elif "left" in b:  # left-center
+                elif b == "leaning-left":
                     bias_counts["leaning_left"] += 1
-                elif "right" in b:  # right-center
+                elif b == "leaning-right":
                     bias_counts["leaning_right"] += 1
                 else:
                     bias_counts["center"] += 1

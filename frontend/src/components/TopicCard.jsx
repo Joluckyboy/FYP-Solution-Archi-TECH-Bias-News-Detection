@@ -6,10 +6,10 @@ const TopicCard = ({ topic }) => {
     const { title, image, sourceCount, biasDistribution } = topic;
 
     // Calculate total for percentages if not provided, though we expect pre-calculated percentages or counts
-    const total = biasDistribution.left + biasDistribution.center + biasDistribution.right;
-    const leftPct = (biasDistribution.left / total) * 100;
+    const total = biasDistribution.left + biasDistribution.leaning_left + biasDistribution.center + biasDistribution.leaning_right + biasDistribution.right;
+    const leftPct = ((biasDistribution.left + biasDistribution.leaning_left) / total) * 100;
     const centerPct = (biasDistribution.center / total) * 100;
-    const rightPct = (biasDistribution.right / total) * 100;
+    const rightPct = ((biasDistribution.right + biasDistribution.leaning_right) / total) * 100;
 
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border-none shadow-md">

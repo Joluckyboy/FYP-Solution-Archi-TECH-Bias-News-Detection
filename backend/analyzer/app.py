@@ -137,13 +137,23 @@ def dashboard_topics():
                     "title": title,
                     "articles": [row],
                     "source_count": 1,
-                    "bias_counts": {"left": 0, "center": 0, "right": 0},
+                    "bias_counts": {
+                        "left": 0,
+                        "leaning_left": 0,
+                        "center": 0,
+                        "leaning_right": 0,
+                        "right": 0,
+                    },
                     "date": str(row.get("date", "")),
                 }
-                if "left" or "leaning_left" in bias_val:
+                if bias_val == "left":
                     new_group["bias_counts"]["left"] += 1
-                elif "right" or "leaning_right" in bias_val:
+                elif bias_val == "leaning-left":
+                    new_group["bias_counts"]["leaning_left"] += 1
+                elif bias_val == "right":
                     new_group["bias_counts"]["right"] += 1
+                elif bias_val == "leaning-right":
+                    new_group["bias_counts"]["leaning_right"] += 1
                 else:
                     new_group["bias_counts"]["center"] += 1
                 groups.append(new_group)
@@ -152,9 +162,12 @@ def dashboard_topics():
         topics = []
         for i, group in enumerate(groups):
             total = group["source_count"]
+
             distribution = {
                 "left": (group["bias_counts"]["left"] / total) * 100,
+                "leaning_left": (group["bias_counts"]["leaning_left"] / total) * 100,
                 "center": (group["bias_counts"]["center"] / total) * 100,
+                "leaning_right": (group["bias_counts"]["leaning_right"] / total) * 100,
                 "right": (group["bias_counts"]["right"] / total) * 100,
             }
 
