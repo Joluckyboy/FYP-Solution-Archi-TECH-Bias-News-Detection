@@ -10,9 +10,7 @@ const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
 /* const BrainBoostersPage = lazy(() => import("@/pages/GamesQuizzes/BrainBoostersPage")); */
 const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQuizPage"));
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
-
-
-import LatestNewsPage from "../pages/LatestNewsPage";
+const LatestNewsPage = lazy(() => import("@/pages/LatestNewsPage"));
 
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
