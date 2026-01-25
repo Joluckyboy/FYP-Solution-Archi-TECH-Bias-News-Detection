@@ -11,13 +11,12 @@ const TopicFeed = () => {
     useEffect(() => {
         const fetchTopics = async () => {
             try {
-                // Assuming the scraper service runs on localhost:5000
-                const response = await axios.get('http://127.0.0.1:8015/scraper/dashboard/topics');
+                const response = await axios.get('http://127.0.0.1:8017/dashboard/topics');
                 setTopics(response.data.topics);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to fetch topics:", err);
-                setError("Failed to load topics. Please ensure the backend scraper service is running.");
+                setError("Failed to load topics. Please ensure the backend analyzer service is running.");
                 setLoading(false);
             }
         };
