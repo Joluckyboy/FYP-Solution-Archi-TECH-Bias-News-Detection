@@ -1,4 +1,3 @@
-import React from 'react';
 import TopicFeed from '@/components/TopicFeed';
 
 const LatestNewsPage = () => {

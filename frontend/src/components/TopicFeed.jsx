@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import TopicCard from './TopicCard';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';

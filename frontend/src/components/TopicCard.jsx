@@ -1,6 +1,4 @@
-import React from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 const TopicCard = ({ topic }) => {
     const { title, image, sourceCount, biasDistribution } = topic;
