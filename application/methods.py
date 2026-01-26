@@ -171,7 +171,8 @@ def get_fact_check(article_content: str, url: str, title: str ):
     query_url = vars.factcheck_url + "/factcheck/predict/fact-check"
     payload = {
         "title": title, 
-        "content": article_content
+        "content": article_content,
+        "url": url
     }
     
     try:

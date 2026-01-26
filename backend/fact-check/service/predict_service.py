@@ -1,13 +1,55 @@
 import re
 import json
 import requests
+from urllib.parse import urlparse
 
 from config.config import Config
-from models.datapayload import DataPayload
-from models.datapayload import ModelDataPayload
+from models.datapayload import DataPayload, ModelDataPayload
 from models.statementformat import StatementFormat
 from models.predictformat import PredictFormat
-from models.modeldataformat import ModelDataFormat
+
+
+def normalize_url(url):
+    """Normalize URL for comparison by removing protocol, www, and trailing slashes"""
+    if not url:
+        return ""
+    parsed = urlparse(url.lower())
+    domain_path = parsed.netloc + parsed.path
+    domain_path = domain_path.replace('www.', '')
+    domain_path = domain_path.rstrip('/')
+    return domain_path
+
+
+def filter_citations(citations, original_url):
+    """Filter out citations that match the original article URL and deduplicate results"""
+    if not citations or not original_url:
+        return []
+
+    def citation_to_url(citation):
+        if isinstance(citation, str):
+            return citation
+        if isinstance(citation, dict):
+            for key in ("url", "source", "link"):
+                val = citation.get(key)
+                if isinstance(val, str):
+                    return val
+        return ""
+
+    normalized_original = normalize_url(original_url)
+    filtered_urls = []
+
+    for citation in citations:
+        citation_url = citation_to_url(citation)
+        if not citation_url:
+            continue
+
+        normalized_citation = normalize_url(citation_url)
+
+        # Only include if it's NOT the same as the original article
+        if normalized_citation != normalized_original:
+            filtered_urls.append(citation_url)
+
+    return filtered_urls
 
 
 def processStatement(content):
@@ -15,6 +57,7 @@ def processStatement(content):
     statements_json = json.loads(cleaned_content)
     statements_list = [item["statement"] for item in statements_json]
     return statements_list
+
 
 async def summarise(text: str) -> str:
     try:
@@ -151,46 +194,141 @@ async def getStatement(json_payload: DataPayload):
         raise Exception(f"Failed to retrieve statements while processing article: {str(e)}")
 
 
-async def fact_check_hybrid(statements, original_article):
+def clean_source_attributions(explanation: str) -> str:
     """
-    HYBRID APPROACH: Balances speed, cost, and citation accuracy
+    Remove potentially inaccurate source attributions while keeping citation numbers.
     
-    Strategy:
-    1. First pass: 1 API call to fact-check all statements (fast, cheap)
-    2. Parse response to extract statement-specific citation references
-    3. Return results with proper citation mapping
+    Examples:
+    "According to AsiaOne, IMDA stated [1]" → "According to [1]"
+    "CNA confirms [2]" → "[2]"
+    "The IMDA verifies [3]" → "[3]"
+    """
+    if not explanation:
+        return explanation
     
-    This maintains 1 API call while improving citation accuracy through
-    better prompt engineering.
+    # Remove "According to X," patterns
+    explanation = re.sub(
+        r'According to [^,\.\[]+?,\s*',
+        '',
+        explanation,
+        flags=re.IGNORECASE
+    )
+    
+    # Remove source names + verbs before citations
+    sources = r'(?:the\s+)?(?:AsiaOne|CNA|Sky News|France24|BBC|Reuters|Bloomberg|ILTV|Times of Israel|IMDA|SPF|official|government)'
+    verbs = r'(?:state[sd]?|confirm[s|ed]?|report[s|ed]?|verif(?:y|ies|ied)|note[s|d]?|mention[s|ed]?|impl(?:y|ies|ied)|announce[s|d]?|say[s]?|said)'
+    
+    explanation = re.sub(
+        sources + r'\s+(?:and\s+\w+\s+)?' + verbs + r'\s+(?:that\s+)?',
+        '',
+        explanation,
+        flags=re.IGNORECASE
+    )
+    
+    # Remove institutional phrases
+    explanation = re.sub(
+        r'(?:the\s+)?(?:IMDA\'s\s+)?(?:official\s+)?(?:press\s+)?(?:release|statement|website)\s*[,:]?\s*',
+        '',
+        explanation,
+        flags=re.IGNORECASE
+    )
+    
+    # Add "According to" before orphaned citations
+    explanation = re.sub(r'(?:^|(?<=\.\s))(\[)', r'According to \1', explanation)
+    
+    # Clean up spacing
+    explanation = re.sub(r'\s+', ' ', explanation)
+    explanation = re.sub(r'\s+([,\.\)])', r'\1', explanation)
+    explanation = explanation.strip()
+    
+    # Fix duplicates
+    explanation = re.sub(r'According to According to', 'According to', explanation)
+    
+    # Capitalize
+    if explanation and explanation[0].islower():
+        explanation = explanation[0].upper() + explanation[1:]
+    
+    return explanation
+
+
+def reorder_citations_by_explanation(explanation: str, all_citations: list) -> tuple:
+    """
+    Extract citation numbers from explanation and reorder citations accordingly.
+    Also removes duplicate citation numbers (e.g., [3][3] becomes [3])
+    
+    Returns: (updated_explanation, reordered_citations)
+    """
+    if not all_citations:
+        return explanation, []
+    
+    pattern = r'\[(\d+)\]'
+    matches = list(re.finditer(pattern, explanation))
+    
+    if not matches:
+        return explanation, []
+    
+    mapping = {}
+    reordered_citations = []
+    
+    for match in matches:
+        old_idx = int(match.group(1))
+        
+        if old_idx not in mapping:
+            if 1 <= old_idx <= len(all_citations):
+                new_idx = len(reordered_citations) + 1
+                mapping[old_idx] = new_idx
+                reordered_citations.append(all_citations[old_idx - 1])
+    
+    updated_explanation = explanation
+    for old_idx in sorted(mapping.keys(), reverse=True):
+        new_idx = mapping[old_idx]
+        updated_explanation = updated_explanation.replace(f'[{old_idx}]', f'[{new_idx}]')
+    
+    # *** NEW: Remove duplicate consecutive citation numbers ***
+    # [1][1] or [3][3] becomes just [1] or [3]
+    updated_explanation = re.sub(r'(\[\d+\])(\1)+', r'\1', updated_explanation)
+    
+    return updated_explanation, reordered_citations
+
+
+async def fact_check_hybrid(statements, original_article_title, original_article_url):
+    """
+    HYBRID APPROACH: Fast, cost-effective fact-checking with citation filtering
+    
+    Features:
+    1. Filters out original article URL from citations
+    2. Reorders citations to match explanation references
+    3. Cleans up false source attributions
     """
     try:
         model = "sonar-pro"
         
-        # Strip existing numbering from statements
         cleaned_statements = [re.sub(r"^\d+\.\s*", "", stmt) for stmt in statements]
-        
-        # Combine all statements with clear numbering
         statements_text = "\n".join([f"{i+1}. {stmt}" for i, stmt in enumerate(cleaned_statements)])
         
-        print(f"🔍 Fact-checking {len(cleaned_statements)} statements with citation tracking...")
+        print(f"Fact-checking {len(cleaned_statements)} statements...")
+        print(f"Original article: {original_article_title}")
+        print(f"Excluding citations from: {original_article_url}")
         
         payload = {
             "model": f"{model}",
             "messages": [
                 {
                     "role": "system",
-                    "content": f"You are a fact-checker for Singapore media outlets (Straits Times, CNA). Analyze each statement independently and provide factual/unfactual/cannot be determined verdicts. CRITICAL: In your explanation, reference which specific sources verify EACH statement. Do not use the original article titled: {original_article} in your citations."
+                    "content": f"You are a fact-checker for Singapore media outlets. Analyze if the statement is factual/unfactual/cannot be determined. CRITICAL: Do NOT cite or reference the article titled '{original_article_title}' (URL: {original_article_url}). Find independent verification from OTHER sources."
                 },
                 {
                     "role": "user",
-                    "content": f"""Fact-check these numbered statements:
+                    "content": f"""Fact-check these numbered statements from an article titled "{original_article_title}":
 
 {statements_text}
+
+IMPORTANT: Do NOT use the original article ({original_article_url}) as a source. Find independent verification from OTHER reliable sources.
 
 For EACH statement, provide:
 1. The statement number and text
 2. Correctness verdict (factual/unfactual/cannot be determined)
-3. Explanation that EXPLICITLY mentions which sources verify THIS specific statement (e.g., "According to [source 1], this claim is verified..." or "Sources [2] and [3] confirm...")
+3. Explanation with citation numbers [1], [2], etc.
 
 Output as JSON array with fields: statement, correctness, explanation."""
                 },
@@ -209,9 +347,8 @@ Output as JSON array with fields: statement, correctness, explanation."""
         response = requests.post(Config.PERPLEXITY_URL, headers=Config.HEADERS, json=payload)
         print(f"Fact-check API status: {response.status_code}")
         
-        # Handle error scenarios
         if response.status_code == 402:
-            raise Exception("⚠️ Perplexity credit limit exceeded! Wait for monthly reset or upgrade your plan.")
+            raise Exception("⚠️ Perplexity credit limit exceeded!")
         elif response.status_code == 429:
             raise Exception("⚠️ Rate limit exceeded. Please try again later.")
         elif response.status_code == 401:
@@ -225,29 +362,39 @@ Output as JSON array with fields: statement, correctness, explanation."""
         cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
         results = json.loads(cleaned_content)
         
-        # Get all citations from the response
+        # *** CRITICAL: Filter out original article citations ***
         all_citations = response_data.get("citations", [])
+        filtered_citations = filter_citations(all_citations, original_article_url)
         
-        # Strip numbering from statement field
+        print(f"Total citations: {len(all_citations)}")
+        print(f"Filtered citations (excluding original): {len(filtered_citations)}")
+        
+        # Strip numbering from statements
         for result in results:
             if "statement" in result:
                 result["statement"] = re.sub(r"^\d+\.\s*", "", result["statement"])
         
-        # IMPROVED: Parse explanation to map statement-specific citations
+        # Process each result
         for idx, result in enumerate(results):
             explanation = result.get("explanation", "")
-            statement_citations = extract_statement_citations(explanation, all_citations)
             
-            # If we couldn't parse specific citations, fall back to all citations
-            # but flag this for the frontend
-            if statement_citations:
-                result["citations"] = statement_citations
-                result["citation_confidence"] = "high"  # We found specific refs
+            # Reorder citations based on explanation
+            updated_explanation, reordered_citations = reorder_citations_by_explanation(
+                explanation, filtered_citations
+            )
+            
+            # Clean up false source attributions
+            cleaned_explanation = clean_source_attributions(updated_explanation)
+            result["explanation"] = cleaned_explanation
+            
+            if reordered_citations:
+                result["citations"] = reordered_citations
+                result["citation_confidence"] = "high"
             else:
-                result["citations"] = all_citations
-                result["citation_confidence"] = "low"   # Fallback to all
+                result["citations"] = []
+                result["citation_confidence"] = "low"
         
-        print(f"✓ Fact-checked {len(results)} statements with citation mapping (1 API call)")
+        print(f"✓ Fact-checked {len(results)} statements (1 API call)")
         return results
         
     except Exception as e:
@@ -255,69 +402,7 @@ Output as JSON array with fields: statement, correctness, explanation."""
         raise Exception(f"Failed to fact-check statements: {str(e)}")
 
 
-def extract_statement_citations(explanation: str, all_citations: list) -> list:
-    """
-    Parse the explanation to find which citations are referenced for this specific statement.
-    
-    Looks for patterns like:
-    - "According to [source 1]"
-    - "Source [2] confirms"
-    - "[1] and [3] verify"
-    - Direct URL mentions
-    
-    Returns: List of citation objects that are referenced in the explanation
-    """
-    if not all_citations:
-        return []
-    
-    statement_citations = []
-    explanation_lower = explanation.lower()
-    
-    # Method 1: Look for citation index references [1], [2], etc.
-    citation_indices = re.findall(r'\[(\d+)\]', explanation)
-    for idx_str in citation_indices:
-        idx = int(idx_str) - 1  # Convert to 0-indexed
-        if 0 <= idx < len(all_citations):
-            citation = all_citations[idx]
-            if citation not in statement_citations:
-                statement_citations.append(citation)
-    
-    # Method 2: Look for direct URL mentions in explanation
-    for citation in all_citations:
-        citation_url = citation.lower() if isinstance(citation, str) else ""
-        # Check if the domain or significant part of URL is mentioned
-        if citation_url:
-            domain = extract_domain(citation_url)
-            if domain and domain in explanation_lower:
-                if citation not in statement_citations:
-                    statement_citations.append(citation)
-    
-    # Method 3: Look for source references like "source 1", "according to source 2"
-    source_refs = re.findall(r'source[s]?\s+(\d+)', explanation_lower)
-    for idx_str in source_refs:
-        idx = int(idx_str) - 1
-        if 0 <= idx < len(all_citations):
-            citation = all_citations[idx]
-            if citation not in statement_citations:
-                statement_citations.append(citation)
-    
-    return statement_citations
-
-
-def extract_domain(url: str) -> str:
-    """Extract domain from URL for matching"""
-    try:
-        # Simple domain extraction
-        match = re.search(r'https?://(?:www\.)?([^/]+)', url)
-        if match:
-            return match.group(1).lower()
-    except:
-        pass
-    return ""
-
-
-# ALTERNATIVE: If you need perfect citation accuracy and can afford it
-async def fact_check_sequential_accurate(statements, original_article):
+async def fact_check_sequential_accurate(statements, original_article_title, original_article_url):
     """
     FALLBACK OPTION: Sequential fact-checking for maximum accuracy
     
@@ -333,7 +418,8 @@ async def fact_check_sequential_accurate(statements, original_article):
     processed_results = []
     model = "sonar-pro"
     
-    print(f"🔍 Sequential fact-checking {len(statements)} statements (HIGH ACCURACY MODE)...")
+    print(f"Sequential fact-checking {len(statements)} statements (HIGH ACCURACY MODE)...")
+    print(f"Excluding citations from: {original_article_url}")
     
     for idx, statement in enumerate(statements, 1):
         try:
@@ -342,11 +428,11 @@ async def fact_check_sequential_accurate(statements, original_article):
                 "messages": [
                     {
                         "role": "system",
-                        "content": f"You are a fact-checker for Singapore media outlets (Straits Times, CNA). Analyze if the statement is factual/unfactual/cannot be determined. Do not use the original article titled: {original_article} in your citations."
+                        "content": f"You are a fact-checker for Singapore media outlets. Analyze if the statement is factual/unfactual/cannot be determined. CRITICAL: Do NOT cite or reference the article titled '{original_article_title}' (URL: {original_article_url}). Find independent verification from OTHER sources."
                     },
                     {
                         "role": "user",
-                        "content": f"Fact-check this statement: {statement}. Output JSON with fields: statement, correctness, explanation."
+                        "content": f"Fact-check this statement: {statement}. Do NOT use {original_article_url} as a source. Find alternative verification. Output JSON with fields: statement, correctness, explanation."
                     },
                 ],
                 "response_format": {
@@ -366,12 +452,15 @@ async def fact_check_sequential_accurate(statements, original_article):
             cleaned_content = re.sub(r"```json|```", "", raw_content).strip()
             statement_json = json.loads(cleaned_content)
             
-            # Perfect citation mapping - each statement has its own citations
-            statement_json["citations"] = response_data.get("citations", [])
+            # Filter citations to exclude original article
+            all_citations = response_data.get("citations", [])
+            filtered_citations = filter_citations(all_citations, original_article_url)
+
+            statement_json["citations"] = filtered_citations
             statement_json["citation_confidence"] = "perfect"
             
             processed_results.append(statement_json)
-            print(f"✓ Checked statement {idx}/{len(statements)}")
+            print(f"✓ Checked statement {idx}/{len(statements)} (Citations: {len(filtered_citations)})")
             
         except Exception as e:
             print(f"⚠️ Error with statement {idx}: {str(e)}")
@@ -380,8 +469,7 @@ async def fact_check_sequential_accurate(statements, original_article):
     return processed_results
 
 
-# UPDATE YOUR ORIGINAL fact_check FUNCTION TO USE HYBRID
-async def fact_check(statements, original_article):
+async def fact_check(statements, original_article_title, original_article_url):
     """
     Main fact-check function - uses hybrid approach by default
     
@@ -389,8 +477,7 @@ async def fact_check(statements, original_article):
     - fact_check_hybrid: Fast + Good accuracy (RECOMMENDED)
     - fact_check_sequential_accurate: Slow + Perfect accuracy (if budget allows)
     """
-    # Use hybrid approach for best balance
-    return await fact_check_hybrid(statements, original_article)
+    return await fact_check_hybrid(statements, original_article_title, original_article_url)
     
-    # OR uncomment this for perfect accuracy (if you can afford it):
-    # return await fact_check_sequential_accurate(statements, original_article)
+    # OR uncomment this for perfect accuracy (if budget allows):
+    # return await fact_check_sequential_accurate(statements, original_article_title, original_article_url)
