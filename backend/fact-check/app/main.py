@@ -50,6 +50,7 @@ async def summarise_model_data(json_payload: ModelDataPayload):
 @app.post("/factcheck/predict/fact-check")
 async def predict(json_payload: DataPayload):
     original_article_title = json_payload.title
+    original_article_url = json_payload.url
     try:
         logger.info(f"[Factcheck Service] Received payload: {json_payload}")
         statement_list = await getStatement(json_payload)
@@ -58,7 +59,7 @@ async def predict(json_payload: DataPayload):
             logger.warning("[Factcheck Service] No statements found; returning empty list.")
             return {"response": []}
         
-        facts = await fact_check(statement_list, original_article_title)
+        facts = await fact_check(statement_list, original_article_title, original_article_url)
         logger.info(f"[Factcheck Service] Facts extracted: {facts}")
         if not facts:
             logger.warning("[Factcheck Service] No facts returned; returning empty list.")

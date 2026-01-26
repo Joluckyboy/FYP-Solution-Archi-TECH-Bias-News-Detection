@@ -76,7 +76,8 @@ async def test_getStatement(mock_post):
 @patch("requests.post")
 async def test_fact_check(mock_post):
     statements = ["Statement 1"]
-    original_article = "Fake News Example"
+    original_article_title = "Fake News Example"
+    original_article_url = "https://example.com/fake-news"  # ADD THIS
 
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -86,16 +87,28 @@ async def test_fact_check(mock_post):
                 "content": json.dumps([{
                     "statement": "Statement 1",
                     "correctness": "factual",
-                    "explanation": "This statement is factual."
+                    "explanation": "This statement is factual according to [1]."
                 }])
             }
         }],
-        "citations": [{"source": "straitstimes.com"}]
+        "citations": [
+            "https://other-source.com/article",  # Different source
+            "https://example.com/fake-news"      # Original (will be filtered)
+        ]
     }
     mock_post.return_value = mock_response
 
-    result = await fact_check(statements, original_article)
+    # UPDATE THIS LINE - now requires 3 parameters
+    result = await fact_check(statements, original_article_title, original_article_url)
+    
     print("Mocked API Response:", result)
+    
+    # Verify the original article URL was filtered out
+    assert len(result) == 1
+    assert result[0]["statement"] == "Statement 1"
+    assert "https://other-source.com/article" in result[0]["citations"]
+    assert "https://example.com/fake-news" not in result[0]["citations"]  # Filtered!
+    
     mock_post.assert_called_once_with(
         Config.PERPLEXITY_URL, headers=Config.HEADERS, json=ANY
     )
