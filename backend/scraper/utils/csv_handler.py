@@ -1,19 +1,23 @@
 """
 CSV handler with duplicate detection by title + source
+1. Clean BOTH title AND summary using comprehensive text cleaning
+2. Enhanced duplicate detection (title + source)
+3. Topic validation and auto-correction
+4. All text cleaning applied consistently
 """
 import csv
 import os
 import logging
 from datetime import datetime
 from utils.topic_classifier import assign_topic, CONFIG_TOPICS
-from utils.text_processing import clean_boilerplate, fix_encoding_issues
+from utils.text_processing import clean_text_comprehensive
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
 
 class CSVHandler:
-    """Handles CSV operations with ENHANCED deduplication (title + source)"""
+    """Handles CSV operations with ENHANCED deduplication and comprehensive text cleaning"""
     
     CSV_FILE = 'data/scraped_articles.csv'
     CSV_HEADERS = ['title', 'source', 'url', 'published_at', 'summary', 
@@ -173,12 +177,13 @@ class CSVHandler:
     @classmethod
     def validate_and_clean_batch(cls, articles: list) -> list:
         """
-        ENHANCED: Validate and clean batch with deduplication by title+source
-        AND encoding/boilerplate cleanup
+        COMPREHENSIVE FIXED: Validate and clean batch with:
+        - Comprehensive text cleaning (encoding, prefixes, boilerplate) for BOTH title AND summary
+        - Deduplication by title+source
         """
         cleaned = []
         seen_urls = set()
-        seen_pairs = set()  # ENHANCED: Track (title, source) pairs
+        seen_pairs = set()  # Track (title, source) pairs
         skipped = 0
         
         for article in articles:
@@ -206,11 +211,17 @@ class CSVHandler:
                 skipped += 1
                 continue
             
-            # Standardize formats AND clean text
-            article['title'] = fix_encoding_issues(str(article.get('title', '')).strip())
-            # IMPORTANT: Only fix encoding in summary, don't apply full clean_boilerplate here
-            # (boilerplate is already cleaned by scrapers before saving)
-            article['summary'] = fix_encoding_issues(str(article.get('summary', '')).strip())
+            # CRITICAL FIX: Apply comprehensive text cleaning to BOTH title AND summary
+            article['title'] = clean_text_comprehensive(str(article.get('title', '')).strip())
+            article['summary'] = clean_text_comprehensive(str(article.get('summary', '')).strip())
+            
+            # Final validation after cleaning
+            if len(article['title']) < 5 or len(article['summary']) < 20:
+                logger.debug(f"Article too short after cleaning: {article.get('title', '')[:50]}")
+                skipped += 1
+                continue
+            
+            # Standardize other fields
             article['url'] = str(article.get('url', '')).strip()
             
             cleaned.append(article)

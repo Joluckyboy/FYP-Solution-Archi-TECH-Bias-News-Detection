@@ -1,5 +1,11 @@
 """
-Text cleaning and validation utilities for news scraping - ENHANCED VERSION
+Text cleaning and validation utilities for news scraping
+
+1. Enhanced encoding fix (â€ → proper characters)
+2. SINGAPORE: prefix removal for CNA articles
+3. NEW! / NEW ! prefix removal for Fox News
+4. Better boilerplate removal
+5. All fixes applied to BOTH title AND summary
 """
 import re
 import logging
@@ -17,6 +23,8 @@ def fix_encoding_issues(text: str) -> str:
     - â€ → " (closing quote)
     - â€™ → ' (apostrophe)
     - Â  → (non-breaking space)
+    - â€¦ → … (ellipsis)
+    - â€" → – (en dash)
     """
     if not text:
         return ""
@@ -25,43 +33,91 @@ def fix_encoding_issues(text: str) -> str:
     text = text.replace('â€"', '—')
     text = text.replace('â€"', '-')
     text = text.replace('â€"', '–')
+    text = text.replace('â€"', '—')
     
     # Fix quote corruptions
     text = text.replace('â€œ', '"')
     text = text.replace('â€', '"')
-    text = text.replace('â€˜', ''')
-    text = text.replace('â€™', ''')
+    text = text.replace('â€˜', "'")
+    text = text.replace('"', '"')
+    text = text.replace("'", "'")
+    
+    # Fix ellipsis
+    text = text.replace('â€¦', '…')
     
     # Fix other common corruptions
     text = text.replace('Â ', ' ')  # Non-breaking space
+    text = text.replace('Â', ' ')   # Stray Â
     text = text.replace('Ã©', 'é')
     text = text.replace('Ã¨', 'è')
     text = text.replace('Ã¡', 'á')
     text = text.replace('Ã±', 'ñ')
+    text = text.replace('Ã¼', 'ü')
+    text = text.replace('Ã¶', 'ö')
+    text = text.replace('Ã¤', 'ä')
     
     # Remove any remaining control characters
     text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
     
-    return text
+    # Clean up multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
 
 
 def remove_location_prefixes(text: str) -> str:
     """
-    Remove common location prefixes from article summaries
+    Remove common location prefixes from article summaries - ENHANCED FOR CNA
     
     Examples:
-    - "SINGAPORE — Article text" → "Article text"
-    - "SINGAPORE: Article text" → "Article text"  
+    - "SINGAPORE: Article text" → "Article text"
+    - "SINGAPORE — Article text" → "Article text"  
     - "NEW YORK - Article text" → "Article text"
+    
+    CRITICAL: This is specifically for CNA which ALWAYS starts with "SINGAPORE:"
     """
     if not text:
         return ""
     
     # Pattern: CITY_NAME followed by em dash, colon, or hyphen at START only
+    # SINGAPORE is the most common, so check it first
     patterns = [
-        r'^SINGAPORE\s*[—:–-]\s*',
-        r'^NEW\s+[A-Z]+\s*[—:–-]\s*',  # NEW YORK, NEW DELHI, etc.
-        r'^[A-Z][A-Z\s]{2,15}\s*[—:–-]\s*',  # Any all-caps location
+        r'^SINGAPORE\s*[:—–-]\s*',           # SINGAPORE: or SINGAPORE —
+        r'^NEW\s+YORK\s*[:—–-]\s*',          # NEW YORK:
+        r'^NEW\s+DELHI\s*[:—–-]\s*',         # NEW DELHI:
+        r'^WASHINGTON\s*[:—–-]\s*',          # WASHINGTON:
+        r'^LONDON\s*[:—–-]\s*',              # LONDON:
+        r'^[A-Z][A-Z\s]{2,15}\s*[:—–-]\s*',  # Any all-caps location
+    ]
+    
+    for pattern in patterns:
+        text = re.sub(pattern, '', text)
+    
+    return text.strip()
+
+
+def remove_news_prefixes(text: str) -> str:
+    """
+    Remove common news prefixes like "NEW!", "NEW !", "BREAKING:", etc.
+    
+    Examples:
+    - "NEW ! Article text" → "Article text"
+    - "NEW! Article text" → "Article text"
+    - "BREAKING: Article text" → "Article text"
+    
+    CRITICAL: This is specifically for Fox News which often has "NEW !" at the start
+    """
+    if not text:
+        return ""
+    
+    # Pattern: NEWS-RELATED PREFIX at START only
+    patterns = [
+        r'^\s*NEW\s*!+\s*',           # NEW!, NEW !, NEW!!, etc.
+        r'^\s*BREAKING\s*[!:]\s*',    # BREAKING!, BREAKING:
+        r'^\s*EXCLUSIVE\s*[!:]\s*',   # EXCLUSIVE!, EXCLUSIVE:
+        r'^\s*JUST\s+IN\s*[!:]\s*',   # JUST IN!, JUST IN:
+        r'^\s*UPDATE\s*[!:]\s*',      # UPDATE!, UPDATE:
+        r'^\s*URGENT\s*[!:]\s*',      # URGENT!, URGENT:
     ]
     
     for pattern in patterns:
@@ -71,18 +127,27 @@ def remove_location_prefixes(text: str) -> str:
 
 
 def clean_boilerplate(text: str) -> str:
-    """Remove common boilerplate text from news articles - ENHANCED VERSION"""
+    """
+    Remove common boilerplate text from news articles - COMPREHENSIVE VERSION
+    
+    This function:
+    1. Fixes encoding issues FIRST
+    2. Removes location prefixes (SINGAPORE:, NEW YORK:)
+    3. Removes news prefixes (NEW!, BREAKING:)
+    4. Removes newsletter signup text
+    5. Cleans up whitespace
+    """
     if not text:
         return ""
     
-    # STEP 1: Fix encoding issues FIRST
+    # STEP 1: Fix encoding issues FIRST (critical!)
     text = fix_encoding_issues(text)
     
-    # STEP 2: Remove location prefixes  
+    # STEP 2: Remove location prefixes (CNA's "SINGAPORE:")
     text = remove_location_prefixes(text)
     
-    # STEP 3: Remove "NEW !", "NEW!", and similar breaking news prefixes at START only
-    text = re.sub(r'^\s*NEW\s*!+\s*', '', text, flags=re.IGNORECASE)
+    # STEP 3: Remove news prefixes (Fox's "NEW !")
+    text = remove_news_prefixes(text)
     
     # STEP 4: Remove boilerplate phrases
     boilerplate_phrases = [
@@ -105,8 +170,8 @@ def clean_boilerplate(text: str) -> str:
         "Sign up for our weekly Wellness newsletter",
         "CNN Business",
         "CNN International Business",
-        # Today Online
-        "SINGAPORE â€",
+        # CNA
+        "accordingto advance",  # typo in source
         # Generic
         "Sign up",
         "Subscribe to continue reading",
@@ -132,10 +197,32 @@ def clean_boilerplate(text: str) -> str:
     cleaned = re.sub(r'By\s+[A-Z][a-z]+\s+[A-Z][a-z]+', '', cleaned)
     cleaned = re.sub(r'ST PHOTO:\s+[A-Z\s]+', '', cleaned)
     
-    # Collapse multiple spaces
-    cleaned = ' '.join(cleaned.split())
+    # Fix typos
+    cleaned = cleaned.replace('accordingto', 'according to')
+    
+    # Collapse multiple spaces and clean up
+    cleaned = re.sub(r'\s+', ' ', cleaned)
     
     return cleaned.strip()
+
+
+def clean_text_comprehensive(text: str) -> str:
+    """
+    ONE-STOP comprehensive text cleaning for BOTH titles and summaries
+    
+    Use this function to clean ANY text from news articles.
+    It applies ALL fixes in the correct order.
+    """
+    if not text:
+        return ""
+    
+    # Apply all cleaning steps
+    text = fix_encoding_issues(text)
+    text = remove_location_prefixes(text)
+    text = remove_news_prefixes(text)
+    text = clean_boilerplate(text)
+    
+    return text.strip()
 
 
 def is_english_text(text: str, min_ascii_ratio: float = 0.7) -> bool:
