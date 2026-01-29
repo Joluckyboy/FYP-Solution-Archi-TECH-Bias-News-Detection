@@ -48,8 +48,10 @@ const ResultsPage = () => {
   const { id } = useParams();
 
   const forwarded_data = location.state?.data;
+  const articleUrl = location.state?.articleUrl;
   const [data, setData] = useState(forwarded_data || null);
   const [API_URL, setAPI_URL] = useState(null);
+  const [badgeUpdated, setBadgeUpdated] = useState(false);
 
   useEffect(() => {
     // Fetch API_URL once
@@ -75,6 +77,25 @@ const ResultsPage = () => {
       eventSource?.close(); // Cleanup on unmount
     };
   }, [API_URL, id]);
+
+  // Update badge when propaganda result is received
+  useEffect(() => {
+    if (
+      !badgeUpdated &&
+      data?.propaganda_result?.propaganda_probability !== undefined &&
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      chrome.runtime.id
+    ) {
+      const propagandaProbability = data.propaganda_result.propaganda_probability;
+      chrome.runtime.sendMessage({
+        action: "propagandaResultReceived",
+        propagandaProbability,
+        url: data.url || articleUrl,
+      });
+      setBadgeUpdated(true);
+    }
+  }, [data?.propaganda_result, badgeUpdated, articleUrl, data?.url]);
 
   /* Stagger Effect for Animation */
   useEffect(() => {

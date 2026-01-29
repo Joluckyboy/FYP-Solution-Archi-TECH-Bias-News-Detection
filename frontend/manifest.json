@@ -1,7 +1,7 @@
 {
   "name": "FrontEnd",
   "description": "Trying out building an extension to call the scraper",
-  "version": "0.2",
+  "version": "0.3",
   "manifest_version": 3,
   "permissions": [
     "activeTab",
@@ -10,14 +10,21 @@
     "sidePanel",
     "downloads",
     "tabCapture",
-    "offscreen"
+    "offscreen",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "action": {
-    "default_title":"Test",
-    "default_popup":"index.html"
+    "default_title": "Checkmate - News Bias Detector",
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "checkmate.png",
+      "32": "checkmate.png",
+      "48": "checkmate.png",
+      "128": "checkmate.png"
+    }
   },
   "side_panel": {
     "default_path": "index.html"
