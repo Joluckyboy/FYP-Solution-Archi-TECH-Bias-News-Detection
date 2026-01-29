@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -28,7 +27,8 @@ sns.set_palette("husl")
 # ============================================================================
 
 print("Loading dataset...")
-df = pd.read_csv('./Kaggle News Articles For Political Bias Classification.csv')
+df = pd.read_csv(
+    './Kaggle News Articles For Political Bias Classification.csv')
 
 # Convert date column to datetime
 df['date'] = pd.to_datetime(df['date'])
@@ -153,9 +153,12 @@ outlet_geography = {
 }
 
 # Create a function to map outlets to countries
+
+
 def get_country(outlet):
     """Get country for a news outlet, default to USA for unknown outlets"""
     return outlet_geography.get(outlet, 'USA')
+
 
 # Add country column
 df['country'] = df['site'].apply(get_country)
@@ -175,11 +178,11 @@ fig = plt.figure(figsize=(20, 24))
 # -----------------------------------------------------------------------
 ax1 = plt.subplot(4, 3, 1)
 country_counts = df['country'].value_counts()
-colors = plt.cm.Set3(np.linspace(0, 1, len(country_counts)))
+colors = plt.cm.get_cmap('Set3')(np.linspace(0, 1, len(country_counts)))
 country_counts.plot(kind='barh', ax=ax1, color=colors, edgecolor='black')
 ax1.set_xlabel('Number of Articles', fontsize=11, fontweight='bold')
 ax1.set_ylabel('Country', fontsize=11, fontweight='bold')
-ax1.set_title('News Articles Distribution by Geographic Location', 
+ax1.set_title('News Articles Distribution by Geographic Location',
               fontsize=12, fontweight='bold', pad=15)
 ax1.grid(axis='x', alpha=0.3)
 for i, v in enumerate(country_counts.values):
@@ -190,11 +193,12 @@ for i, v in enumerate(country_counts.values):
 # -----------------------------------------------------------------------
 ax2 = plt.subplot(4, 3, 2)
 top_outlets = df['site'].value_counts().head(20)
-colors_outlets = plt.cm.Spectral(np.linspace(0, 1, len(top_outlets)))
+colors_outlets = plt.cm.get_cmap('Spectral')(
+    np.linspace(0, 1, len(top_outlets)))
 top_outlets.plot(kind='barh', ax=ax2, color=colors_outlets, edgecolor='black')
 ax2.set_xlabel('Number of Articles', fontsize=11, fontweight='bold')
 ax2.set_ylabel('News Outlet', fontsize=11, fontweight='bold')
-ax2.set_title('Top 20 News Outlets by Article Count', 
+ax2.set_title('Top 20 News Outlets by Article Count',
               fontsize=12, fontweight='bold', pad=15)
 ax2.grid(axis='x', alpha=0.3)
 for i, v in enumerate(top_outlets.values):
@@ -205,28 +209,25 @@ for i, v in enumerate(top_outlets.values):
 # -----------------------------------------------------------------------
 ax3 = plt.subplot(4, 3, 3)
 bias_counts = df['bias'].value_counts()
-colors_bias = {'left': '#FF6B6B', 'leaning-left': '#FF8E8E', 
+colors_bias = {'left': '#FF6B6B', 'leaning-left': '#FF8E8E',
                'center': '#95E1D3', 'leaning-right': '#A8D8FF', 'right': '#4A90E2'}
 colors_list = [colors_bias.get(bias, '#CCCCCC') for bias in bias_counts.index]
-wedges, texts, autotexts = ax3.pie(bias_counts.values, labels=bias_counts.index, 
-                                     autopct='%1.1f%%', colors=colors_list, 
-                                     startangle=90, textprops={'fontweight': 'bold'})
-ax3.set_title('Overall Bias Distribution in News Articles', 
+wedges, texts = ax3.pie(bias_counts.values.tolist(), labels=bias_counts.index.tolist(),
+                        autopct='%1.1f%%', colors=colors_list,
+                        startangle=90, textprops={'fontweight': 'bold'})[:2]
+ax3.set_title('Overall Bias Distribution in News Articles',
               fontsize=12, fontweight='bold', pad=15)
-for autotext in autotexts:
-    autotext.set_color('black')
-    autotext.set_fontsize(10)
 
 # -----------------------------------------------------------------------
 # PLOT 4: Top 15 Topics Coverage
 # -----------------------------------------------------------------------
 ax4 = plt.subplot(4, 3, 4)
 top_topics = df['topic'].value_counts().head(15)
-colors_topics = plt.cm.tab20(np.linspace(0, 1, len(top_topics)))
+colors_topics = plt.cm.get_cmap('tab20')(np.linspace(0, 1, len(top_topics)))
 top_topics.plot(kind='barh', ax=ax4, color=colors_topics, edgecolor='black')
 ax4.set_xlabel('Number of Articles', fontsize=11, fontweight='bold')
 ax4.set_ylabel('Topic', fontsize=11, fontweight='bold')
-ax4.set_title('Top 15 News Topics Covered', 
+ax4.set_title('Top 15 News Topics Covered',
               fontsize=12, fontweight='bold', pad=15)
 ax4.grid(axis='x', alpha=0.3)
 for i, v in enumerate(top_topics.values):
@@ -237,14 +238,16 @@ for i, v in enumerate(top_topics.values):
 # -----------------------------------------------------------------------
 ax5 = plt.subplot(4, 3, 5)
 bias_country = pd.crosstab(df['country'], df['bias'])
-bias_country.plot(kind='bar', ax=ax5, stacked=True, 
-                  color=[colors_bias.get(b, '#CCCCCC') for b in bias_country.columns],
+bias_country.plot(kind='bar', ax=ax5, stacked=True,
+                  color=[colors_bias.get(b, '#CCCCCC')
+                         for b in bias_country.columns],
                   edgecolor='black', width=0.7)
 ax5.set_xlabel('Country', fontsize=11, fontweight='bold')
 ax5.set_ylabel('Number of Articles', fontsize=11, fontweight='bold')
-ax5.set_title('Bias Distribution by Geographic Location', 
+ax5.set_title('Bias Distribution by Geographic Location',
               fontsize=12, fontweight='bold', pad=15)
-ax5.legend(title='Bias Type', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+ax5.legend(title='Bias Type', bbox_to_anchor=(
+    1.05, 1), loc='upper left', fontsize=9)
 ax5.tick_params(axis='x', rotation=45)
 ax5.grid(axis='y', alpha=0.3)
 
@@ -253,17 +256,18 @@ ax5.grid(axis='y', alpha=0.3)
 # -----------------------------------------------------------------------
 ax6 = plt.subplot(4, 3, 6)
 top_topics_list = df['topic'].value_counts().head(10).index
-bias_topic_matrix = pd.crosstab(df[df['topic'].isin(top_topics_list)]['topic'], 
-                                 df[df['topic'].isin(top_topics_list)]['bias'])
+bias_topic_matrix = pd.crosstab(df[df['topic'].isin(top_topics_list)]['topic'],
+                                df[df['topic'].isin(top_topics_list)]['bias'])
 # Reorder columns for better visualization
 bias_order = ['left', 'leaning-left', 'center', 'leaning-right', 'right']
-bias_topic_matrix = bias_topic_matrix[[col for col in bias_order if col in bias_topic_matrix.columns]]
+bias_topic_matrix = bias_topic_matrix[[
+    col for col in bias_order if col in bias_topic_matrix.columns]]
 
 sns.heatmap(bias_topic_matrix, annot=True, fmt='d', cmap='RdYlGn_r', ax=ax6,
             cbar_kws={'label': 'Article Count'}, linewidths=0.5)
 ax6.set_xlabel('Bias Type', fontsize=11, fontweight='bold')
 ax6.set_ylabel('Topic', fontsize=11, fontweight='bold')
-ax6.set_title('Heatmap: Bias Type vs Top 10 Topics', 
+ax6.set_title('Heatmap: Bias Type vs Top 10 Topics',
               fontsize=12, fontweight='bold', pad=15)
 ax6.tick_params(axis='x', rotation=45)
 ax6.tick_params(axis='y', rotation=0)
@@ -274,26 +278,29 @@ ax6.tick_params(axis='y', rotation=0)
 ax7 = plt.subplot(4, 3, 7)
 df['year_month'] = df['date'].dt.to_period('M')
 monthly_counts = df.groupby('year_month').size()
-monthly_counts.index = monthly_counts.index.to_timestamp()
-ax7.plot(monthly_counts.index, monthly_counts.values, linewidth=2, marker='o', markersize=4)
-ax7.fill_between(monthly_counts.index, monthly_counts.values, alpha=0.3)
+monthly_counts.index = pd.PeriodIndex(monthly_counts.index).to_timestamp()
+ax7.plot(monthly_counts.index, monthly_counts.values.tolist(),
+         linewidth=2, marker='o', markersize=4)
+ax7.fill_between(monthly_counts.index,
+                 monthly_counts.values.tolist(), alpha=0.3)
 ax7.set_xlabel('Date', fontsize=11, fontweight='bold')
 ax7.set_ylabel('Number of Articles', fontsize=11, fontweight='bold')
-ax7.set_title('Article Count Trend Over Time (Monthly)', 
+ax7.set_title('Article Count Trend Over Time (Monthly)',
               fontsize=12, fontweight='bold', pad=15)
 ax7.grid(True, alpha=0.3)
 ax7.tick_params(axis='x', rotation=45)
+
 
 # -----------------------------------------------------------------------
 # PLOT 8: Articles by Year
 # -----------------------------------------------------------------------
 ax8 = plt.subplot(4, 3, 8)
 yearly_counts = df.groupby(df['date'].dt.year).size()
-colors_year = plt.cm.viridis(np.linspace(0, 1, len(yearly_counts)))
+colors_year = plt.get_cmap('viridis')(np.linspace(0, 1, len(yearly_counts)))
 yearly_counts.plot(kind='bar', ax=ax8, color=colors_year, edgecolor='black')
 ax8.set_xlabel('Year', fontsize=11, fontweight='bold')
 ax8.set_ylabel('Number of Articles', fontsize=11, fontweight='bold')
-ax8.set_title('Articles Distribution by Year', 
+ax8.set_title('Articles Distribution by Year',
               fontsize=12, fontweight='bold', pad=15)
 ax8.grid(axis='y', alpha=0.3)
 ax8.tick_params(axis='x', rotation=45)
@@ -310,7 +317,7 @@ bias_yearly_pct.plot(ax=ax9, marker='o', linewidth=2,
                      color=[colors_bias.get(b, '#CCCCCC') for b in bias_yearly_pct.columns])
 ax9.set_xlabel('Year', fontsize=11, fontweight='bold')
 ax9.set_ylabel('Percentage of Articles (%)', fontsize=11, fontweight='bold')
-ax9.set_title('Bias Trend Over Years (Percentage)', 
+ax9.set_title('Bias Trend Over Years (Percentage)',
               fontsize=12, fontweight='bold', pad=15)
 ax9.legend(title='Bias Type', fontsize=9, title_fontsize=10)
 ax9.grid(True, alpha=0.3)
@@ -320,17 +327,20 @@ ax9.grid(True, alpha=0.3)
 # -----------------------------------------------------------------------
 ax10 = plt.subplot(4, 3, 10)
 top_15_outlets = df['site'].value_counts().head(15).index
-outlet_bias = pd.crosstab(df[df['site'].isin(top_15_outlets)]['site'], 
-                           df[df['site'].isin(top_15_outlets)]['bias'])
-outlet_bias = outlet_bias[[col for col in bias_order if col in outlet_bias.columns]]
+outlet_bias = pd.crosstab(df[df['site'].isin(top_15_outlets)]['site'],
+                          df[df['site'].isin(top_15_outlets)]['bias'])
+outlet_bias = outlet_bias[[
+    col for col in bias_order if col in outlet_bias.columns]]
 outlet_bias.plot(kind='barh', ax=ax10, stacked=True,
-                 color=[colors_bias.get(b, '#CCCCCC') for b in outlet_bias.columns],
+                 color=[colors_bias.get(b, '#CCCCCC')
+                        for b in outlet_bias.columns],
                  edgecolor='black')
 ax10.set_xlabel('Number of Articles', fontsize=11, fontweight='bold')
 ax10.set_ylabel('News Outlet', fontsize=11, fontweight='bold')
-ax10.set_title('Bias Distribution in Top 15 Outlets', 
+ax10.set_title('Bias Distribution in Top 15 Outlets',
                fontsize=12, fontweight='bold', pad=15)
-ax10.legend(title='Bias Type', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+ax10.legend(title='Bias Type', bbox_to_anchor=(
+    1.05, 1), loc='upper left', fontsize=9)
 ax10.grid(axis='x', alpha=0.3)
 
 # -----------------------------------------------------------------------
@@ -339,15 +349,17 @@ ax10.grid(axis='x', alpha=0.3)
 ax11 = plt.subplot(4, 3, 11)
 top_10_topics = df['topic'].value_counts().head(10).index
 topic_bias = pd.crosstab(df[df['topic'].isin(top_10_topics)]['bias'],
-                          df[df['topic'].isin(top_10_topics)]['topic'])
+                         df[df['topic'].isin(top_10_topics)]['topic'])
 topic_bias.plot(kind='bar', ax=ax11, stacked=False, width=0.8,
-                color=plt.cm.tab20(np.linspace(0, 1, len(topic_bias.columns))),
+                color=plt.cm.get_cmap('tab20')(
+                    np.linspace(0, 1, len(topic_bias.columns))),
                 edgecolor='black')
 ax11.set_xlabel('Bias Type', fontsize=11, fontweight='bold')
 ax11.set_ylabel('Number of Articles', fontsize=11, fontweight='bold')
-ax11.set_title('Top 10 Topics Distribution by Bias Type', 
+ax11.set_title('Top 10 Topics Distribution by Bias Type',
                fontsize=12, fontweight='bold', pad=15)
-ax11.legend(title='Topic', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+ax11.legend(title='Topic', bbox_to_anchor=(
+    1.05, 1), loc='upper left', fontsize=8)
 ax11.tick_params(axis='x', rotation=45)
 ax11.grid(axis='y', alpha=0.3)
 
@@ -356,13 +368,14 @@ ax11.grid(axis='y', alpha=0.3)
 # -----------------------------------------------------------------------
 ax12 = plt.subplot(4, 3, 12)
 monthly_agg = df.groupby(df['date'].dt.month).size()
-month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-colors_month = plt.cm.cool(np.linspace(0, 1, 12))
-ax12.bar(range(1, 13), monthly_agg.values, color=colors_month, edgecolor='black')
+colors_month = plt.get_cmap('cool')(np.linspace(0, 1, 12))
+ax12.bar(range(1, 13), monthly_agg.values.tolist(),
+         color=colors_month, edgecolor='black')
 ax12.set_xlabel('Month', fontsize=11, fontweight='bold')
 ax12.set_ylabel('Total Articles (All Years)', fontsize=11, fontweight='bold')
-ax12.set_title('Seasonal Patterns: Articles by Month', 
+ax12.set_title('Seasonal Patterns: Articles by Month',
                fontsize=12, fontweight='bold', pad=15)
 ax12.set_xticks(range(1, 13))
 ax12.set_xticklabels(month_names, rotation=45)
@@ -371,7 +384,8 @@ for i, v in enumerate(monthly_agg.values):
     ax12.text(i+1, v + 20, str(v), ha='center', fontweight='bold', fontsize=9)
 
 plt.tight_layout()
-plt.savefig('news_bias_analysis_comprehensive.png', dpi=300, bbox_inches='tight')
+plt.savefig('news_bias_analysis_comprehensive.png',
+            dpi=300, bbox_inches='tight')
 print("\n✓ Comprehensive visualization saved as 'news_bias_analysis_comprehensive.png'")
 plt.close()
 
@@ -384,8 +398,10 @@ print("DETAILED ANALYSIS: NEWS OUTLETS BY COUNTRY, BIAS, AND TOPIC")
 print("="*80)
 
 # Create detailed summary
-summary_df = df.groupby(['country', 'site', 'bias']).size().reset_index(name='count')
-summary_df = summary_df.sort_values(['country', 'count'], ascending=[True, False])
+summary_df = df.groupby(['country', 'site', 'bias']
+                        ).size().reset_index(name='count')
+summary_df = summary_df.sort_values(
+    ['country', 'count'], ascending=[True, False])
 
 print("\nTop Outlets by Country and Their Bias Distribution:")
 print("-" * 80)
@@ -410,7 +426,8 @@ print("="*80)
 
 print(f"\nTotal Articles: {len(df):,}")
 print(f"Date Range: {df['date'].min().date()} to {df['date'].max().date()}")
-print(f"Total Years Covered: {df['date'].dt.year.max() - df['date'].dt.year.min() + 1}")
+print(
+    f"Total Years Covered: {df['date'].dt.year.max() - df['date'].dt.year.min() + 1}")
 print(f"\nUnique Outlets: {df['site'].nunique()}")
 print(f"Countries Represented: {df['country'].nunique()}")
 print(f"Unique Topics: {df['topic'].nunique()}")
@@ -438,14 +455,19 @@ for topic, count in df['topic'].value_counts().head(5).items():
 # 6. EXPORT DETAILED DATA FOR REFERENCE
 # ============================================================================
 
+def bias_distribution(series):
+    return series.value_counts().to_dict()
+
 # Create comprehensive outlet summary
 outlet_summary = df.groupby(['country', 'site']).agg({
-    'bias': lambda x: x.value_counts().to_dict(),
+    'bias': bias_distribution,
     'topic': 'nunique',
     'date': ['min', 'max', 'count']
 }).reset_index()
-outlet_summary.columns = ['Country', 'Outlet', 'Bias Distribution', 
-                          'Unique Topics', 'First Article', 'Last Article', 'Total Articles']
+outlet_summary.columns = pd.Index([
+    'Country', 'Outlet', 'Bias Distribution',
+    'Unique Topics', 'First Article', 'Last Article', 'Total Articles'
+])
 outlet_summary = outlet_summary.sort_values('Total Articles', ascending=False)
 
 # Save to CSV

@@ -49,6 +49,18 @@ services:
       - ENV=production
     restart: always
 
+  analyzer:
+    build: 
+      context: ./backend/analyzer
+    ports:
+      - "8017:8017"
+    environment:
+      - ENV=production
+    volumes:
+      - ./datasets:/app/datasets
+    restart: always
+
+
   scraper:
     build:
       context: ./backend/scraper
@@ -73,6 +85,7 @@ services:
       - PROPAGANDA_URL=http://propaganda:8014
       - SCRAPER_URL=http://scraper:8015
       - FACTCHECK_URL=http://factcheck:8016
+      - ANALYZER_URL=http://analyzer:8017
     depends_on:
       - database
       - sentiment
@@ -80,6 +93,7 @@ services:
       - propaganda
       - scraper
       - factcheck
+      - analyzer
     restart: always
 
   telebot:
