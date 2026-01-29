@@ -69,7 +69,9 @@ services:
     environment:
       - ENV=production
     restart: always
-
+    volumes:
+      - ./backend/scraper/data:/app/data
+      
   application:
     build:
       context: ./application
