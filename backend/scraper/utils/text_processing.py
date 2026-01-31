@@ -125,6 +125,40 @@ def remove_news_prefixes(text: str) -> str:
     
     return text.strip()
 
+def remove_usatoday_dates(text: str) -> str:
+    """
+    Remove USA Today date prefixes from article text
+    
+    Examples:
+    - "Jan. 30, 2026, 7:56 p.m. ET Article text" → "Article text"
+    - "Updated Jan. 30, 2026, 8:28 p.m. ET Article" → "Article"
+    """
+    if not text:
+        return ""
+    
+    # Pattern 1: "Updated Jan. 30, 2026, 8:28 p.m. ET "
+    text = re.sub(
+        r'^Updated\s+[A-Z][a-z]{2}\.\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s+[ap]\.m\.\s+ET\s+',
+        '',
+        text,
+        flags=re.IGNORECASE
+    )
+    
+    # Pattern 2: "Jan. 30, 2026, 7:56 p.m. ET "
+    text = re.sub(
+        r'^[A-Z][a-z]{2}\.\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s+[ap]\.m\.\s+ET\s+',
+        '',
+        text
+    )
+    
+    # Pattern 3: "Jan. 30, 2026 " (without time)
+    text = re.sub(
+        r'^[A-Z][a-z]{2}\.\s+\d{1,2},\s+\d{4}\s+',
+        '',
+        text
+    )
+    
+    return text.strip()
 
 def clean_boilerplate(text: str) -> str:
     """
@@ -149,7 +183,10 @@ def clean_boilerplate(text: str) -> str:
     # STEP 3: Remove news prefixes (Fox's "NEW !")
     text = remove_news_prefixes(text)
     
-    # STEP 4: Remove boilerplate phrases
+    # STEP 4: Remove USA Today date prefixes
+    text = remove_usatoday_dates(text)  # ← ADD THIS
+    
+    # STEP 5: Remove boilerplate phrases
     boilerplate_phrases = [
         # Straits Times & Business Times
         "Sign up now:Get ST's newsletters delivered to your inbox",
@@ -220,6 +257,7 @@ def clean_text_comprehensive(text: str) -> str:
     text = fix_encoding_issues(text)
     text = remove_location_prefixes(text)
     text = remove_news_prefixes(text)
+    text = remove_usatoday_dates(text)
     text = clean_boilerplate(text)
     
     return text.strip()
