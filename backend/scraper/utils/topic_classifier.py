@@ -52,7 +52,32 @@ def assign_topic(title: str, summary: str) -> str:
     # ============================================
     # PRIORITY CONTEXT RULES (CHECK FIRST!)
     # ============================================
+       
+    # Rule: Education/School policy ≠ Crime (prevents "exam" false positive)
+    if any(k in text_full for k in ['exam', 'psle', 'education reform']):
+        if any(k in text_full for k in ['moe', 'ministry of education', 'school system']):
+            if 'crime' not in text_full and 'arrest' not in text_full:
+                logger.debug("✓ Priority: Education policy → General")
+                return 'General'
     
+    # Rule: Economic/Business news ≠ Entertainment (prevents tariff/inflation false positive)
+    if any(k in text_full for k in ['tariff', 'inflation', 'producer price', 'gdp', 'fiscal', 'monetary']):
+        logger.debug("✓ Priority: Economic news → Business")
+        return 'Business'
+    
+    # Rule: Parenting/childcare ≠ Sports (prevents "primary school" false positive)
+    if 'primary' in text_full and 'school' in text_full:
+        if any(k in text_full for k in ['child', 'parent', 'kid', 'student']):
+            if 'football' not in text_full and 'sport' not in text_full:
+                logger.debug("✓ Priority: Parenting → General")
+                return 'General'
+    
+    # Rule: Police advice/warnings ≠ Crime
+    if 'police' in title_text and any(k in title_text for k in ['advise', 'advice', 'warn', 'remind']):
+        if 'arrest' not in text_full and 'charge' not in text_full:
+            logger.debug("✓ Priority: Police advice → General")
+            return 'General'
+        
     # Rule: Medical practice/GP = Health
     if any(k in text_full for k in ['gp', 'doctor', 'physician', 'general practitioner']):
         if any(k in text_full for k in ['patient', 'digital records', 'nehr', 'practice', 'clinic', 'medical']):

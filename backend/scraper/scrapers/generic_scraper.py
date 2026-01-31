@@ -159,7 +159,7 @@ def scrape_generic_source(source_url: str, source_name: str, country: str,
                 logger.debug(f"Error processing article: {str(e)[:50]}")
                 continue
         
-        success_msg = f"✅ {source_name}: {article_count} recent articles scraped"
+        success_msg = f"{source_name}: {article_count} recent articles scraped"
         if timeout_count > 0:
             success_msg += f" ({timeout_count} timeouts)"
         if old_articles_skipped > 0:

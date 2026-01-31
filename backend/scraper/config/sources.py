@@ -17,7 +17,7 @@ SINGAPORE_SOURCES = {
     },
     'todayonline': {
         'url': 'https://www.todayonline.com/singapore',
-        'name': 'Today Online',
+        'name': 'TODAY Online',
         'country': 'Singapore',
         'type': 'generic'
     },
@@ -38,7 +38,7 @@ SINGAPORE_SOURCES = {
         'name': 'Yahoo News Singapore',
         'country': 'Singapore',
         'type': 'generic'
-    }
+    },
 }
 
 US_SOURCES = {
@@ -54,12 +54,6 @@ US_SOURCES = {
         'country': 'United States',
         'type': 'custom'
     },
-    'nytimes': {
-        'url': 'https://www.nytimes.com/section/world',
-        'name': 'The New York Times',
-        'country': 'United States',
-        'type': 'generic'
-    },
     'washingtonpost': {
         'url': 'https://www.washingtonpost.com',
         'name': 'The Washington Post',
@@ -71,5 +65,17 @@ US_SOURCES = {
         'name': 'NBC News',
         'country': 'United States',
         'type': 'generic'
-    }
+    },
+    'usatoday': {
+        'url': 'https://www.usatoday.com/news/',
+        'name': 'USA Today',
+        'country': 'United States',
+        'type': 'generic'
+    },
+    'npr': {
+        'url': 'https://www.npr.org/sections/news/',
+        'name': 'NPR',
+        'country': 'United States',
+        'type': 'generic'
+    },
 }
