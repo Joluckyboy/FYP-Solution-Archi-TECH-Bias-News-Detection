@@ -6,9 +6,44 @@ chrome.sidePanel.setOptions({
     path: "index.html",
 });
 
-// Make it so that clicking on the extension icon opens the side panel
+// Initialize extension on install
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    // Don't auto-open side panel on click (we use popup now)
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+
+    // Create context menu for fact-checking
+    chrome.contextMenus.create({
+        id: "factcheck-selection",
+        title: "Fact-check this claim",
+        contexts: ["selection"]
+    });
+
+    // Initialize default settings
+    chrome.storage.sync.get(['pageOverlayEnabled', 'contextMenuEnabled'], (result) => {
+        if (result.pageOverlayEnabled === undefined) {
+            chrome.storage.sync.set({ pageOverlayEnabled: false });
+        }
+        if (result.contextMenuEnabled === undefined) {
+            chrome.storage.sync.set({ contextMenuEnabled: true });
+        }
+    });
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId === "factcheck-selection") {
+        // Check if context menu is enabled
+        const { contextMenuEnabled } = await chrome.storage.sync.get('contextMenuEnabled');
+        if (!contextMenuEnabled) return;
+
+        const selectedText = info.selectionText;
+        if (selectedText) {
+            // Store the selected text for fact-checking
+            await chrome.storage.local.set({ factcheckText: selectedText });
+            // Open side panel with fact-check mode
+            chrome.sidePanel.open({ windowId: tab.windowId });
+        }
+    }
 });
 
 console.log("Background script loaded");
@@ -355,6 +390,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ success: true });
             } catch (error) {
                 console.error("Error clearing badge:", error);
+                sendResponse({ success: false, error: error.message });
+            }
+        })();
+        return true;
+    }
+
+    // Handler to open side panel
+    if (message.action === 'openSidePanel') {
+        (async () => {
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+                if (tab) {
+                    await chrome.sidePanel.open({ windowId: tab.windowId });
+                }
+                sendResponse({ success: true });
+            } catch (error) {
+                console.error("Error opening side panel:", error);
+                sendResponse({ success: false, error: error.message });
+            }
+        })();
+        return true;
+    }
+
+    // Handler to get analysis data for popup
+    if (message.action === 'getAnalysisData') {
+        (async () => {
+            try {
+                const { url } = message;
+                const response = await fetch(`${API_URL}/database/getByURL/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    sendResponse({ success: true, data });
+                } else {
+                    sendResponse({ success: false, data: null });
+                }
+            } catch (error) {
+                console.error("Error getting analysis data:", error);
                 sendResponse({ success: false, error: error.message });
             }
         })();
