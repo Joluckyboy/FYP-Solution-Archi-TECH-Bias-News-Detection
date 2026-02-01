@@ -11,11 +11,12 @@ chrome.runtime.onInstalled.addListener(() => {
     // Don't auto-open side panel on click (we use popup now)
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
 
-    // Create context menu for fact-checking
+    // Create context menu for fact-checking (initially hidden, shown only on news sites)
     chrome.contextMenus.create({
         id: "factcheck-selection",
         title: "Fact-check this claim",
-        contexts: ["selection"]
+        contexts: ["selection"],
+        visible: false
     });
 
     // Initialize default settings
@@ -299,6 +300,25 @@ async function checkAndUpdateBadge(url, tabId) {
 }
 
 // =============================================================================
+// Context Menu Visibility
+// =============================================================================
+
+/**
+ * Update context menu visibility based on whether the URL is a news site
+ * @param {string} url - The current tab URL
+ */
+async function updateContextMenuVisibility(url) {
+    try {
+        const isNewsUrl = isLikelyNewsUrl(url);
+        await chrome.contextMenus.update("factcheck-selection", {
+            visible: isNewsUrl
+        });
+    } catch (error) {
+        console.error("Error updating context menu visibility:", error);
+    }
+}
+
+// =============================================================================
 // Tab Event Listeners
 // =============================================================================
 
@@ -308,6 +328,7 @@ chrome.tabs.onActivated.addListener(async function(activeInfo) {
         const tab = await chrome.tabs.get(activeInfo.tabId);
         tabUrl = tab.url;
         await checkAndUpdateBadge(tab.url, activeInfo.tabId);
+        await updateContextMenuVisibility(tab.url);
     } catch (error) {
         console.error("Error on tab activation:", error);
     }
@@ -322,6 +343,7 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
             if (activeTab && activeTab.id === tabId) {
                 tabUrl = tab.url;
                 await checkAndUpdateBadge(tab.url, tabId);
+                await updateContextMenuVisibility(tab.url);
             }
         } catch (error) {
             console.error("Error on tab update:", error);
@@ -334,10 +356,18 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
 // =============================================================================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // Existing handler for getting tab URL
+    // Handler for getting tab URL - always query fresh to handle service worker restarts
     if (message.action === 'getTabUrl') {
-        sendResponse({ tabUrl });
-        return true;
+        (async () => {
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+                sendResponse({ tabUrl: tab?.url || null });
+            } catch (error) {
+                console.error("Error getting tab URL:", error);
+                sendResponse({ tabUrl: null });
+            }
+        })();
+        return true; // Keep message channel open for async response
     }
 
     // Handler for when analysis starts

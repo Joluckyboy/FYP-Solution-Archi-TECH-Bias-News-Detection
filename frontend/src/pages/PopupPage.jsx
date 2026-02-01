@@ -152,20 +152,40 @@ const PopupPage = () => {
               setIsNewsPage(isNews);
 
               if (isNews && apiUrl) {
-                // Check if article is analyzed
+                // Check if article is analyzed - first check local cache, then API
                 try {
-                  const res = await fetch(`${apiUrl}/database/getByURL/`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url: response.tabUrl }),
-                  });
+                  // Check local cache first (chrome.storage.local)
+                  const cacheKey = `analysis_${response.tabUrl}`;
+                  const cached = await chrome.storage.local.get(cacheKey);
+                  if (cached[cacheKey]) {
+                    console.log("Found local cached analysis");
+                    setAnalysisData(cached[cacheKey]);
+                    setArticleId(cached[cacheKey].id);
+                    setIsAnalyzed(true);
+                  } else {
+                    // Fall back to API
+                    console.log("Checking API for cached analysis:", response.tabUrl);
+                    const res = await fetch(`${apiUrl}/database/getByURL/`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ url: response.tabUrl }),
+                    });
 
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.propaganda_result) {
-                      setAnalysisData(data);
-                      setArticleId(data.id);
-                      setIsAnalyzed(true);
+                    if (res.ok) {
+                      const data = await res.json();
+                      const hasAnalysis =
+                        data &&
+                        data.id &&
+                        (data.propaganda_result?.propaganda_probability !==
+                          undefined ||
+                          data.sentiment_result);
+                      if (hasAnalysis) {
+                        setAnalysisData(data);
+                        setArticleId(data.id);
+                        setIsAnalyzed(true);
+                        // Cache locally for faster access next time
+                        await chrome.storage.local.set({ [cacheKey]: data });
+                      }
                     }
                   }
                 } catch (error) {
@@ -225,6 +245,12 @@ const PopupPage = () => {
         setAnalysisData(data);
         setIsAnalyzed(true);
         setIsAnalyzing(false);
+
+        // Cache locally for persistence across popup reopens
+        if (typeof chrome !== "undefined" && chrome.storage) {
+          const cacheKey = `analysis_${currentUrl}`;
+          chrome.storage.local.set({ [cacheKey]: data });
+        }
 
         // Update badge if propaganda result exists
         if (
