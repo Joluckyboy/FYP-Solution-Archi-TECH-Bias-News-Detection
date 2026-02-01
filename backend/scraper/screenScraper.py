@@ -60,7 +60,11 @@ def get_article():
     
         driver.get_screenshot_as_file(image_name)  # Capture and save screenshot to the specified path
 
-        return jsonify({"body": pytesseract.image_to_string(Image.open(image_name)).strip().replace("\n"," ")})
+        # Extract text and truncate to 1500 chars (safely under 512 token limit)
+        full_text = pytesseract.image_to_string(Image.open(image_name)).strip().replace("\n"," ")
+        truncated_text = full_text[:1500] if len(full_text) > 1500 else full_text
+        
+        return jsonify({"body": truncated_text})
 
     finally:
         driver.quit()
