@@ -636,6 +636,12 @@ const PopupPage = () => {
           chrome.storage.local.set({ [cacheKey]: data });
         }
 
+        // Cache locally for persistence across popup reopens
+        if (typeof chrome !== "undefined" && chrome.storage) {
+          const cacheKey = `analysis_${currentUrl}`;
+          chrome.storage.local.set({ [cacheKey]: data });
+        }
+
         // Update badge if propaganda result exists
         if (
           data.propaganda_result &&
