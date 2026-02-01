@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import get_api from "@/config/config";
 import axios from "axios";
@@ -62,7 +62,7 @@ export default function TopicOutletDistribution() {
 
       {/* Table */}
       <div className="flex-1 overflow-y-auto space-y-1 px-1 scrollbar-hide">
-        {sortedOutlets.map(([outlet, count], idx) => (
+        {sortedOutlets.map(([outlet, count]) => (
           <div 
             key={outlet} 
             className="flex items-center justify-between py-1.5 px-2 text-xs bg-white/80 hover:bg-white rounded-md border border-gray-100 hover:border-gray-200 transition-colors h-8"
