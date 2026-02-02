@@ -23,13 +23,14 @@ SEQUENCE_TAGS = ("Non-prop", "Prop")
 @dataclass
 class TokenAndSequenceJointClassifierOutput(ModelOutput):
     loss: Optional[torch.FloatTensor] = None
-    token_logits: torch.FloatTensor = None
-    sequence_logits: torch.FloatTensor = None
+    token_logits: Optional[torch.FloatTensor] = None
+    sequence_logits: Optional[torch.FloatTensor] = None
     hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
 
 
 class BertForTokenAndSequenceJointClassification(BertPreTrainedModel):
+    _tied_weights_keys = None
 
     def __init__(self, config):
         super().__init__(config)
@@ -37,7 +38,7 @@ class BertForTokenAndSequenceJointClassification(BertPreTrainedModel):
         self.num_sequence_labels = 2
 
         self.token_tags = TOKEN_TAGS
-        self.sequence_tags = SEQUENCE_TAGS 
+        self.sequence_tags = SEQUENCE_TAGS
 
         self.alpha = 0.9
 
@@ -49,8 +50,8 @@ class BertForTokenAndSequenceJointClassification(BertPreTrainedModel):
         ])
         self.masking_gate = nn.Linear(2, 1)
 
-        self.init_weights()
         self.merge_classifier_1 = nn.Linear(self.num_token_labels + self.num_sequence_labels, self.num_token_labels)
+        self.post_init()
 
     def forward(
         self,

@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
 import get_api from "@/config/config";
+import TrendingKeywords from "../components/TrendingKeywords";
+import OutletBiasChart from "../components/OutletBiasChart";
+import TopicOutletDistribution from "../components/TopicOutletDistribution";
 
 import { CustomInput } from "@/components/ui/custom-input";
 import { Button } from "@/components/ui/button";
@@ -12,10 +15,8 @@ import {
 } from "@/components/ui/resizable";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 import { BadgeCheck, Scale, AlertCircle, Gauge, SmilePlus } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 import axios from "axios";
 
@@ -126,7 +127,7 @@ const LandingPage = () => {
           Your Move Against Misinformation
         </h1>
         <h2 className={`text-2xl ${isMobile ? "text-xl" : "text-2xl"}`}>
-          Analyze any article for emotions, sentiment, and facts.
+          Analyse any article for emotions, sentiment, and facts.
         </h2>
       </div>
 
@@ -220,22 +221,74 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Browse Topics */}
-      <div className="mb-12 ml-12 mr-12">
-        <h2 className="text-2xl mb-3 font-semibold">Browse Topics</h2>
-        <Badge variant="outline" className="rounded-xl p-2 mr-3 font-light">
-          Trending
-        </Badge>
-        <Badge variant="outline" className="rounded-xl p-2 mr-3 font-light">
-          Politics
-        </Badge>
-        <Badge variant="outline" className="rounded-xl p-2 mr-3 font-light">
-          Technology
-        </Badge>
-        <Badge variant="outline" className="rounded-xl p-2 mr-3 font-light">
-          Finance
-        </Badge>
+      <div className="ml-12 mr-12">
+
+      {/* Topics Divider */}
+      <div className="w-full h-px bg-black border-0 mb-12"></div>
+
+      {/* Latest Topics Card */}
+      <div className="mb-12">
+        <Card className="w-full h-[600px]">
+          <CardHeader>
+            <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+           wai wen's portion!
+        </CardContent>
+        </Card>
       </div>
+
+      {/* Trending Keywords Card */}
+      <div className="mb-12">
+      <Card className="w-full h-[400px]">
+        <CardHeader>
+          <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <TrendingKeywords />
+        </CardContent>
+      </Card>
+      </div>
+
+      {/* Visualisations */}
+      <div className="grid grid-cols-2 gap-8 mb-12">
+        {/* Articles per Outlet, filterable by topic */}
+        <Card className="h-[500px]">
+          <CardHeader>
+            <CardTitle className="text-left checkmate-gradient">Topic Coverage</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <TopicOutletDistribution />
+          </CardContent>
+        </Card>
+
+        {/* Outlet Bias */}
+        <Card className="h-[500px]">
+          <CardHeader>
+            <CardTitle className="checkmate-gradient">
+              Outlet Bias Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <OutletBiasChart />
+            <p className="text-sm">Ratings do not reflect accuracy or credibility, they reflect perspective only.</p>
+          </CardContent>
+        </Card>
+      </div>      
+
+      {/* Final Divider */}
+      <div className="w-full h-px bg-black border-0 mb-8"></div>
+
+      {/* Link to Dashboard */}
+      <div className="text-center">
+        <p className="text-xl checkmate-gradient">More About:</p>
+        <Link to="/dashboard" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
+          How we Dashboard
+        </Link>
+      </div>
+
+      </div>
+
     </div>
   );
 };
