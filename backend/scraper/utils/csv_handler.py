@@ -8,6 +8,7 @@ CSV handler with duplicate detection by title + source
 import csv
 import os
 import logging
+import re  # ← ADDED: Required for validate_summary_quality()
 from datetime import datetime
 from utils.topic_classifier import assign_topic, CONFIG_TOPICS
 from utils.text_processing import clean_text_comprehensive
@@ -175,11 +176,41 @@ class CSVHandler:
         return True, ""
 
     @classmethod
+    def validate_summary_quality(cls, summary: str) -> tuple:
+        """
+        Validate summary doesn't have mid-sentence cutoffs
+        
+        Returns:
+            (is_valid, error_message)
+        """
+        if not summary:
+            return False, "Empty summary"
+        
+        # Check for incomplete endings
+        bad_endings = [
+            ' of.', ' the.', ' a.', ' an.', ' to.', ' in.', ' at.',
+            ' for.', ' with.', ' by.', ' from.', ' and.', ' or.',
+            'adefault', 'accordingto'  # Word merges
+        ]
+        
+        summary_lower = summary.lower()
+        for ending in bad_endings:
+            if summary_lower.endswith(ending):
+                return False, f"Incomplete ending: {ending}"
+        
+        # Check for word merges (lowercase letter followed by uppercase)
+        if re.search(r'[a-z][A-Z]', summary):
+            return False, "Contains word merge (e.g., 'aDefault')"
+        
+        return True, ""
+
+    @classmethod
     def validate_and_clean_batch(cls, articles: list) -> list:
         """
         COMPREHENSIVE FIXED: Validate and clean batch with:
         - Comprehensive text cleaning (encoding, prefixes, boilerplate) for BOTH title AND summary
         - Deduplication by title+source
+        - Summary quality validation
         """
         cleaned = []
         seen_urls = set()
@@ -215,7 +246,22 @@ class CSVHandler:
             article['title'] = clean_text_comprehensive(str(article.get('title', '')).strip())
             article['summary'] = clean_text_comprehensive(str(article.get('summary', '')).strip())
             
-            # Final validation after cleaning
+            # NEW: Validate summary quality (check for mid-sentence cutoffs)
+            is_valid_summary, summary_issue = cls.validate_summary_quality(article['summary'])
+            if not is_valid_summary:
+                logger.warning(f"⚠️  Summary quality issue: {summary_issue} - {article.get('title', '')[:50]}")
+                # Try to fix incomplete endings
+                summary = article['summary']
+                bad_endings = [' of.', ' the.', ' a.', ' an.', ' to.', ' in.', ' at.',
+                              ' for.', ' with.', ' by.', ' from.', ' and.', ' or.']
+                for ending in bad_endings:
+                    if summary.lower().endswith(ending):
+                        summary = summary[:-len(ending)].strip() + '...'
+                        logger.info(f"   → Fixed incomplete ending: {ending}")
+                        article['summary'] = summary
+                        break
+            
+            # Final validation after cleaning AND quality check
             if len(article['title']) < 5 or len(article['summary']) < 20:
                 logger.debug(f"Article too short after cleaning: {article.get('title', '')[:50]}")
                 skipped += 1

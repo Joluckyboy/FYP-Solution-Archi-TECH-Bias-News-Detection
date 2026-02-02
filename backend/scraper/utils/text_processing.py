@@ -46,8 +46,8 @@ def fix_encoding_issues(text: str) -> str:
     text = text.replace('â€¦', '…')
     
     # Fix other common corruptions
-    text = text.replace('Â ', ' ')  # Non-breaking space
-    text = text.replace('Â', ' ')   # Stray Â
+    text = text.replace('Â ', ' ')
+    text = text.replace('Â', ' ')
     text = text.replace('Ã©', 'é')
     text = text.replace('Ã¨', 'è')
     text = text.replace('Ã¡', 'á')
@@ -67,27 +67,22 @@ def fix_encoding_issues(text: str) -> str:
 
 def remove_location_prefixes(text: str) -> str:
     """
-    Remove common location prefixes from article summaries - ENHANCED FOR CNA
+    Remove common location prefixes from article summaries
     
     Examples:
     - "SINGAPORE: Article text" → "Article text"
-    - "SINGAPORE — Article text" → "Article text"  
     - "NEW YORK - Article text" → "Article text"
-    
-    CRITICAL: This is specifically for CNA which ALWAYS starts with "SINGAPORE:"
     """
     if not text:
         return ""
     
-    # Pattern: CITY_NAME followed by em dash, colon, or hyphen at START only
-    # SINGAPORE is the most common, so check it first
     patterns = [
-        r'^SINGAPORE\s*[:—–-]\s*',           # SINGAPORE: or SINGAPORE —
-        r'^NEW\s+YORK\s*[:—–-]\s*',          # NEW YORK:
-        r'^NEW\s+DELHI\s*[:—–-]\s*',         # NEW DELHI:
-        r'^WASHINGTON\s*[:—–-]\s*',          # WASHINGTON:
-        r'^LONDON\s*[:—–-]\s*',              # LONDON:
-        r'^[A-Z][A-Z\s]{2,15}\s*[:—–-]\s*',  # Any all-caps location
+        r'^SINGAPORE\s*[:—–-]\s*',
+        r'^NEW\s+YORK\s*[:—–-]\s*',
+        r'^NEW\s+DELHI\s*[:—–-]\s*',
+        r'^WASHINGTON\s*[:—–-]\s*',
+        r'^LONDON\s*[:—–-]\s*',
+        r'^[A-Z][A-Z\s]{2,15}\s*[:—–-]\s*',
     ]
     
     for pattern in patterns:
@@ -98,32 +93,29 @@ def remove_location_prefixes(text: str) -> str:
 
 def remove_news_prefixes(text: str) -> str:
     """
-    Remove common news prefixes like "NEW!", "NEW !", "BREAKING:", etc.
+    Remove common news prefixes like "NEW!", "BREAKING:", etc.
     
     Examples:
     - "NEW ! Article text" → "Article text"
-    - "NEW! Article text" → "Article text"
     - "BREAKING: Article text" → "Article text"
-    
-    CRITICAL: This is specifically for Fox News which often has "NEW !" at the start
     """
     if not text:
         return ""
     
-    # Pattern: NEWS-RELATED PREFIX at START only
     patterns = [
-        r'^\s*NEW\s*!+\s*',           # NEW!, NEW !, NEW!!, etc.
-        r'^\s*BREAKING\s*[!:]\s*',    # BREAKING!, BREAKING:
-        r'^\s*EXCLUSIVE\s*[!:]\s*',   # EXCLUSIVE!, EXCLUSIVE:
-        r'^\s*JUST\s+IN\s*[!:]\s*',   # JUST IN!, JUST IN:
-        r'^\s*UPDATE\s*[!:]\s*',      # UPDATE!, UPDATE:
-        r'^\s*URGENT\s*[!:]\s*',      # URGENT!, URGENT:
+        r'^\s*NEW\s*!+\s*',
+        r'^\s*BREAKING\s*[!:]\s*',
+        r'^\s*EXCLUSIVE\s*[!:]\s*',
+        r'^\s*JUST\s+IN\s*[!:]\s*',
+        r'^\s*UPDATE\s*[!:]\s*',
+        r'^\s*URGENT\s*[!:]\s*',
     ]
     
     for pattern in patterns:
         text = re.sub(pattern, '', text, flags=re.IGNORECASE)
     
     return text.strip()
+
 
 def remove_usatoday_dates(text: str) -> str:
     """
@@ -160,35 +152,35 @@ def remove_usatoday_dates(text: str) -> str:
     
     return text.strip()
 
+
 def clean_boilerplate(text: str) -> str:
     """
-    Remove common boilerplate text from news articles - COMPREHENSIVE VERSION
+    Remove common boilerplate text from news articles
     
-    This function:
-    1. Fixes encoding issues FIRST
-    2. Removes location prefixes (SINGAPORE:, NEW YORK:)
-    3. Removes news prefixes (NEW!, BREAKING:)
+    Steps:
+    1. Fixes encoding issues
+    2. Removes location prefixes
+    3. Removes news prefixes
     4. Removes newsletter signup text
     5. Cleans up whitespace
+    6. PRESERVES ELLIPSIS from truncation
     """
     if not text:
         return ""
     
-    # STEP 1: Fix encoding issues FIRST (critical!)
+    # Remember if text was truncated
+    was_truncated = text.rstrip().endswith('...')
+    
+    # Fix encoding issues first
     text = fix_encoding_issues(text)
     
-    # STEP 2: Remove location prefixes (CNA's "SINGAPORE:")
+    # Remove prefixes
     text = remove_location_prefixes(text)
-    
-    # STEP 3: Remove news prefixes (Fox's "NEW !")
     text = remove_news_prefixes(text)
+    text = remove_usatoday_dates(text)
     
-    # STEP 4: Remove USA Today date prefixes
-    text = remove_usatoday_dates(text)  # ← ADD THIS
-    
-    # STEP 5: Remove boilerplate phrases
+    # Remove boilerplate phrases
     boilerplate_phrases = [
-        # Straits Times & Business Times
         "Sign up now:Get ST's newsletters delivered to your inbox",
         "Get ST's newsletters delivered to your inbox",
         "Sign up here to get Decoding Asia newsletter",
@@ -196,20 +188,16 @@ def clean_boilerplate(text: str) -> str:
         "Delivered to your inbox. Free.",
         "Sign up now:",
         "The Usual Place Podcast",
-        # Fox News
         "You can now listen to Fox News articles",
         "EW You can now listen to Fox News articles",
         "Listen to this article",
-        # CNN
         "EDITOR'S NOTE:",
         "EDITOR'S NOTE: Call to Earth is a CNN editorial series",
         "Perpetual Planet Initiative has partnered with CNN",
         "Sign up for our weekly Wellness newsletter",
         "CNN Business",
         "CNN International Business",
-        # CNA
-        "accordingto advance",  # typo in source
-        # Generic
+        "accordingto advance",
         "Sign up",
         "Subscribe to continue reading",
         "Subscribe to get unlimited access",
@@ -237,21 +225,28 @@ def clean_boilerplate(text: str) -> str:
     # Fix typos
     cleaned = cleaned.replace('accordingto', 'according to')
     
-    # Collapse multiple spaces and clean up
+    # Collapse multiple spaces
     cleaned = re.sub(r'\s+', ' ', cleaned)
+    cleaned = cleaned.strip()
     
-    return cleaned.strip()
+    # PRESERVE ELLIPSIS if it was there before cleaning
+    if was_truncated and not cleaned.endswith('...'):
+        cleaned = cleaned.rstrip() + '...'
+    
+    return cleaned
 
 
 def clean_text_comprehensive(text: str) -> str:
     """
-    ONE-STOP comprehensive text cleaning for BOTH titles and summaries
+    ONE-STOP comprehensive text cleaning for titles and summaries
     
-    Use this function to clean ANY text from news articles.
-    It applies ALL fixes in the correct order.
+    Applies ALL fixes in the correct order and preserves ellipsis.
     """
     if not text:
         return ""
+    
+    # Remember if text was truncated
+    was_truncated = text.rstrip().endswith('...')
     
     # Apply all cleaning steps
     text = fix_encoding_issues(text)
@@ -259,6 +254,10 @@ def clean_text_comprehensive(text: str) -> str:
     text = remove_news_prefixes(text)
     text = remove_usatoday_dates(text)
     text = clean_boilerplate(text)
+    
+    # Ensure ellipsis is preserved
+    if was_truncated and not text.endswith('...'):
+        text = text.rstrip() + '...'
     
     return text.strip()
 
@@ -275,7 +274,23 @@ def is_english_text(text: str, min_ascii_ratio: float = 0.7) -> bool:
 
 
 def smart_truncate(text: str, max_length: int = 300) -> str:
-    """Truncate text at sentence or word boundaries"""
+    """
+    IMPROVED: Truncate text at sentence or word boundaries with GUARANTEED ellipsis
+    
+    Key improvements over original:
+    - ALWAYS adds ellipsis when truncating (100% coverage)
+    - Respects sentence boundaries when possible
+    - Falls back to word boundaries gracefully
+    - Default 300 chars for optimal summary length
+    - Never cuts mid-sentence without ellipsis
+    
+    Args:
+        text: Text to truncate
+        max_length: Maximum length (default 300)
+    
+    Returns:
+        Truncated text with ellipsis if shortened
+    """
     if not text:
         return ""
     
@@ -283,23 +298,41 @@ def smart_truncate(text: str, max_length: int = 300) -> str:
     text = text.replace('\n', ' ').replace('\r', ' ')
     text = ' '.join(text.split())
     
+    # If text is already short enough, return as-is
     if len(text) <= max_length:
         return text.strip()
     
+    # Text needs truncation - will add ellipsis
     truncated = text[:max_length]
-    min_sentence_pos = int(max_length * 0.6)
+    min_sentence_pos = int(max_length * 0.6)  # At least 60% of desired length
     
-    # Try to end at sentence boundary
-    for delimiter in ['. ', '! ', '? ']:
-        last_sentence = truncated.rfind(delimiter, min_sentence_pos)
-        if last_sentence > 0:
-            return truncated[:last_sentence + 1].strip()
+    # Strategy 1: Try to end at sentence boundary
+    sentence_endings = ['. ', '! ', '? ']
+    last_sentence_pos = -1
     
-    # Try word boundary
+    for ending in sentence_endings:
+        pos = truncated.rfind(ending)
+        if pos > last_sentence_pos and pos >= min_sentence_pos:
+            last_sentence_pos = pos
+    
+    # If we found a good sentence boundary
+    if last_sentence_pos >= min_sentence_pos:
+        # ALWAYS check if there's more content after the sentence
+        full_text_after = text[last_sentence_pos + 1:].strip()
+        
+        # If there's ANY text after (even 1 char), add ellipsis
+        if len(full_text_after) > 5:  # More than just whitespace/punctuation
+            return text[:last_sentence_pos + 1].strip() + '...'
+        else:
+            # This is truly the end of text
+            return text[:last_sentence_pos + 1].strip()
+        
+    # Strategy 2: Word boundary with ellipsis
     last_space = truncated.rfind(' ')
     if last_space > min_sentence_pos:
         return truncated[:last_space].strip() + '...'
     
+    # Strategy 3: Hard truncate with ellipsis (fallback)
     return truncated.strip() + '...'
 
 

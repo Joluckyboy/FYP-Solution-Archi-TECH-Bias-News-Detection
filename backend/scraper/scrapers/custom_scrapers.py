@@ -6,7 +6,7 @@ import logging
 from bs4 import BeautifulSoup as bs
 from datetime import datetime, timedelta
 from urllib.parse import urljoin
-from utils.text_processing import clean_boilerplate, is_english_text
+from utils.text_processing import clean_boilerplate, is_english_text, smart_truncate
 from utils.topic_classifier import derive_topic_from_metadata
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def retrieve_cna_urls(specified_length: int | None):
 
 
 def scrape_straits_times(url):
-    """Scrape Straits Times article with DATE FILTERING"""
+    """Scrape Straits Times article with DATE FILTERING and FIXED TRUNCATION"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         res = requests.get(url, headers=headers, timeout=10)
@@ -145,17 +145,15 @@ def scrape_straits_times(url):
                 date_obj = datetime.fromisoformat(date_elem["datetime"].replace('Z', '+00:00'))
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # NEW: DATE FILTERING
+                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Straits Times article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for Straits Times: {date_error}")
-                # Use default date (today) if parsing fails
                 pass
         else:
-            # No date found: use current date (assume recent since scraped today)
             logger.debug(f"No date found for Straits Times article: {headline[:50]} (using today's date)")
             pass
         
@@ -165,9 +163,12 @@ def scrape_straits_times(url):
             logger.warning(f"Insufficient content from {url}")
             return None
         
+        # FIXED: Use smart_truncate with 300 char limit for proper summary length
+        summary = smart_truncate(body, 300)
+        
         return {
             "headline": headline.replace("\n", " "),
-            "body": body.replace("\n", " ")[:5000],
+            "body": summary,  # Now properly truncated with ellipsis
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -179,7 +180,7 @@ def scrape_straits_times(url):
 
 
 def scrape_cna(url):
-    """Scrape CNA article with DATE FILTERING"""
+    """Scrape CNA article with DATE FILTERING and FIXED TRUNCATION"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         res = requests.get(url, headers=headers, timeout=10)
@@ -193,6 +194,9 @@ def scrape_cna(url):
         # Extract body
         body_paras = soup.find_all("div", class_="text-long") or soup.find_all("p")
         body = " ".join([para.get_text(strip=True) for para in body_paras])
+        
+        # Clean boilerplate FIRST
+        body = clean_boilerplate(body)
         
         # Extract image
         image_url = ""
@@ -212,25 +216,26 @@ def scrape_cna(url):
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # NEW: DATE FILTERING
+                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"⏭️  Skipping old CNA article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for CNA: {date_error}")
-                # Use default date (today) if parsing fails
                 pass
         else:
-            # No date found: use current date (assume recent since scraped today)
             logger.debug(f"No date found for CNA article: {headline[:50]} (using today's date)")
             pass
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
+        # FIXED: Use smart_truncate with 300 char limit for proper summary length
+        summary = smart_truncate(body, 300)
+        
         return {
             "headline": headline.replace("\n", " "),
-            "body": body.replace("\n", " ")[:5000],
+            "body": summary,  # Now properly truncated with ellipsis
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -262,17 +267,15 @@ def scrape_fox_news(url):
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # NEW: DATE FILTERING
+                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"⏭️  Skipping old Fox News article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for Fox News: {date_error}")
-                # Use default date (today) if parsing fails
                 pass
         else:
-            # No date found: use current date (assume recent since scraped today)
             logger.debug(f"No date found for Fox News article: {headline[:50]} (using today's date)")
             pass
         
@@ -307,9 +310,12 @@ def scrape_fox_news(url):
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
+        # FIXED: Use smart_truncate with 300 char limit for proper summary length
+        summary = smart_truncate(body, 300)
+        
         return {
-            "headline": headline,
-            "body": body.strip(),
+            "headline": headline.replace("\n", " "),
+            "body": summary,  # Now properly truncated with ellipsis
             "topic": topic
         }
         
