@@ -166,7 +166,7 @@ def test_get_transcript_invalid_url(client):
     assert data is not None
 
 
-@patch('app.get_youtube_transcript_safe')
+@patch('app.YouTubeTranscriptApi.get_transcript')
 def test_get_transcript_with_mock(mock_transcript, client):
     """Test successful transcript retrieval with mocked transcript fetcher"""
     mock_transcript.return_value = [
@@ -184,7 +184,7 @@ def test_get_transcript_with_mock(mock_transcript, client):
 def test_get_article_youtube_with_transcript(client):
     """Test YouTube article scraping with transcript extraction"""
     with patch('app.requests.get') as mock_get, \
-         patch('app.get_youtube_transcript_safe') as mock_transcript:
+         patch('app.YouTubeTranscriptApi.get_transcript') as mock_transcript:
         
         # Mock the YouTube page title
         mock_response = MagicMock()
@@ -434,7 +434,7 @@ def test_article_stats_with_data(mock_open, mock_exists, client):
 def test_get_article_youtube_shorts(client):
     """Test YouTube Shorts URL format"""
     with patch('app.requests.get') as mock_get, \
-         patch('app.get_youtube_transcript_safe') as mock_transcript:
+         patch('app.YouTubeTranscriptApi.get_transcript') as mock_transcript:
         
         mock_response = MagicMock()
         mock_response.text = "<title>Short Video - YouTube</title>"
