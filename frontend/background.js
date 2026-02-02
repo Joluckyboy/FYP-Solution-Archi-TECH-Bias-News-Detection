@@ -210,12 +210,29 @@ function isLikelyNewsUrl(url) {
 
 /**
  * Get cached result for a URL from local storage
+ * Checks both cache key formats for compatibility with popup
  * @param {string} url - The URL to check
  * @returns {Object|null} Cached result or null
  */
 async function getCachedResult(url) {
     try {
-        const result = await chrome.storage.local.get(url);
+        // Check both cache key formats (popup uses 'analysis_${url}', background uses 'url')
+        const cacheKey = `analysis_${url}`;
+        const result = await chrome.storage.local.get([url, cacheKey]);
+
+        // Check popup-style cache first (analysis_${url})
+        if (result[cacheKey]) {
+            const cached = result[cacheKey];
+            // Popup stores full analysis data with propaganda_result
+            if (cached.propaganda_result?.propaganda_probability !== undefined) {
+                return {
+                    propagandaProbability: cached.propaganda_result.propaganda_probability,
+                    timestamp: Date.now() // Popup cache doesn't have timestamp, assume fresh
+                };
+            }
+        }
+
+        // Fall back to background-style cache (url)
         if (result[url]) {
             const cached = result[url];
             // Check if cache is still valid (24 hours)
