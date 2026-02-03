@@ -10,7 +10,7 @@ const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
 /* const BrainBoostersPage = lazy(() => import("@/pages/GamesQuizzes/BrainBoostersPage")); */
 const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQuizPage"));
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
-const LatestNewsPage = lazy(() => import("@/pages/LatestNewsPage"));
+const FullCoveragePage = lazy(() => import("@/pages/FullCoveragePage"));
 // Dashboard
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
@@ -20,7 +20,7 @@ export const PUBLIC_ROUTES = [
     { path: "/games", element: <GamesPage /> },
     { path: "/games/quizzes", element: <GamesQuizPage /> },
     { path: "/games/personality-quiz", element: <PersonalityQuizPage /> },
-    { path: "/latest-news-coverage", element: <LatestNewsPage /> },
+    { path: "/full-coverage/:topicId", element: <FullCoveragePage /> },
     { path: "/*", element: <Navigate to="/" /> },
     { path: "/dashboard", element: <DashboardPage /> },
 ];
