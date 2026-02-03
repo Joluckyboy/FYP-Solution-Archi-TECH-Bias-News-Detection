@@ -55,9 +55,7 @@ class TopicClusteredService:
         for cluster_id in sorted(list(set(labels))):
             group = articles_df[articles_df["cluster"] == cluster_id]
 
-            # Simple bias aggregation
-            # We want 5 buckets: Left, Leaning Left, Center, Leaning Right, Right
-            # Check dataset values usually: left, right, center, leaning-left, leaning-right
+            # --- Bias Aggregation ---
             bias_counts = {
                 "left": 0,
                 "leaning_left": 0,
@@ -68,15 +66,16 @@ class TopicClusteredService:
 
             for _, row in group.iterrows():
                 b = str(row.get("bias", "")).lower()
+                # Normalize varied bias strings if necessary
                 if b == "left":
                     bias_counts["left"] += 1
                 elif b == "right":
                     bias_counts["right"] += 1
                 elif b == "center":
                     bias_counts["center"] += 1
-                elif b == "leaning-left":
+                elif b == "leaning-left" or "left" in b:  # looser matching
                     bias_counts["leaning_left"] += 1
-                elif b == "leaning-right":
+                elif b == "leaning-right" or "right" in b:
                     bias_counts["leaning_right"] += 1
                 else:
                     bias_counts["center"] += 1
@@ -86,17 +85,71 @@ class TopicClusteredService:
                 k: round((v / total) * 100, 1) for k, v in bias_counts.items()
             }
 
-            # Representative article (first one or longest title?)
-            # Let's take the first one for now
-            rep = group.iloc[0]
+            # --- Consensus Score (Semantic Similarity) ---
+            # Calculate average pairwise cosine similarity within the cluster
+            if total > 1:
+                # Get embeddings for this cluster's articles
+                cluster_indices = group.index.tolist()
+                # We need to map original DF indices to the embeddings array indices
+                # Assuming 'articles_df' order matched 'embeddings' order 1-to-1:
+                # However, we passed a subset to cluster_articles, let's assume index alignment for now.
+                # Re-encoding just for the cluster is safer to avoid index confusion if subsetting happened outside.
 
-            # Latest date
+                # Optimization: For now, lets just re-calculate centroid distance for simplicity
+                group_titles = group["title"].fillna("").tolist()
+                group_emb = self.model.encode(group_titles, convert_to_tensor=True)
+
+                # Calculate centroid
+                centroid = group_emb.mean(dim=0)
+
+                # Review: Cosine similarity to centroid
+                from sentence_transformers.util import cos_sim
+
+                scores = cos_sim(group_emb, centroid)
+                consensus_score = float(scores.mean()) * 10  # Scale 0-10
+            else:
+                consensus_score = (
+                    10.0  # Single article is in perfect consensus with itself
+                )
+
+            # --- Polarization & Alerts ---
+            left_total = bias_counts["left"] + bias_counts["leaning_left"]
+            right_total = bias_counts["right"] + bias_counts["leaning_right"]
+
+            polarization_alert = None
+            if total > 5:  # Threshold to avoid noise
+                if left_total > right_total * 2 and right_total < total * 0.15:
+                    polarization_alert = "Heavily skewed towards Left sources"
+                elif right_total > left_total * 2 and left_total < total * 0.15:
+                    polarization_alert = "Heavily skewed towards Right sources"
+
+            under_reported_alert = None
+            # logic: if trending (high total) but near zero in one spectrum
+            if total > 5:
+                if left_total == 0:
+                    under_reported_alert = "Invisible to Left-Leaning audiences"
+                elif right_total == 0:
+                    under_reported_alert = "Invisible to Right-Leaning audiences"
+
+            # --- Contextual Insight ---
+            insight = f"This story is covered by {total} sources."
+            if consensus_score > 8.5:
+                insight += " Sources show high agreement on the core facts."
+            elif consensus_score < 5.0:
+                insight += (
+                    " There is significant variation in how headlines frame this story."
+                )
+
+            if polarization_alert:
+                insight += f" It is {polarization_alert.lower()}."
+
+            # --- Representative Article & Date ---
+            rep = group.iloc[0]
             dates = pd.to_datetime(group["date"], errors="coerce")
             latest_date = dates.max()
-            if pd.isnull(latest_date):
-                latest_date_str = ""
-            else:
-                latest_date_str = latest_date.strftime("%Y-%m-%d")
+            latest_date_str = (
+                latest_date.strftime("%Y-%m-%d") if not pd.isnull(latest_date) else ""
+            )
 
             topic = {
                 "id": int(cluster_id),
@@ -104,6 +157,10 @@ class TopicClusteredService:
                 "source_count": int(total),
                 "bias_distribution": bias_distribution,
                 "latest_date": latest_date_str,
+                "consensus_score": round(consensus_score, 1),
+                "polarization_alert": polarization_alert,
+                "under_reported_alert": under_reported_alert,
+                "contextual_insight": insight,
                 "articles": group[["title", "source", "url", "bias"]].to_dict(
                     orient="records"
                 ),

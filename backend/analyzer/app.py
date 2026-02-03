@@ -158,6 +158,10 @@ def _fetch_topics_data():
                 "source_count": group["source_count"],
                 "bias_distribution": distribution,
                 "latest_date": group["date"],
+                "consensus_score": None,  # Placeholder for fallback
+                "polarization_alert": None,
+                "under_reported_alert": None,
+                "contextual_insight": "Automated data not available from clustering service.",
                 "articles": articles_list,
             }
         )
