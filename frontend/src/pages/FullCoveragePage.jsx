@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Search, Filter, ExternalLink, Share2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -126,35 +126,64 @@ const FullCoveragePage = () => {
         );
     }
 
-    // Calculate Alerts
-    const silenceAlert = metrics.left < 20 ? "Left" : (metrics.right < 20 ? "Right" : null);
-    const consensusScore = metrics.center > 40 ? "HIGH" : (metrics.center < 20 ? "LOW" : "MEDIUM");
+    // Use data from backend or fallback to calculation
+    const silenceAlert = topic.polarization_alert || (metrics.left < 20 ? "Left" : (metrics.right < 20 ? "Right" : null));
+    // Consensus Score Logic
+    let consensusLabel = "MEDIUM";
+    let consensusText = "There is moderate agreement across sources.";
+
+    if (topic.consensus_score !== undefined && topic.consensus_score !== null) {
+        if (topic.consensus_score > 7) {
+            consensusLabel = "HIGH";
+            consensusText = "Most sources agree on the core facts of this story.";
+        } else if (topic.consensus_score < 4) {
+            consensusLabel = "LOW";
+            consensusText = "Significant variation in framing across sources.";
+        }
+    } else {
+        // Fallback if no backend score
+        if (metrics.center > 40) consensusLabel = "HIGH";
+        else if (metrics.center < 20) consensusLabel = "LOW";
+    }
+
+    const underReported = topic.under_reported_alert;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-
-
             <div className="container mx-auto px-6 py-8 max-w-7xl">
 
                 {/* Alerts Section */}
                 <div className="flex flex-col md:flex-row gap-6 mb-10 justify-center">
                     {silenceAlert && (
                         <div className="bg-red-100 border border-red-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
-                            <h3 className="font-bold text-red-800 uppercase text-sm mb-1">Silence Alert!</h3>
+                            <h3 className="font-bold text-red-800 uppercase text-sm mb-1 flex items-center gap-2">
+                                <span>🚨</span> Polarization Alert
+                            </h3>
                             <p className="text-sm text-red-700">
-                                Reported significantly less by {silenceAlert}-leaning sources.
+                                {silenceAlert.includes("skewed") ? silenceAlert : `Reported significantly less by ${silenceAlert}-leaning sources.`}
                             </p>
                         </div>
                     )}
 
-                    <div className="bg-red-100 border border-red-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
+                    {underReported && (
+                        <div className="bg-orange-100 border border-orange-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
+                            <h3 className="font-bold text-orange-800 uppercase text-sm mb-1 flex items-center gap-2">
+                                <span>🕵️‍♂️</span> Under-Reported
+                            </h3>
+                            <p className="text-sm text-orange-700">
+                                {underReported}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
                         <div className="flex justify-between items-start">
                             <div>
-                                <h3 className="font-bold text-red-800 uppercase text-sm mb-1">Consensus Score: {consensusScore}</h3>
-                                <p className="text-sm text-red-700">
-                                    {consensusScore === "LOW" && "This story is seeing high coverage in Neutral outlets but is likely framed differently across the spectrum."}
-                                    {consensusScore === "HIGH" && "Most sources agree on the core facts of this story."}
-                                    {consensusScore === "MEDIUM" && "There is moderate agreement across sources."}
+                                <h3 className="font-bold text-blue-800 uppercase text-sm mb-1 flex items-center gap-2">
+                                    <span>🤝</span> Consensus Score: {consensusLabel} {topic.consensus_score && `(${topic.consensus_score}/10)`}
+                                </h3>
+                                <p className="text-sm text-blue-700">
+                                    {consensusText}
                                 </p>
                             </div>
                         </div>
@@ -168,25 +197,30 @@ const FullCoveragePage = () => {
                     </h1>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* General Summary */}
-                        <div className="lg:col-span-2 bg-gray-100 rounded-xl p-6 shadow-inner min-h-[160px] flex items-center justify-center text-gray-500 italic">
-                            {/* Placeholder for real summary if available */}
-                            &lt; General summary of the clustered topic &gt;
+                        {/* Contextual Insight */}
+                        <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col justify-center">
+                            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                                <Info className="h-4 w-4 text-blue-500" />
+                                AI Contextual Insight
+                            </h3>
+                            <p className="text-slate-600 text-lg leading-relaxed italic">
+                                "{topic.contextual_insight || "Analysis in progress..."}"
+                            </p>
                         </div>
 
                         {/* Media Bias Chart */}
-                        <div className="bg-gray-200 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-inner">
+                        <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100">
                             <h3 className="font-semibold text-slate-700 mb-4">Media Bias Chart</h3>
 
                             {/* Visual representation of L L C R R */}
                             <div className="flex gap-1 w-full max-w-[200px] h-12 items-end justify-center mb-2">
-                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-600" : "bg-gray-300"}`} style={{ height: `${Math.max(20, metrics.left)}%` }} title={`Left: ${metrics.left}%`}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-400" : "bg-gray-300"}`} style={{ height: `${Math.max(20, metrics.left * 0.8)}%` }}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.center > 0 ? "bg-purple-500" : "bg-gray-300"}`} style={{ height: `${Math.max(20, metrics.center)}%` }} title={`Center: ${metrics.center}%`}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-400" : "bg-gray-300"}`} style={{ height: `${Math.max(20, metrics.right * 0.8)}%` }}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-600" : "bg-gray-300"}`} style={{ height: `${Math.max(20, metrics.right)}%` }} title={`Right: ${metrics.right}%`}></div>
+                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-600" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.left)}%` }} title={`Left: ${metrics.left}%`}></div>
+                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-400" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.left * 0.8)}%` }}></div>
+                                <div className={`w-8 rounded-sm ${metrics.raw.center > 0 ? "bg-purple-500" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.center)}%` }} title={`Center: ${metrics.center}%`}></div>
+                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-400" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.right * 0.8)}%` }}></div>
+                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-600" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.right)}%` }} title={`Right: ${metrics.right}%`}></div>
                             </div>
-                            <div className="flex gap-3 text-xs font-mono text-slate-600">
+                            <div className="flex gap-3 text-xs font-mono text-slate-500">
                                 <span>L</span><span>L</span><span>C</span><span>R</span><span>R</span>
                             </div>
                         </div>
@@ -199,64 +233,83 @@ const FullCoveragePage = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
 
+
                         {/* Left Coverage */}
                         <div className="flex flex-col">
                             <h3 className="text-center font-medium text-slate-500 mb-2">Left</h3>
-                            <div className="bg-blue-100 border border-blue-200 rounded-lg p-5 flex-1 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-                                onClick={() => featuredLeft && window.open(featuredLeft.url, '_blank')}>
-                                {featuredLeft ? (
-                                    <>
-                                        <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-blue-700 leading-snug">
-                                            {featuredLeft.title}
-                                        </h4>
-                                        <div className="mt-auto pt-4 border-t border-blue-200/50">
-                                            <p className="font-medium text-slate-700">{featuredLeft.source}</p>
+                            <Card
+                                className="bg-red-50 border-red-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
+                                onClick={() => featuredLeft && window.open(featuredLeft.url, '_blank')}
+                            >
+                                <CardContent className="p-5 flex flex-col h-full">
+                                    {featuredLeft ? (
+                                        <>
+                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-red-700 leading-snug">
+                                                {featuredLeft.title}
+                                            </h4>
+                                            <div className="mt-auto pt-4 border-t border-red-200/50">
+                                                <p className="font-medium text-slate-700">{featuredLeft.source}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
+                                            No left-leaning coverage found.
                                         </div>
-                                    </>
-                                ) : (
-                                    <p className="text-slate-500 italic">No left-leaning coverage found.</p>
-                                )}
-                            </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
 
                         {/* Center Coverage */}
                         <div className="flex flex-col">
                             <h3 className="text-center font-medium text-slate-500 mb-2">Center</h3>
-                            <div className="bg-white border border-slate-200 rounded-lg p-5 flex-1 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-                                onClick={() => featuredCenter && window.open(featuredCenter.url, '_blank')}>
-                                {featuredCenter ? (
-                                    <>
-                                        <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-purple-700 leading-snug">
-                                            {featuredCenter.title}
-                                        </h4>
-                                        <div className="mt-auto pt-4 border-t border-slate-100">
-                                            <p className="font-medium text-slate-700">{featuredCenter.source}</p>
+                            <Card
+                                className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
+                                onClick={() => featuredCenter && window.open(featuredCenter.url, '_blank')}
+                            >
+                                <CardContent className="p-5 flex flex-col h-full">
+                                    {featuredCenter ? (
+                                        <>
+                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-purple-700 leading-snug">
+                                                {featuredCenter.title}
+                                            </h4>
+                                            <div className="mt-auto pt-4 border-t border-slate-100">
+                                                <p className="font-medium text-slate-700">{featuredCenter.source}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
+                                            No center coverage found.
                                         </div>
-                                    </>
-                                ) : (
-                                    <p className="text-slate-500 italic">No center coverage found.</p>
-                                )}
-                            </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
 
                         {/* Right Coverage */}
                         <div className="flex flex-col">
                             <h3 className="text-center font-medium text-slate-500 mb-2">Right</h3>
-                            <div className="bg-red-100 border border-red-200 rounded-lg p-5 flex-1 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-                                onClick={() => featuredRight && window.open(featuredRight.url, '_blank')}>
-                                {featuredRight ? (
-                                    <>
-                                        <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-red-700 leading-snug">
-                                            {featuredRight.title}
-                                        </h4>
-                                        <div className="mt-auto pt-4 border-t border-red-200/50">
-                                            <p className="font-medium text-slate-700">{featuredRight.source}</p>
+                            <Card
+                                className="bg-blue-50 border-blue-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
+                                onClick={() => featuredRight && window.open(featuredRight.url, '_blank')}
+                            >
+                                <CardContent className="p-5 flex flex-col h-full">
+                                    {featuredRight ? (
+                                        <>
+                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-blue-700 leading-snug">
+                                                {featuredRight.title}
+                                            </h4>
+                                            <div className="mt-auto pt-4 border-t border-blue-200/50">
+                                                <p className="font-medium text-slate-700">{featuredRight.source}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
+                                            No right-leaning coverage found.
                                         </div>
-                                    </>
-                                ) : (
-                                    <p className="text-slate-500 italic">No right-leaning coverage found.</p>
-                                )}
-                            </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         </div>
 
                         {/* Framing Gap / Sidebar */}
@@ -265,7 +318,7 @@ const FullCoveragePage = () => {
                             <div className="space-y-3 text-sm">
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600">Left</span>
-                                    <span className="w-16 h-2 bg-blue-400 rounded-full"></span>
+                                    <span className="w-16 h-2 bg-red-400 rounded-full"></span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600">Center</span>
@@ -273,7 +326,7 @@ const FullCoveragePage = () => {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600">Right</span>
-                                    <span className="w-16 h-2 bg-red-400 rounded-full"></span>
+                                    <span className="w-16 h-2 bg-blue-400 rounded-full"></span>
                                 </div>
                                 <p className="text-xs text-slate-500 mt-4 italic">
                                     Analysis of how different outlets frame the narrative.
