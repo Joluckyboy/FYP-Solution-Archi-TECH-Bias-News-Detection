@@ -1,7 +1,7 @@
 import json
 from fastapi import FastAPI, HTTPException
 
-from models.datapayload import DataPayload, SummarisePayload, ModelDataPayload
+from models.datapayload import DataPayload, SummarisePayload, ModelDataPayload, ClaimPayload
 
 from service.predict_service import getStatement, fact_check, summarise, summarise_data
 
@@ -58,16 +58,60 @@ async def predict(json_payload: DataPayload):
         if not statement_list:
             logger.warning("[Factcheck Service] No statements found; returning empty list.")
             return {"response": []}
-        
+
         facts = await fact_check(statement_list, original_article_title, original_article_url)
         logger.info(f"[Factcheck Service] Facts extracted: {facts}")
         if not facts:
             logger.warning("[Factcheck Service] No facts returned; returning empty list.")
             return {"response": []}
-        
+
         return {"response": facts}
-        
+
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@app.post("/factcheck/claim")
+async def factcheck_claim(json_payload: ClaimPayload):
+    """
+    Fact-check a single claim/statement directly without extracting statements.
+    Used by the browser extension context menu feature.
+    """
+    claim = json_payload.claim
+    page_title = json_payload.page_title or ""
+    page_url = json_payload.page_url or ""
+
+    try:
+        logger.info(f"[Factcheck Service] Single claim received: {claim[:100]}...")
+
+        if not claim or len(claim.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Claim is too short to fact-check")
+
+        # Fact-check the single claim directly
+        facts = await fact_check([claim.strip()], page_title, page_url)
+        logger.info(f"[Factcheck Service] Claim fact-checked successfully")
+
+        if not facts:
+            return {"response": {
+                "claim": claim,
+                "correctness": "cannot be determined",
+                "explanation": "Unable to verify this claim with available sources.",
+                "citations": []
+            }}
+
+        # Return the first (and only) result
+        result = facts[0]
+        return {"response": {
+            "claim": result.get("statement", claim),
+            "correctness": result.get("correctness", "cannot be determined"),
+            "explanation": result.get("explanation", ""),
+            "citations": result.get("citations", [])
+        }}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Factcheck Service] Error fact-checking claim: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 

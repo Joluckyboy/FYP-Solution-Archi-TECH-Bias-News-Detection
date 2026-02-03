@@ -14,3 +14,8 @@ class ModelDataPayload(BaseModel):
 
 class SummarisePayload(BaseModel):
     content: str
+
+class ClaimPayload(BaseModel):
+    claim: str
+    page_title: Optional[str] = None
+    page_url: Optional[str] = None
