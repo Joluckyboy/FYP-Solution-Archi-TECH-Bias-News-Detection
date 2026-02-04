@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.feature_extraction.text import CountVectorizer
 from sentence_transformers import SentenceTransformer
 
 
@@ -131,17 +132,88 @@ class TopicClusteredService:
                 elif right_total == 0:
                     under_reported_alert = "Invisible to Right-Leaning audiences"
 
+            # --- Framing Gap Analysis (Distinctive Keywords) ---
+            # Collect headlines
+            left_headlines = []
+            right_headlines = []
+
+            for _, row in group.iterrows():
+                b = str(row.get("bias", "")).lower()
+                title = str(row.get("title", ""))
+                if "left" in b:
+                    left_headlines.append(title)
+                elif "right" in b:
+                    right_headlines.append(title)
+
+            framing_gap = {}
+            if left_headlines and right_headlines:
+                try:
+                    # Helper to get top words
+                    def get_top_words(corpus, other_corpus):
+                        # Words common in A but rare in B
+                        # Simple approach: simple frequency in A, stop words removed
+                        vec = CountVectorizer(
+                            stop_words="english", ngram_range=(1, 1), max_features=20
+                        )
+                        try:
+                            counts = vec.fit_transform(corpus).toarray().sum(axis=0)
+                            feature_names = vec.get_feature_names_out()
+
+                            # Get word frequencies for A
+                            freq_a = dict(zip(feature_names, counts))
+
+                            # Check existence in B (naive boolean check or low freq check)
+                            other_text = " ".join(other_corpus).lower()
+
+                            distinctive = []
+                            for word, count in sorted(
+                                freq_a.items(), key=lambda x: x[1], reverse=True
+                            ):
+                                if (
+                                    word not in other_text
+                                    or other_text.count(word) < count * 0.2
+                                ):  # Simple heuristic
+                                    distinctive.append(word)
+                                if len(distinctive) >= 3:
+                                    break
+                            return distinctive
+                        except ValueError:
+                            # Corpus too small or empty vocab
+                            return []
+
+                    left_keywords = get_top_words(left_headlines, right_headlines)
+                    right_keywords = get_top_words(right_headlines, left_headlines)
+
+                    if left_keywords and right_keywords:
+                        framing_gap = {
+                            "left_keywords": left_keywords,
+                            "right_keywords": right_keywords,
+                        }
+                except Exception as e:
+                    print(f"Error in framing analysis: {e}")
+
             # --- Contextual Insight ---
-            insight = f"This story is covered by {total} sources."
-            if consensus_score > 8.5:
-                insight += " Sources show high agreement on the core facts."
-            elif consensus_score < 5.0:
-                insight += (
-                    " There is significant variation in how headlines frame this story."
-                )
+            insight = f"This story is covered by {total} unique sources."
+
+            # Consensus logic refinement based on User feedback
+            if consensus_score < 5.0:
+                insight += " There is significant disagreement on the core facts across sources (Low Consensus)."
+            elif consensus_score > 8.0:
+                insight += " Sources largely agree on the core facts (High Consensus)."
+            else:
+                insight += " There is moderate agreement across sources."
 
             if polarization_alert:
-                insight += f" It is {polarization_alert.lower()}."
+                insight += f" Coverage is {polarization_alert.lower()}."
+
+            if framing_gap:
+                l_words = ", ".join(
+                    [f'"{w}"' for w in framing_gap["left_keywords"][:2]]
+                )
+                r_words = ", ".join(
+                    [f'"{w}"' for w in framing_gap["right_keywords"][:2]]
+                )
+                insight += f" Framing varies: Left sources focus on {l_words}, while Right sources highlight {r_words}."
 
             # --- Representative Article & Date ---
             rep = group.iloc[0]

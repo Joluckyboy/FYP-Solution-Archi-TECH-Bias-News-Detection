@@ -146,7 +146,7 @@ def _fetch_topics_data():
                 {
                     "title": row.get("title"),
                     "source": row.get("site"),
-                    "url": row.get("url"),  # Ensure URL is included
+                    "url": row.get("url"),
                     "bias": row.get("bias"),
                 }
             )
@@ -158,10 +158,12 @@ def _fetch_topics_data():
                 "source_count": group["source_count"],
                 "bias_distribution": distribution,
                 "latest_date": group["date"],
+                # Placeholder for advanced analytics fields
                 "consensus_score": None,  # Placeholder for fallback
                 "polarization_alert": None,
                 "under_reported_alert": None,
-                "contextual_insight": "Automated data not available from clustering service.",
+                "framing_gap": None,
+                "contextual_insight": "AI analysis unavailable.",
                 "articles": articles_list,
             }
         )
