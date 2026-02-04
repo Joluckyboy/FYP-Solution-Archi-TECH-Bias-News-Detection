@@ -41,21 +41,27 @@ const FullCoveragePage = () => {
 
     // Derived metrics
     const getBiasMetrics = () => {
-        if (!topic || !topic.bias_distribution) return { left: 0, center: 0, right: 0 };
+        if (!topic || !topic.bias_distribution) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
         const dist = topic.bias_distribution;
-        const leftRaw = (dist.left || 0) + (dist.leaning_left || 0);
-        const rightRaw = (dist.right || 0) + (dist.leaning_right || 0);
-        const centerRaw = dist.center || 0;
 
-        const total = leftRaw + rightRaw + centerRaw;
-        if (total === 0) return { left: 0, center: 0, right: 0 };
+        // Raw counts (handling potential missing keys)
+        const leftRaw = dist.left || 0;
+        const leaningLeftRaw = dist.leaning_left || 0;
+        const centerRaw = dist.center || 0;
+        const leaningRightRaw = dist.leaning_right || 0;
+        const rightRaw = dist.right || 0;
+
+        const total = leftRaw + leaningLeftRaw + centerRaw + leaningRightRaw + rightRaw;
+        if (total === 0) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
 
         return {
             left: Math.round((leftRaw / total) * 100),
+            leaningLeft: Math.round((leaningLeftRaw / total) * 100),
             center: Math.round((centerRaw / total) * 100),
+            leaningRight: Math.round((leaningRightRaw / total) * 100),
             right: Math.round((rightRaw / total) * 100),
             total,
-            raw: { left: leftRaw, center: centerRaw, right: rightRaw }
+            raw: { left: leftRaw, leaningLeft: leaningLeftRaw, center: centerRaw, leaningRight: leaningRightRaw, right: rightRaw }
         };
     };
 
@@ -210,18 +216,53 @@ const FullCoveragePage = () => {
 
                         {/* Media Bias Chart */}
                         <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100">
-                            <h3 className="font-semibold text-slate-700 mb-4">Media Bias Chart</h3>
+                            <h3 className="font-semibold text-slate-700 mb-6">Media Bias Chart</h3>
 
-                            {/* Visual representation of L L C R R */}
-                            <div className="flex gap-1 w-full max-w-[200px] h-12 items-end justify-center mb-2">
-                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-600" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.left)}%` }} title={`Left: ${metrics.left}%`}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.left > 0 ? "bg-blue-400" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.left * 0.8)}%` }}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.center > 0 ? "bg-purple-500" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.center)}%` }} title={`Center: ${metrics.center}%`}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-400" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.right * 0.8)}%` }}></div>
-                                <div className={`w-8 rounded-sm ${metrics.raw.right > 0 ? "bg-red-600" : "bg-gray-200"}`} style={{ height: `${Math.max(20, metrics.right)}%` }} title={`Right: ${metrics.right}%`}></div>
-                            </div>
-                            <div className="flex gap-3 text-xs font-mono text-slate-500">
-                                <span>L</span><span>L</span><span>C</span><span>R</span><span>R</span>
+                            <div className="w-full flex justify-between h-32 gap-2 px-2">
+                                {/* Left */}
+                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                    <span className="text-xs font-medium text-slate-500">{metrics.left}%</span>
+                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.left > 0 ? "bg-blue-700" : "bg-gray-200"}`}
+                                        style={{ height: `${Math.max(4, metrics.left)}%` }}
+                                        title={`Left: ${metrics.left}%`}></div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-blue-700">Left</span>
+                                </div>
+
+                                {/* Leaning Left */}
+                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                    <span className="text-xs font-medium text-slate-500">{metrics.leaningLeft}%</span>
+                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.leaningLeft > 0 ? "bg-blue-400" : "bg-gray-200"}`}
+                                        style={{ height: `${Math.max(4, metrics.leaningLeft)}%` }}
+                                        title={`Leaning Left: ${metrics.leaningLeft}%`}></div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-blue-400">L. Left</span>
+                                </div>
+
+                                {/* Center */}
+                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                    <span className="text-xs font-medium text-slate-500">{metrics.center}%</span>
+                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.center > 0 ? "bg-purple-500" : "bg-gray-200"}`}
+                                        style={{ height: `${Math.max(4, metrics.center)}%` }}
+                                        title={`Center: ${metrics.center}%`}></div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-purple-500">Center</span>
+                                </div>
+
+                                {/* Leaning Right */}
+                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                    <span className="text-xs font-medium text-slate-500">{metrics.leaningRight}%</span>
+                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.leaningRight > 0 ? "bg-red-400" : "bg-gray-200"}`}
+                                        style={{ height: `${Math.max(4, metrics.leaningRight)}%` }}
+                                        title={`Leaning Right: ${metrics.leaningRight}%`}></div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-red-400">L. Right</span>
+                                </div>
+
+                                {/* Right */}
+                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                    <span className="text-xs font-medium text-slate-500">{metrics.right}%</span>
+                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.right > 0 ? "bg-red-600" : "bg-gray-200"}`}
+                                        style={{ height: `${Math.max(4, metrics.right)}%` }}
+                                        title={`Right: ${metrics.right}%`}></div>
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-red-600">Right</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -315,23 +356,50 @@ const FullCoveragePage = () => {
                         {/* Framing Gap / Sidebar */}
                         <div className="hidden lg:flex flex-col justify-center bg-gray-100 rounded-lg p-6">
                             <h3 className="font-semibold text-slate-700 mb-4">Framing Gap</h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Left</span>
-                                    <span className="w-16 h-2 bg-red-400 rounded-full"></span>
+
+                            {topic.framing_gap ? (
+                                <div className="space-y-4 text-sm">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Left Sources Use</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {topic.framing_gap.left_keywords.map((word, i) => (
+                                                <Badge key={i} variant="secondary" className="bg-red-200 text-red-800 hover:bg-red-200">
+                                                    "{word}"
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-slate-200" />
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Right Sources Use</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {topic.framing_gap.right_keywords.map((word, i) => (
+                                                <Badge key={i} variant="secondary" className="bg-blue-200 text-blue-800 hover:bg-blue-200">
+                                                    "{word}"
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Center</span>
-                                    <span className="w-16 h-2 bg-purple-400 rounded-full"></span>
+                            ) : (
+                                <div className="space-y-3 text-sm">
+                                    <p className="text-slate-500 italic text-xs mb-2">
+                                        Not enough data to determine framing differences yet.
+                                    </p>
+                                    <div className="flex justify-between items-center opacity-50">
+                                        <span className="text-slate-600">Left</span>
+                                        <span className="w-16 h-2 bg-red-400 rounded-full"></span>
+                                    </div>
+                                    <div className="flex justify-between items-center opacity-50">
+                                        <span className="text-slate-600">Center</span>
+                                        <span className="w-16 h-2 bg-purple-400 rounded-full"></span>
+                                    </div>
+                                    <div className="flex justify-between items-center opacity-50">
+                                        <span className="text-slate-600">Right</span>
+                                        <span className="w-16 h-2 bg-blue-400 rounded-full"></span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Right</span>
-                                    <span className="w-16 h-2 bg-blue-400 rounded-full"></span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-4 italic">
-                                    Analysis of how different outlets frame the narrative.
-                                </p>
-                            </div>
+                            )}
                         </div>
 
                     </div>
@@ -344,13 +412,13 @@ const FullCoveragePage = () => {
                         <div className="flex items-baseline gap-6 mb-4 md:mb-0">
                             <h2 className="text-2xl font-bold text-slate-800">{articles.length} Articles</h2>
                             <div className="flex gap-4 text-sm font-medium">
-                                <button onClick={() => setFilter("left")} className={`${filter === "left" ? "text-blue-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
+                                <button onClick={() => setFilter("left")} className={`${filter === "left" ? "text-red-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
                                     Left ({articles.filter(a => (a.bias || "").toLowerCase().includes("left")).length})
                                 </button>
                                 <button onClick={() => setFilter("center")} className={`${filter === "center" ? "text-purple-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
                                     Center ({articles.filter(a => (a.bias || "").toLowerCase().includes("center")).length})
                                 </button>
-                                <button onClick={() => setFilter("right")} className={`${filter === "right" ? "text-red-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
+                                <button onClick={() => setFilter("right")} className={`${filter === "right" ? "text-blue-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
                                     Right ({articles.filter(a => (a.bias || "").toLowerCase().includes("right")).length})
                                 </button>
                                 {filter !== "all" && (
