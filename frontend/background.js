@@ -524,8 +524,6 @@ async function performFactCheck(tab, claim, pageUrl) {
 
 console.log("Background script loaded");
 
-let tabUrl = null;
-
 // =============================================================================
 // Badge Helper Functions
 // =============================================================================
@@ -858,7 +856,7 @@ function isLikelyNewsUrl(url) {
             (pathParts.length >= 2 && pathParts.some(p => p.length > 20));
 
         return hasArticleLikePath;
-    } catch (error) {
+    } catch {
         return false;
     }
 }
@@ -1022,7 +1020,6 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 chrome.tabs.onActivated.addListener(async function(activeInfo) {
     try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
-        tabUrl = tab.url;
         await checkAndUpdateBadge(tab.url, activeInfo.tabId);
         await updateContextMenuVisibility(tab.url);
     } catch (error) {
@@ -1037,7 +1034,6 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
         try {
             const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
             if (activeTab && activeTab.id === tabId) {
-                tabUrl = tab.url;
                 await checkAndUpdateBadge(tab.url, tabId);
                 await updateContextMenuVisibility(tab.url);
             }

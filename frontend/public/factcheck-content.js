@@ -12,7 +12,7 @@
     let lastSelectionRect = null;
 
     // Capture selection position before context menu appears
-    document.addEventListener('mouseup', (e) => {
+    document.addEventListener('mouseup', () => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
             const range = selection.getRangeAt(0);
@@ -21,7 +21,7 @@
     });
 
     // Also capture on contextmenu event
-    document.addEventListener('contextmenu', (e) => {
+    document.addEventListener('contextmenu', () => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
             const range = selection.getRangeAt(0);
@@ -312,7 +312,7 @@
     }
 
     // Show loading state
-    function showLoading(claim) {
+    function showLoading() {
         const tooltip = createTooltip();
         const iconUrl = getIconUrl();
 

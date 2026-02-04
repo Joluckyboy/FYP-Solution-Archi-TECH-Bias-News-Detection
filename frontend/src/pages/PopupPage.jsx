@@ -68,7 +68,7 @@ const PopupPage = () => {
   // Get sentiment color based on level
   const getSentimentColor = (sentimentResult) => {
     if (!sentimentResult) return "bg-gray-500";
-    const { neutral = 0, negative = 0, positive = 0 } = sentimentResult;
+    const { neutral = 0 } = sentimentResult;
 
     if (neutral >= 0.6) return "bg-green-500";
     if (neutral >= 0.3) return "bg-yellow-500";
