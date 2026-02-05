@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Search, Filter, ExternalLink, Share2, Info } from "lucide-react";
+import { Search, Filter, ExternalLink, Share2, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ const FullCoveragePage = () => {
             <div className="container mx-auto p-12 text-center text-red-500">
                 <h2 className="text-2xl font-bold mb-4">Error Loading Topic</h2>
                 <p>{error || "Topic not found"}</p>
-                <Button onClick={() => navigate(-1)} className="mt-4" variant="outline">
+                <Button onClick={() => navigate('/')} className="mt-4" variant="outline">
                     Go Back
                 </Button>
             </div>
@@ -158,8 +158,8 @@ const FullCoveragePage = () => {
         <div className="min-h-screen bg-slate-50 font-sans">
             <div className="container mx-auto px-6 py-8 max-w-7xl">
 
-                {/* Alerts Section */}
-                <div className="flex flex-col md:flex-row gap-6 mb-10 justify-center">
+                {/* Not used - Alerts Section */}
+                {/* <div className="flex flex-col md:flex-row gap-6 mb-10 justify-center">
                     {silenceAlert && (
                         <div className="bg-red-100 border border-red-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
                             <h3 className="font-bold text-red-800 uppercase text-sm mb-1 flex items-center gap-2">
@@ -194,7 +194,7 @@ const FullCoveragePage = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 {/* Topic Header and Summary */}
                 <div className="mb-8">
@@ -203,15 +203,80 @@ const FullCoveragePage = () => {
                     </h1>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Contextual Insight */}
-                        <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col justify-center">
-                            <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                                <Info className="h-4 w-4 text-blue-500" />
-                                AI Contextual Insight
-                            </h3>
-                            <p className="text-slate-600 text-lg leading-relaxed italic">
-                                "{topic.contextual_insight || "Analysis in progress..."}"
-                            </p>
+                        {/* Premium Contextual Insight Card */}
+                        <div className="lg:col-span-2 relative overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
+                            {/* Decorative Gradient Background */}
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600"></div>
+
+                            <div className="p-6 md:p-8">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 bg-blue-50 rounded-lg">
+                                            <Info className="h-5 w-5 text-blue-600" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-800">
+                                            Daily Briefing & AI Analysis
+                                        </h3>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="gap-2 text-slate-600 border-slate-300 hover:text-blue-700 hover:border-blue-300 transition-all"
+                                        onClick={() => window.open('http://localhost:8016', '_blank')}
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        Verify Claims
+                                    </Button>
+                                </div>
+
+                                {/* Selection Bias Alert */}
+                                {topic.selection_bias_alert && (
+                                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-lg flex gap-3 items-start">
+                                        <div className="p-1 bg-red-100 rounded-full mt-0.5">
+                                            <AlertTriangle className="h-4 w-4 text-red-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-red-800 text-sm">Selection Bias Detected</h4>
+                                            <p className="text-sm text-red-700 mt-1">{topic.selection_bias_alert}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-6">
+                                    {/* Content Split Logic */}
+                                    {(() => {
+                                        const rawText = topic.contextual_insight || "Analysis in progress...";
+                                        // Split into Summary and Analysis if possible
+                                        let summary = rawText;
+                                        let analysis = "";
+
+                                        if (rawText.includes("coverage analysis:")) {
+                                            const parts = rawText.split("coverage analysis:");
+                                            summary = parts[0].replace("Event Summary:", "").trim();
+                                            analysis = parts[1].trim();
+                                        }
+
+                                        return (
+                                            <>
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Event Summary</h4>
+                                                    <p className="text-slate-900 text-lg leading-relaxed">
+                                                        {summary}
+                                                    </p>
+                                                </div>
+
+                                                {analysis && (
+                                                    <div className="pt-4 border-t border-slate-100">
+                                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Contextual Analysis</h4>
+                                                        <p className="text-slate-600 text-base leading-relaxed italic">
+                                                            "{analysis}"
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
                         </div>
 
                         {/* Media Bias Chart */}
