@@ -3,12 +3,73 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.feature_extraction.text import CountVectorizer
 from sentence_transformers import SentenceTransformer
+from transformers import pipeline
+import os
+import requests
+import json
+import time
 
 
 class TopicClusteredService:
     def __init__(self):
         # Load the S-BERT model. This might take a moment on first run.
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            # Initialize summarization pipeline (lightweight model)
+            self.summarizer = pipeline(
+                "summarization", model="sshleifer/distilbart-cnn-12-6"
+            )
+        except Exception as e:
+            print(f"Warning: Could not load summarization model: {e}")
+            self.summarizer = None
+
+        self.perplexity_api_key = os.getenv("API_KEY")
+
+    def _summarize_with_perplexity(self, text_content):
+        if not self.perplexity_api_key:
+            return None
+
+        url = "https://api.perplexity.ai/chat/completions"
+        payload = {
+            "model": "sonar",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a specialized news summarizer. Your task is to summarize the following news articles into a single, comprehensive event summary paragraph. \n\nCRITICAL STRICTNESS RULES:\n1. USE ONLY THE CONTENT PROVIDED IN THE 'USER' MESSAGE.\n2. DO NOT USE ANY EXTERNAL KNOWLEDGE, INTERNET SEARCH, OR OUTSIDE SOURCES.\n3. If the provided text does not contain enough information, state 'Insufficient information to generate summary'.\n4. Focus on the core facts reported in the provided text.",
+                },
+                {"role": "user", "content": text_content},
+            ],
+            "max_tokens": 300,
+            "temperature": 0.2,
+            "return_citations": False,
+        }
+        headers = {
+            "Authorization": f"Bearer {self.perplexity_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=30)
+                if response.status_code == 200:
+                    return response.json()["choices"][0]["message"]["content"]
+                elif response.status_code == 429:
+                    wait_time = 2 ** (attempt + 1)
+                    print(f"Perplexity Rate Limit (429). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(
+                        f"Perplexity API Error: {response.status_code} - {response.text}"
+                    )
+                    # Don't retry for other client errors (4xx)
+                    if 400 <= response.status_code < 500:
+                        return None
+            except Exception as e:
+                print(f"Perplexity API Request Failed: {e}")
+                time.sleep(1)
+
+        return None
 
     def cluster_articles(self, articles_df, distance_threshold=0.5):
         """
@@ -124,13 +185,17 @@ class TopicClusteredService:
                 elif right_total > left_total * 2 and left_total < total * 0.15:
                     polarization_alert = "Heavily skewed towards Right sources"
 
-            under_reported_alert = None
-            # logic: if trending (high total) but near zero in one spectrum
+            selection_bias_alert = None
+            # Logic: If trending (high total) but ZERO coverage from one side -> Selection Bias
             if total > 5:
                 if left_total == 0:
-                    under_reported_alert = "Invisible to Left-Leaning audiences"
+                    selection_bias_alert = (
+                        "High Selection Bias: Ignored by Left Sources"
+                    )
                 elif right_total == 0:
-                    under_reported_alert = "Invisible to Right-Leaning audiences"
+                    selection_bias_alert = (
+                        "High Selection Bias: Ignored by Right Sources"
+                    )
 
             # --- Framing Gap Analysis (Distinctive Keywords) ---
             # Collect headlines
@@ -192,10 +257,10 @@ class TopicClusteredService:
                 except Exception as e:
                     print(f"Error in framing analysis: {e}")
 
-            # --- Contextual Insight ---
+            # --- Initial Insight Construction (Pre-Deep Summary) ---
             insight = f"This story is covered by {total} unique sources."
 
-            # Consensus logic refinement based on User feedback
+            # Consensus logic refinement
             if consensus_score < 5.0:
                 insight += " There is significant disagreement on the core facts across sources (Low Consensus)."
             elif consensus_score > 8.0:
@@ -208,15 +273,38 @@ class TopicClusteredService:
 
             if framing_gap:
                 l_words = ", ".join(
-                    [f'"{w}"' for w in framing_gap["left_keywords"][:2]]
+                    [f"'{w}'" for w in framing_gap["left_keywords"][:2]]
                 )
                 r_words = ", ".join(
-                    [f'"{w}"' for w in framing_gap["right_keywords"][:2]]
+                    [f"'{w}'" for w in framing_gap["right_keywords"][:2]]
                 )
-                insight += f" Framing varies: Left sources focus on {l_words}, while Right sources highlight {r_words}."
+                insight += f" Left-leaning sources tend to emphasize {l_words}, while Right-leaning sources focus on {r_words}."
 
-            # --- Representative Article & Date ---
+            # Fallback if no specific insight
+            if len(insight) < 60:
+                insight += " This topic is receiving broad attention."
+
+            # --- Default/Fallback Summary ---
+            summary_text = f"Event Summary: {group.iloc[0].get('title', 'News Event')}"
+
+            # Try Local Transformers (Headlines) as robust fallback
+            if self.summarizer and total > 1:
+                try:
+                    unique_titles = list(set(group_titles))[:15]
+                    input_text = ". ".join(unique_titles)[:3000]
+                    summary_result = self.summarizer(
+                        input_text, max_length=60, min_length=20, do_sample=False
+                    )
+                    if summary_result:
+                        summary_text = (
+                            f"Event Summary: {summary_result[0]['summary_text']}"
+                        )
+                except Exception as e:
+                    print(f"Local Summarization failed: {e}")
+
+            # Define representative article for title usage
             rep = group.iloc[0]
+
             dates = pd.to_datetime(group["date"], errors="coerce")
             latest_date = dates.max()
             latest_date_str = (
@@ -231,15 +319,75 @@ class TopicClusteredService:
                 "latest_date": latest_date_str,
                 "consensus_score": round(consensus_score, 1),
                 "polarization_alert": polarization_alert,
-                "under_reported_alert": under_reported_alert,
-                "contextual_insight": insight,
-                "articles": group[["title", "source", "url", "bias"]].to_dict(
-                    orient="records"
-                ),
+                "selection_bias_alert": selection_bias_alert,
+                "framing_gap": framing_gap,
+                "base_insight": insight,  # Store base insight separately
+                "base_summary": summary_text,  # Store base summary
+                "contextual_insight": f"{summary_text} coverage analysis: {insight}",  # Default value
+                "articles": group[
+                    ["title", "source", "url", "bias", "page_text"]
+                ].to_dict(orient="records"),  # Include page_text for second pass
             }
             clustered_topics.append(topic)
 
-        # Sort by source count (hottest topics first)
+        # 4. Sort by source count (hottest topics first)
         clustered_topics.sort(key=lambda x: x["source_count"], reverse=True)
 
         return clustered_topics
+
+    def enrich_topic_with_deep_summary(self, topic):
+        """
+        Generates a deep summary for a single topic using Perplexity API.
+        Modifies the topic dictionary in-place.
+        """
+        if not self.perplexity_api_key:
+            return topic
+
+        try:
+            # Reconstruct context from articles dict
+            arts = topic.get("articles", [])
+
+            # Select unique articles (up to 3) for context
+            seen_titles = set()
+            unique_arts = []
+            for a in arts:
+                title = a.get("title", "")
+                if title not in seen_titles:
+                    unique_arts.append(a)
+                    seen_titles.add(title)
+                if len(unique_arts) >= 3:
+                    break
+
+            combined_text = ""
+            for art in unique_arts:
+                # Prioritize page_text if available (it might be in the dict if we preserved it)
+                # Note: app.py might have stripped it, so we rely on what's passed in 'topic'
+                text_snippet = str(art.get("page_text", ""))
+
+                # If page_text is missing/empty, we can't do a "Deep" summary strictly.
+                # But let's check. If it's short, we fallback to title, but that violates "Strict content"
+                # if we want deep insights. However, strictly speaking, title IS provided content.
+                if len(text_snippet) < 50:
+                    text_snippet = art.get("title", "")
+
+                text_snippet = text_snippet[:1500]
+                combined_text += (
+                    f"\n\nSource ({art.get('source', 'Unknown')}): {text_snippet}"
+                )
+
+            if len(combined_text) > 100:
+                print(f"Generating On-Demand Summary for Topic {topic['id']}...")
+                perplexity_summary = self._summarize_with_perplexity(combined_text)
+
+                if perplexity_summary:
+                    deep_summary_text = f"Event Summary (Deep AI): {perplexity_summary}"
+                    # Update the insight
+                    base_insight = topic.get("base_insight", "")
+                    topic["contextual_insight"] = (
+                        f"{deep_summary_text} coverage analysis: {base_insight}"
+                    )
+                    topic["has_deep_summary"] = True
+        except Exception as e:
+            print(f"Deep summarization failed for topic {topic['id']}: {e}")
+
+        return topic
