@@ -53,10 +53,13 @@ def _fetch_topics_data():
     df = pd.read_csv(DATASET_PATH)
 
     # --- Try Advanced Clustering (Semantic) ---
+    error_detail = "Unknown error"
     try:
         print(f"Running clustering on {len(df)} articles...")
         # Use a sample for speed (e.g. 500 articles)
         subset = df.head(500).fillna("")
+        if "site" in subset.columns:
+            subset = subset.rename(columns={"site": "source"})
 
         # Direct call to service
         topics_data = service.cluster_articles(subset)
@@ -64,6 +67,7 @@ def _fetch_topics_data():
         return topics_data, None
 
     except Exception as e:
+        error_detail = str(e)
         print(f"Failed to contact Analyzer service, using local fallback: {e}")
 
     # --- Fallback: Simple Jaccard Grouping ---
@@ -161,9 +165,9 @@ def _fetch_topics_data():
                 # Placeholder for advanced analytics fields
                 "consensus_score": None,  # Placeholder for fallback
                 "polarization_alert": None,
-                "under_reported_alert": None,
+                "selection_bias_alert": None,
                 "framing_gap": None,
-                "contextual_insight": "AI analysis unavailable.",
+                "contextual_insight": f"AI analysis unavailable. Error: {error_detail}",
                 "articles": articles_list,
             }
         )
@@ -228,6 +232,18 @@ def get_topic_details(topic_id):
 
     encoded_text = urllib.parse.quote(short_headline)
     topic["image"] = f"https://placehold.co/600x400?text={encoded_text}"
+
+    # --- On-Demand Deep Summarization ---
+    # Only run if not already summarized (though our simplified clustering doesn't pre-summarize anymore)
+    if "has_deep_summary" not in topic:
+        print(f"Triggering on-demand summary for Topic {topic_id}")
+        topic = service.enrich_topic_with_deep_summary(topic)
+
+    # Clean up page_text (large payload) from response
+    if "articles" in topic:
+        for a in topic["articles"]:
+            if "page_text" in a:
+                del a["page_text"]
 
     return topic, 200
 
