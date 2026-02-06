@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Search, Filter, ExternalLink, Share2, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +22,7 @@ const FullCoveragePage = () => {
         const fetchTopicDetails = async () => {
             try {
                 setLoading(true);
-                // Ensure this points to your actual backend port
+
                 const response = await axios.get(`http://127.0.0.1:8017/dashboard/topic_details/${topicId}`);
                 setTopic(response.data);
                 setArticles(response.data.articles || []);
@@ -132,69 +132,9 @@ const FullCoveragePage = () => {
         );
     }
 
-    // Use data from backend or fallback to calculation
-    const silenceAlert = topic.polarization_alert || (metrics.left < 20 ? "Left" : (metrics.right < 20 ? "Right" : null));
-    // Consensus Score Logic
-    let consensusLabel = "MEDIUM";
-    let consensusText = "There is moderate agreement across sources.";
-
-    if (topic.consensus_score !== undefined && topic.consensus_score !== null) {
-        if (topic.consensus_score > 7) {
-            consensusLabel = "HIGH";
-            consensusText = "Most sources agree on the core facts of this story.";
-        } else if (topic.consensus_score < 4) {
-            consensusLabel = "LOW";
-            consensusText = "Significant variation in framing across sources.";
-        }
-    } else {
-        // Fallback if no backend score
-        if (metrics.center > 40) consensusLabel = "HIGH";
-        else if (metrics.center < 20) consensusLabel = "LOW";
-    }
-
-    const underReported = topic.under_reported_alert;
-
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
             <div className="container mx-auto px-6 py-8 max-w-7xl">
-
-                {/* Not used - Alerts Section */}
-                {/* <div className="flex flex-col md:flex-row gap-6 mb-10 justify-center">
-                    {silenceAlert && (
-                        <div className="bg-red-100 border border-red-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
-                            <h3 className="font-bold text-red-800 uppercase text-sm mb-1 flex items-center gap-2">
-                                <span>🚨</span> Polarization Alert
-                            </h3>
-                            <p className="text-sm text-red-700">
-                                {silenceAlert.includes("skewed") ? silenceAlert : `Reported significantly less by ${silenceAlert}-leaning sources.`}
-                            </p>
-                        </div>
-                    )}
-
-                    {underReported && (
-                        <div className="bg-orange-100 border border-orange-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
-                            <h3 className="font-bold text-orange-800 uppercase text-sm mb-1 flex items-center gap-2">
-                                <span>🕵️‍♂️</span> Under-Reported
-                            </h3>
-                            <p className="text-sm text-orange-700">
-                                {underReported}
-                            </p>
-                        </div>
-                    )}
-
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg shadow-sm flex-1 max-w-md">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="font-bold text-blue-800 uppercase text-sm mb-1 flex items-center gap-2">
-                                    <span>🤝</span> Consensus Score: {consensusLabel} {topic.consensus_score && `(${topic.consensus_score}/10)`}
-                                </h3>
-                                <p className="text-sm text-blue-700">
-                                    {consensusText}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div> */}
 
                 {/* Topic Header and Summary */}
                 <div className="mb-8">
@@ -218,14 +158,6 @@ const FullCoveragePage = () => {
                                             Daily Briefing & AI Analysis
                                         </h3>
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        className="gap-2 text-slate-600 border-slate-300 hover:text-blue-700 hover:border-blue-300 transition-all"
-                                        onClick={() => window.open('http://localhost:8016', '_blank')}
-                                    >
-                                        <ExternalLink className="h-4 w-4" />
-                                        Verify Claims
-                                    </Button>
                                 </div>
 
                                 {/* Selection Bias Alert */}
@@ -249,8 +181,8 @@ const FullCoveragePage = () => {
                                         let summary = rawText;
                                         let analysis = "";
 
-                                        if (rawText.includes("coverage analysis:")) {
-                                            const parts = rawText.split("coverage analysis:");
+                                        if (rawText.toLowerCase().includes("coverage analysis:")) {
+                                            const parts = rawText.split(/coverage analysis:/i);
                                             summary = parts[0].replace("Event Summary:", "").trim();
                                             analysis = parts[1].trim();
                                         }
@@ -259,7 +191,7 @@ const FullCoveragePage = () => {
                                             <>
                                                 <div>
                                                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Event Summary</h4>
-                                                    <p className="text-slate-900 text-lg leading-relaxed">
+                                                    <p className="text-slate-900 text-lg leading-relaxed whitespace-pre-line">
                                                         {summary}
                                                     </p>
                                                 </div>
@@ -328,6 +260,56 @@ const FullCoveragePage = () => {
                                         title={`Right: ${metrics.right}%`}></div>
                                     <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-red-600">Right</span>
                                 </div>
+                            </div>
+
+                            {/* Polarization Analysis / Source Map */}
+                            <div className="mt-8 pt-6 border-t border-slate-100 w-full">
+                                <h4 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">Polarization Analysis</h4>
+
+                                {(() => {
+                                    // Extract unique sources with their bias
+                                    const uniqueSources = {};
+                                    articles.forEach(a => {
+                                        if (a.source && !uniqueSources[a.source]) {
+                                            uniqueSources[a.source] = {
+                                                source: a.source,
+                                                bias: (a.bias || "").toLowerCase()
+                                            };
+                                        }
+                                    });
+                                    const sources = Object.values(uniqueSources);
+
+                                    return (
+                                        <div className="flex flex-col items-center">
+                                            <p className="text-sm text-slate-500 mb-4">
+                                                This story is covered by <span className="font-bold text-slate-800">{sources.length}</span> unique sources.
+                                            </p>
+
+                                            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+                                                {sources.map((s, i) => {
+                                                    let bgClass = "bg-slate-100 border-slate-200";
+                                                    if (s.bias.includes("left")) bgClass = "bg-blue-100 border-blue-200";
+                                                    else if (s.bias.includes("right")) bgClass = "bg-red-100 border-red-200";
+                                                    else if (s.bias.includes("center")) bgClass = "bg-purple-100 border-purple-200";
+
+                                                    return (
+                                                        <div key={i}
+                                                            className={`h-8 w-8 rounded-full flex items-center justify-center border ${bgClass} p-1`}
+                                                            title={`${s.source} (${s.bias})`}
+                                                        >
+                                                            <img
+                                                                src={getSourceIcon(s.source)}
+                                                                alt={s.source}
+                                                                className="h-full w-full object-cover rounded-full"
+                                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -427,7 +409,7 @@ const FullCoveragePage = () => {
                                     <div className="flex flex-col gap-1">
                                         <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Left Sources Use</span>
                                         <div className="flex flex-wrap gap-2">
-                                            {topic.framing_gap.left_keywords.map((word, i) => (
+                                            {topic.framing_gap.left_keywords?.map((word, i) => (
                                                 <Badge key={i} variant="secondary" className="bg-red-200 text-red-800 hover:bg-red-200">
                                                     "{word}"
                                                 </Badge>
@@ -438,7 +420,7 @@ const FullCoveragePage = () => {
                                     <div className="flex flex-col gap-1">
                                         <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Right Sources Use</span>
                                         <div className="flex flex-wrap gap-2">
-                                            {topic.framing_gap.right_keywords.map((word, i) => (
+                                            {topic.framing_gap.right_keywords?.map((word, i) => (
                                                 <Badge key={i} variant="secondary" className="bg-blue-200 text-blue-800 hover:bg-blue-200">
                                                     "{word}"
                                                 </Badge>

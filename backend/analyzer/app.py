@@ -3,8 +3,10 @@ import pandas as pd
 
 try:
     from .clustering import TopicClusteredService
+    from .summary import SummaryService
 except ImportError:
     from clustering import TopicClusteredService
+    from summary import SummaryService
 import os
 from flask_cors import CORS
 
@@ -14,7 +16,49 @@ CORS(app)
 # Initialize service (loads model once on startup)
 print("Loading Analyzer Model...")
 service = TopicClusteredService()
+summary = SummaryService()
 print("Analyzer Model Loaded.")
+
+# Path to the Kaggle dataset
+DATASET_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "datasets",
+    "kaggle news articles for political bias classification.csv",
+)
+
+
+def _fetch_topics_data():
+    """Helper to fetch and cluster topics from the dataset"""
+    if not os.path.exists(DATASET_PATH):
+        return None, "Dataset not found"
+
+    df = pd.read_csv(DATASET_PATH)
+
+    # --- Try Advanced Clustering (Semantic) ---
+    try:
+        print(f"Running clustering on {len(df)} articles...")
+        # Use a sample for speed (e.g. 500 articles)
+        subset = df.head(500).fillna("")
+        if "site" in subset.columns:
+            subset = subset.rename(columns={"site": "source"})
+
+        # Direct call to service
+        topics_data = service.cluster_articles(subset)
+        print(f"Generated {len(topics_data)} topics.")
+        return topics_data, None
+
+    except Exception as e:
+        print(f"Failed to contact Analyzer service, using local fallback: {e}")
+        error_detail = str(e)
+
+        # --- Fallback: Simple Jaccard Grouping (Delegated to Service) ---
+        try:
+            print("Using Fallback Jaccard Grouping (Service)...")
+            topics = service.cluster_articles_fallback(df, error_detail)
+            return topics, None
+        except Exception as fb_e:
+            print(f"Fallback clustering also failed: {fb_e}")
+            return None, f"Clustering failed: {e}. Fallback failed: {fb_e}"
 
 
 @app.route("/analyze/topics", methods=["POST"])
@@ -35,145 +79,6 @@ def analyze_topics():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-# Path to the Kaggle dataset
-DATASET_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "datasets",
-    "kaggle news articles for political bias classification.csv",
-)
-
-
-def _fetch_topics_data():
-    """Helper to fetch and cluster topics from the dataset"""
-    if not os.path.exists(DATASET_PATH):
-        return None, "Dataset not found"
-
-    df = pd.read_csv(DATASET_PATH)
-
-    # --- Try Advanced Clustering (Semantic) ---
-    error_detail = "Unknown error"
-    try:
-        print(f"Running clustering on {len(df)} articles...")
-        # Use a sample for speed (e.g. 500 articles)
-        subset = df.head(500).fillna("")
-        if "site" in subset.columns:
-            subset = subset.rename(columns={"site": "source"})
-
-        # Direct call to service
-        topics_data = service.cluster_articles(subset)
-        print(f"Generated {len(topics_data)} topics.")
-        return topics_data, None
-
-    except Exception as e:
-        error_detail = str(e)
-        print(f"Failed to contact Analyzer service, using local fallback: {e}")
-
-    # --- Fallback: Simple Jaccard Grouping ---
-    print("Using Fallback Jaccard Grouping...")
-    subset = df.head(200).fillna("")
-
-    groups = []  # List of dicts
-
-    def calculate_similarity(text1, text2):
-        set1 = set(text1.lower().split())
-        set2 = set(text2.lower().split())
-        intersection = len(set1.intersection(set2))
-        union = len(set1.union(set2))
-        return intersection / union if union > 0 else 0
-
-    for index, row in subset.iterrows():
-        title = str(row.get("title", ""))
-        if not title.strip():
-            continue
-
-        bias_val = str(row.get("bias", "center")).lower()
-
-        match_found = False
-        for group in groups:
-            sim = calculate_similarity(title, group["title"])
-            if sim > 0.3:
-                group["articles"].append(row)
-                group["source_count"] += 1
-                if "left" in bias_val:
-                    group["bias_counts"]["left"] += 1
-                elif "right" in bias_val:
-                    group["bias_counts"]["right"] += 1
-                else:
-                    group["bias_counts"]["center"] += 1
-                match_found = True
-                break
-
-        if not match_found:
-            new_group = {
-                "title": title,
-                "articles": [row],
-                "source_count": 1,
-                "bias_counts": {
-                    "left": 0,
-                    "leaning_left": 0,
-                    "center": 0,
-                    "leaning_right": 0,
-                    "right": 0,
-                },
-                "date": str(row.get("date", "")),
-            }
-            if bias_val == "left":
-                new_group["bias_counts"]["left"] += 1
-            elif bias_val == "leaning-left":
-                new_group["bias_counts"]["leaning_left"] += 1
-            elif bias_val == "right":
-                new_group["bias_counts"]["right"] += 1
-            elif bias_val == "leaning-right":
-                new_group["bias_counts"]["leaning_right"] += 1
-            else:
-                new_group["bias_counts"]["center"] += 1
-            groups.append(new_group)
-
-    # Format fallback groups to match service output structure
-    topics = []
-    for i, group in enumerate(groups):
-        total = group["source_count"]
-        distribution = {
-            "left": (group["bias_counts"]["left"] / total) * 100,
-            "leaning_left": (group["bias_counts"]["leaning_left"] / total) * 100,
-            "center": (group["bias_counts"]["center"] / total) * 100,
-            "leaning_right": (group["bias_counts"]["leaning_right"] / total) * 100,
-            "right": (group["bias_counts"]["right"] / total) * 100,
-        }
-
-        # Convert df rows in articles to dict records
-        articles_list = []
-        for row in group["articles"]:
-            articles_list.append(
-                {
-                    "title": row.get("title"),
-                    "source": row.get("site"),
-                    "url": row.get("url"),
-                    "bias": row.get("bias"),
-                }
-            )
-
-        topics.append(
-            {
-                "id": i,
-                "title": group["title"],
-                "source_count": group["source_count"],
-                "bias_distribution": distribution,
-                "latest_date": group["date"],
-                # Placeholder for advanced analytics fields
-                "consensus_score": None,  # Placeholder for fallback
-                "polarization_alert": None,
-                "selection_bias_alert": None,
-                "framing_gap": None,
-                "contextual_insight": f"AI analysis unavailable. Error: {error_detail}",
-                "articles": articles_list,
-            }
-        )
-
-    topics.sort(key=lambda x: x["source_count"], reverse=True)
-    return topics, None
 
 
 @app.route("/dashboard/topics", methods=["GET"])
@@ -237,7 +142,7 @@ def get_topic_details(topic_id):
     # Only run if not already summarized (though our simplified clustering doesn't pre-summarize anymore)
     if "has_deep_summary" not in topic:
         print(f"Triggering on-demand summary for Topic {topic_id}")
-        topic = service.enrich_topic_with_deep_summary(topic)
+        topic = summary.enrich_topic_with_deep_summary(topic)
 
     # Clean up page_text (large payload) from response
     if "articles" in topic:
