@@ -56,6 +56,8 @@ services:
       - "8017:8017"
     environment:
       - ENV=production
+    env_file:
+      - ./backend/.env
     volumes:
       - ./datasets:/app/datasets
     restart: always

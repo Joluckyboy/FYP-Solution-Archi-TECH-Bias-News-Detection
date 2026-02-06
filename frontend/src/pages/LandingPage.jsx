@@ -5,6 +5,7 @@ import get_api from "@/config/config";
 import TrendingKeywords from "../components/TrendingKeywords";
 import OutletBiasChart from "../components/OutletBiasChart";
 import TopicOutletDistribution from "../components/TopicOutletDistribution";
+import TopicFeed from "@/components/TopicFeed";
 
 import { CustomInput } from "@/components/ui/custom-input";
 import { Button } from "@/components/ui/button";
@@ -129,9 +130,8 @@ const LandingPage = () => {
       {/* Header Text */}
       <div className="text-center m-12 slide-in-right">
         <h1
-          className={`checkmate-gradient pb-4 ${
-            isMobile ? "text-3xl" : "text-5xl"
-          }`}
+          className={`checkmate-gradient pb-4 ${isMobile ? "text-3xl" : "text-5xl"
+            }`}
         >
           Your Move Against Misinformation
         </h1>
@@ -232,69 +232,69 @@ const LandingPage = () => {
 
       <div className="ml-12 mr-12">
 
-      {/* Topics Divider */}
-      <div className="w-full h-px bg-black border-0 mb-12"></div>
+        {/* Topics Divider */}
+        <div className="w-full h-px bg-black border-0 mb-12"></div>
 
-      {/* Latest Topics Card */}
-      <div className="mb-12">
-        <Card className="w-full h-[600px]">
-          <CardHeader>
-            <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-           wai wen's portion!
-        </CardContent>
-        </Card>
-      </div>
+        {/* Latest Topics Card */}
+        <div className="mb-12">
+          <Card className="w-full h-[600px] flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 flex-1 overflow-y-auto">
+              <TopicFeed compact={true} />
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Trending Keywords Card */}
-      <div className="mb-12">
-      <Card className="w-full h-[400px]">
-        <CardHeader>
-          <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <TrendingKeywords />
-        </CardContent>
-      </Card>
-      </div>
+        {/* Trending Keywords Card */}
+        <div className="mb-12">
+          <Card className="w-full h-[400px]">
+            <CardHeader>
+              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <TrendingKeywords />
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Visualisations */}
-      <div className="grid grid-cols-2 gap-8 mb-12">
-        {/* Articles per Outlet, filterable by topic */}
-        <Card className="h-[500px]">
-          <CardHeader>
-            <CardTitle className="text-left checkmate-gradient">Topic Coverage</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <TopicOutletDistribution />
-          </CardContent>
-        </Card>
+        {/* Visualisations */}
+        <div className="grid grid-cols-2 gap-8 mb-12">
+          {/* Articles per Outlet, filterable by topic */}
+          <Card className="h-[500px]">
+            <CardHeader>
+              <CardTitle className="text-left checkmate-gradient">Topic Coverage</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <TopicOutletDistribution />
+            </CardContent>
+          </Card>
 
-        {/* Outlet Bias */}
-        <Card className="h-[500px]">
-          <CardHeader>
-            <CardTitle className="checkmate-gradient">
-              Outlet Bias Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <OutletBiasChart />
-            <p className="text-sm">Ratings do not reflect accuracy or credibility, they reflect perspective only.</p>
-          </CardContent>
-        </Card>
-      </div>      
+          {/* Outlet Bias */}
+          <Card className="h-[500px]">
+            <CardHeader>
+              <CardTitle className="checkmate-gradient">
+                Outlet Bias Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OutletBiasChart />
+              <p className="text-sm">Ratings do not reflect accuracy or credibility, they reflect perspective only.</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Final Divider */}
-      <div className="w-full h-px bg-black border-0 mb-8"></div>
+        {/* Final Divider */}
+        <div className="w-full h-px bg-black border-0 mb-8"></div>
 
-      {/* Link to Dashboard */}
-      <div className="text-center">
-        <p className="text-xl checkmate-gradient">More About:</p>
-        <Link to="/dashboard" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
-          How we Dashboard
-        </Link>
-      </div>
+        {/* Link to Dashboard */}
+        <div className="text-center">
+          <p className="text-xl checkmate-gradient">More About:</p>
+          <Link to="/dashboard" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
+            How we Dashboard
+          </Link>
+        </div>
 
       </div>
 
