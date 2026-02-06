@@ -4,6 +4,7 @@ import { lazy } from "react";
 // Pages
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ResultsPage = lazy(() => import("@/pages/ResultsPage"));
+const PopupPage = lazy(() => import("@/pages/PopupPage"));
 const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
 
 // Indiv Games and Quizzes Pages
@@ -23,5 +24,9 @@ export const PUBLIC_ROUTES = [
     { path: "/full-coverage/:topicId", element: <FullCoveragePage /> },
     { path: "/*", element: <Navigate to="/" /> },
     { path: "/dashboard", element: <DashboardPage /> },
+    { path: "/*", element: <Navigate to="/" /> },
 ];
+
+// Popup route (no layout)
+export const POPUP_ROUTE = { path: "/popup", element: <PopupPage /> };
 

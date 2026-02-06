@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npm install:*)",
+      "Bash(./node_modules/.bin/vite build)",
+      "Bash(powershell -Command \"cd ''c:\\\\Users\\\\User\\\\Documents\\\\GitHub\\\\FYP-Solution-Archi-TECH-Bias-News-Detection\\\\frontend''; npm run build 2>&1\")",
+      "Bash(python -m pytest:*)",
+      "Bash(copy:*)"
+    ]
+  }
+}

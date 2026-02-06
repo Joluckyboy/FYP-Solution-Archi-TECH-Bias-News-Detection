@@ -93,6 +93,11 @@ const LandingPage = () => {
 
     const new_query = async () => {
       try {
+        // Notify background script that analysis is starting (for badge update)
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+          chrome.runtime.sendMessage({ action: "analysisStarted" });
+        }
+
         // "url": articleURL in body (not params)
         // let res = await axios.get(`${API_URL}/application/new_query`);
         let res = await axios.post(`${API_URL}/application/new_query`, {
@@ -104,10 +109,14 @@ const LandingPage = () => {
         // setData(apiData);
         console.log("landing page API fetch successful:", data);
 
-        navigate(`/results/${data.id}?redirect=false`);
+        navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
       } catch (error) {
         console.error("API fetch failed, using fallback JSON:", error);
         setError(true);
+        // Clear badge on error
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+          chrome.runtime.sendMessage({ action: "clearBadge" });
+        }
       }
     };
 
