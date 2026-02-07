@@ -3,7 +3,7 @@ import TopicCard from './TopicCard';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
 
-const TopicFeed = () => {
+const TopicFeed = ({ compact = false }) => {
     const [topics, setTopics] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -41,8 +41,8 @@ const TopicFeed = () => {
     }
 
     return (
-        <div className="container mx-auto py-8">
-            <h2 className="text-3xl font-bold mb-6 tracking-tight">Latest Topics</h2>
+        <div className={compact ? "w-full" : "container mx-auto py-8"}>
+            {!compact && <h2 className="text-3xl font-bold mb-6 tracking-tight">Latest Topics</h2>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {topics.map(topic => (
                     <TopicCard key={topic.id} topic={topic} />

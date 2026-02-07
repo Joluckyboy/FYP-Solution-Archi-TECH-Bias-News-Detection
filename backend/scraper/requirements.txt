@@ -13,3 +13,4 @@ Werkzeug==3.1.5
 selenium
 gunicorn
 requests
+APScheduler==3.10.4

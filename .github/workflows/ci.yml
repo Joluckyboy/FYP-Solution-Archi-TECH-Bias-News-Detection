@@ -8,6 +8,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      sentiment: ${{ steps.filter.outputs.sentiment }}
+      emotion: ${{ steps.filter.outputs.emotion }}
+      propaganda: ${{ steps.filter.outputs.propaganda }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'application/**'
+              - 'telebot/**'
+            sentiment:
+              - 'backend/sentiment/**'
+            emotion:
+              - 'backend/emotion/**'
+            propaganda:
+              - 'backend/propaganda/**'
+
   unit-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -96,7 +120,8 @@ jobs:
 
   docker-build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.backend == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -105,10 +130,13 @@ jobs:
             context: ./backend/database
           - name: sentiment
             context: ./backend/sentiment
+            slow: true
           - name: emotion
             context: ./backend/emotion
+            slow: true
           - name: propaganda
             context: ./backend/propaganda
+            slow: true
           - name: factcheck
             context: ./backend/fact-check
           - name: scraper
@@ -122,10 +150,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Check if slow service needs build
+        id: should-build
+        run: |
+          if [[ "${{ matrix.service.slow }}" != "true" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.service.name }}" == "sentiment" && "${{ needs.changes.outputs.sentiment }}" == "true" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.service.name }}" == "emotion" && "${{ needs.changes.outputs.emotion }}" == "true" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.service.name }}" == "propaganda" && "${{ needs.changes.outputs.propaganda }}" == "true" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+            echo "Skipping ${{ matrix.service.name }} - no changes detected"
+          fi
+
       - name: Set up Docker Buildx
+        if: steps.should-build.outputs.build == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image for ${{ matrix.service.name }}
+        if: steps.should-build.outputs.build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.service.context }}

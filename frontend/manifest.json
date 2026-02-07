@@ -1,7 +1,7 @@
 {
-  "name": "FrontEnd",
-  "description": "Trying out building an extension to call the scraper",
-  "version": "0.2",
+  "name": "Checkmate",
+  "description": "News Bias Detector - Analyze articles for propaganda and sentiment",
+  "version": "0.5",
   "manifest_version": 3,
   "permissions": [
     "activeTab",
@@ -10,14 +10,22 @@
     "sidePanel",
     "downloads",
     "tabCapture",
-    "offscreen"
+    "offscreen",
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "action": {
-    "default_title":"Test",
-    "default_popup":"index.html"
+    "default_title": "Checkmate - News Bias Detector",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "checkmate.png",
+      "32": "checkmate.png",
+      "48": "checkmate.png",
+      "128": "checkmate.png"
+    }
   },
   "side_panel": {
     "default_path": "index.html"
@@ -25,5 +33,11 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["checkmate.png", "factcheck-content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

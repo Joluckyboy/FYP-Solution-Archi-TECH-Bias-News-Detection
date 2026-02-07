@@ -56,6 +56,8 @@ services:
       - "8017:8017"
     environment:
       - ENV=production
+    env_file:
+      - ./backend/.env
     volumes:
       - ./datasets:/app/datasets
     restart: always
@@ -69,7 +71,9 @@ services:
     environment:
       - ENV=production
     restart: always
-
+    volumes:
+      - ./backend/scraper/data:/app/data
+      
   application:
     build:
       context: ./application
@@ -77,6 +81,7 @@ services:
       - "8010:8010"
     volumes:
       - ./datasets:/datasets:ro
+      - ./backend/scraper/data:/backend/scraper/data:ro
     environment:
       - ENV=production
       - DATABASE_URL=http://database:8011

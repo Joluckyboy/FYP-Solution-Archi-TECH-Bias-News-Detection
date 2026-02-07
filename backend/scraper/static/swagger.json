@@ -1,147 +1,409 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "title": "Scraper API",
-        "version": "0.1",
-        "description": "API for getting text data from articles or youtube videos"
-    },
-    "paths": {
-        "/scraper/get-article?url={url}": {
-            "get": {
-                "description": "Returns the headline, article body, publish date for an article",
-                "produces": [
-                    "application/json"
-                ],
-                "parameters": [
-                    {
-                        "name": "url",
-                        "in": "query",
-                        "description": "The URL of the article to scrape",
-                        "required": true,
-                        "type": "string"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful response with article data.",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "body": {
-                                    "type": "string",
-                                    "example": "Singapore playwright Jonathan Lim has died on Jan 23 at age 50. He was found by his close friend and lawyer Luke Kwek in his flat after family members were unable to reach him..."
-                                },
-                                "headline": {
-                                    "type": "string",
-                                    "example": "Singapore playwright Jonathan Lim, known for his comedic genius, dies at age 50"
-                                },
-                                "publish_date": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "example": "Sat, 25 Jan 2025 10:20:00 GMT"
-                                },
-                                "updated_date": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "example": "Sat, 25 Jan 2025 11:15:00 GMT"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "Error": {
-                                    "type": "string",
-                                    "example": "No URL provided"
-                                }
-                            }
-                        }
-                    },
-                    "400-InvalidURL": {
-                        "description": "Bad Request – Invalid URL Format",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string",
-                                    "example": "Invalid URL format"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/scraper/get-transcript?url={url}": {
-            "get": {
-                "description": "Returns the transcript of a video from YouTube given a valid URL.",
-                "parameters": [
-                    {
-                        "name": "url",
-                        "in": "query",
-                        "description": "The URL of the YouTube video to retrieve the transcript for.",
-                        "required": true,
-                        "type": "string"
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful response with the video transcript.",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "transcript": {
-                                    "type": "string",
-                                    "example": "This is the transcript of the video."
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request – No URL provided",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string",
-                                    "example": "No URL provided"
-                                }
-                            }
-                        }
-                    },
-                    "400-InvalidURL": {
-                        "description": "Bad Request – Invalid YouTube URL format",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string",
-                                    "example": "Invalid YouTube URL"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error – Could not retrieve transcript",
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "error": {
-                                    "type": "string",
-                                    "example": "Error retrieving the transcript"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Scraper API",
+    "version": "1.0.0",
+    "description": "API for scraping news articles from multiple sources and extracting YouTube transcripts"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8015",
+      "description": "Local development server"
     }
-    
+  ],
+  "paths": {
+    "/scraper/": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check if the Scraper API is running",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "2.0-complete"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/get-latest-articles": {
+      "get": {
+        "summary": "Get Latest Articles",
+        "description": "Retrieve latest article URLs from CNA and Straits Times",
+        "operationId": "getLatestArticles",
+        "parameters": [
+          {
+            "name": "num_articles",
+            "in": "query",
+            "description": "Number of articles per source (default: 30)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved article URLs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cna": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "straits_times": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/get-article": {
+      "get": {
+        "summary": "Scrape Single Article",
+        "description": "Extract article content from supported news sources or YouTube videos",
+        "operationId": "getArticle",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "description": "Article or YouTube URL to scrape",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully scraped article",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "headline": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "publish_date": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "topic": {
+                      "type": "string"
+                    },
+                    "image_url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid URL or unsupported source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/get-transcript": {
+      "get": {
+        "summary": "Get YouTube Transcript",
+        "description": "Extract transcript from YouTube videos",
+        "operationId": "getTranscript",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "description": "YouTube video URL",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully extracted transcript",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "headline": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid YouTube URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "body": {
+                      "type": "null"
+                    },
+                    "headline": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/get-article-screenscraper": {
+      "get": {
+        "summary": "Screen Scrape Article",
+        "description": "Use Selenium-based screen scraping for dynamic content",
+        "operationId": "getArticleScreenScraper",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "description": "URL to screen scrape",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully scraped page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/scrape-all-sources": {
+      "get": {
+        "summary": "Scrape All Sources",
+        "description": "Scrape articles from all configured news sources",
+        "operationId": "scrapeAllSources",
+        "responses": {
+          "200": {
+            "description": "Scraping job started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/job-status/{job_id}": {
+      "get": {
+        "summary": "Get Job Status",
+        "description": "Check status of a background scraping job",
+        "operationId": "getJobStatus",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "description": "Job ID to check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "progress": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/view-scraped-articles": {
+      "get": {
+        "summary": "View Scraped Articles",
+        "description": "View all cached scraped articles",
+        "operationId": "viewScrapedArticles",
+        "responses": {
+          "200": {
+            "description": "List of scraped articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "articles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scraper/article-stats": {
+      "get": {
+        "summary": "Article Statistics",
+        "description": "Get statistics about scraped articles",
+        "operationId": "getArticleStats",
+        "responses": {
+          "200": {
+            "description": "Article statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total_articles": {
+                      "type": "integer"
+                    },
+                    "by_source": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
