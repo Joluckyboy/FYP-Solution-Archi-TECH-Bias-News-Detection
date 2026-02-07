@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import get_api from "@/config/config";
 import axios from "axios";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts"; 
 
 const HowItWorksPage = () => {
   const [stats, setStats] = useState(null);
@@ -31,9 +31,6 @@ const HowItWorksPage = () => {
     count: item.count
   })) || [];
 
-  // Top sources pie colors
-  const sourceColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-
   return (
     <div className="max-w-6xl mx-auto p-8 space-y-8">
       <div className="text-center">
@@ -41,71 +38,69 @@ const HowItWorksPage = () => {
           How Our News Scraper Works
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-        Our web scraper is like a friendly robot that automatically visits news websites every day! We then collect and analyse them for bias by comparing word choices, sources cited, and tones in articles etc. 
+          Our web scraper is like a friendly robot that automatically visits news websites every day! We then collect and analyse them for bias by comparing word choices, sources cited, and tones in articles etc. 
         </p>
       </div>
 
       {/* Live Stats KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-            <CardHeader className="text-center">
+          <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-green-600">
-                {stats?.coreStats?.todayArticles || 0}
+              {stats?.coreStats?.todayArticles || 0}
             </CardTitle>
             <p>New articles today</p>
-            </CardHeader>
+          </CardHeader>
         </Card>
         <Card>
-            <CardHeader className="text-center">
+          <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-blue-600">
-                {stats?.coreStats?.cumulativeTotal?.toLocaleString() || 0}
+              {stats?.coreStats?.cumulativeTotal?.toLocaleString() || 0}
             </CardTitle>
             <p>Total articles collected</p>
-            </CardHeader>
+          </CardHeader>
         </Card>
         <Card>
-            <CardHeader className="text-center">
+          <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-purple-600">
-                {stats?.coreStats?.avgDaily || 0}
+              {stats?.coreStats?.avgDaily || 0}
             </CardTitle>
             <p>Average articles per day</p>
-            </CardHeader>
+          </CardHeader>
         </Card>
       </div>
 
-      {/* Sources Breakdown */}
+      {/* Sources & Countries */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>
-        <CardHeader>
+          <CardHeader>
             <CardTitle>News Sources</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Top sources in our database:</p>
-            {Object.entries(stats?.sourceBreakdown || {}).slice(0, 3).map(([source, count], i) => (
-            <div key={source} className="flex items-center justify-between py-2 border-b last:border-b-0">
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">Top sources:</p>
+            {Object.entries(stats?.sourceBreakdown || {}).slice(0, 3).map(([source, count]) => (  // ← Removed unused 'i'
+              <div key={source} className="flex items-center justify-between py-2 border-b last:border-b-0">
                 <span className="font-medium">{source}</span>
                 <span className="text-2xl font-bold text-blue-600">{count}</span>
-            </div>
+              </div>
             ))}
-        </CardContent>
+          </CardContent>
         </Card>
 
         <Card>
-            <CardHeader>
-                <CardTitle>Countries Covered</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                Geographic coverage in our database:
-                </p>
-                {Object.entries(stats?.countriesDistribution || {}).slice(0, 5).map(([country, count]) => (
-                <div key={country} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                    <span className="font-medium">{country}</span>
-                    <span className="font-bold text-green-600">{count} articles</span>
-                </div>
-                ))}
-            </CardContent>
-            </Card>
+          <CardHeader>
+            <CardTitle>Countries Covered</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">Geographic coverage:</p>
+            {Object.entries(stats?.countriesDistribution || {}).slice(0, 5).map(([country, count]) => (
+              <div key={country} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                <span className="font-medium">{country}</span>
+                <span className="font-bold text-green-600">{count} articles</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Collection Trend */}
