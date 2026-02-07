@@ -81,6 +81,7 @@ services:
       - "8010:8010"
     volumes:
       - ./datasets:/datasets:ro
+      - ./backend/scraper/data:/backend/scraper/data:ro
     environment:
       - ENV=production
       - DATABASE_URL=http://database:8011

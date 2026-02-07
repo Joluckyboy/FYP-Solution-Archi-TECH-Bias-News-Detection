@@ -16,6 +16,7 @@ from api_models import URLInput, NewsItem, URLwithBG
 import methods as methods
 import dashboard_methods as dashboard_methods
 import visualisations as visualisations
+import explanations as explanations
 
 logging.basicConfig(
     level=logging.INFO,
@@ -119,6 +120,16 @@ def get_visualisations():
     except Exception as e:
         logger.exception("Failed to load visualisations data")
         raise HTTPException(status_code=500, detail="Failed to load visualisations data")
+    
+@app.get("/application/scraper_stats")
+def get_scraper_stats():
+    try:
+        return explanations.load_scraper_stats()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.exception("Failed to load scraper stats")
+        raise HTTPException(status_code=500, detail="Failed to load scraper stats")
 
 @app.post("/application/new_query", response_model=NewsItem, responses={
     200: {
