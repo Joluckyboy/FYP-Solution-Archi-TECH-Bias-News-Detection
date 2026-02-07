@@ -288,11 +288,11 @@ const LandingPage = () => {
         {/* Final Divider */}
         <div className="w-full h-px bg-black border-0 mb-8"></div>
 
-        {/* Link to Dashboard */}
+        {/* Link to Explanations */}
         <div className="text-center">
           <p className="text-xl checkmate-gradient">More About:</p>
-          <Link to="/dashboard" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
-            How we Dashboard
+          <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
+            How This Works!
           </Link>
         </div>
 
