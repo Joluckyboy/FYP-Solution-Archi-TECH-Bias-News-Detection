@@ -39,7 +39,7 @@ export default function TrendingKeywords() {
           : [];
 
         if (!cancelled) setKeywords(normalized);
-      } catch (e) {
+      } catch {
         if (!cancelled) setKeywords([]);
       }
     };
