@@ -26,13 +26,30 @@ DATASET_PATH = os.path.join(
     "kaggle news articles for political bias classification.csv",
 )
 
+# Path to Scraper Data (Shared Volume)
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/backend/scraper/data")
+SCRAPED_DATA_PATH = os.path.join(SCRAPER_DATA_DIR, "scraped_articles.csv")
+
 
 def _fetch_topics_data():
     """Helper to fetch and cluster topics from the dataset"""
-    if not os.path.exists(DATASET_PATH):
-        return None, "Dataset not found"
+    df = None
 
-    df = pd.read_csv(DATASET_PATH)
+    # 1. Try loading from Scraper Data
+    if os.path.exists(SCRAPED_DATA_PATH):
+        try:
+            print(f"Loading scraped data from {SCRAPED_DATA_PATH}...")
+            df = pd.read_csv(SCRAPED_DATA_PATH)
+            print(f"Loaded {len(df)} articles from scraper data.")
+        except Exception as e:
+            print(f"Error loading scraper data: {e}")
+
+    # 2. Fallback to Kaggle Dataset
+    if df is None:
+        if not os.path.exists(DATASET_PATH):
+            return None, "Dataset not found"
+        print(f"Loading Kaggle dataset from {DATASET_PATH}...")
+        df = pd.read_csv(DATASET_PATH)
 
     # --- Try Advanced Clustering (Semantic) ---
     try:

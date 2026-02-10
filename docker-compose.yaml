@@ -59,7 +59,7 @@ services:
     env_file:
       - ./backend/.env
     volumes:
-      - ./datasets:/app/datasets
+      - ./backend/scraper/data:/backend/scraper/data:ro
     restart: always
 
 
