@@ -56,6 +56,8 @@ services:
       - "8017:8017"
     environment:
       - ENV=production
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
     env_file:
       - ./backend/.env
     volumes:
@@ -80,10 +82,10 @@ services:
     ports:
       - "8010:8010"
     volumes:
-      - ./datasets:/datasets:ro
       - ./backend/scraper/data:/backend/scraper/data:ro
     environment:
       - ENV=production
+      - SCRAPER_DATA_DIR=/backend/scraper/data
       - DATABASE_URL=http://database:8011
       - SENTIMENT_URL=http://sentiment:8012
       - EMOTION_URL=http://emotion:8013
@@ -100,6 +102,7 @@ services:
       - factcheck
       - analyzer
     restart: always
+
 
   telebot:
     build:
