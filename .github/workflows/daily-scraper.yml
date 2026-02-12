@@ -23,6 +23,18 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+      - name: Create backend env file
+        run: |
+          mkdir -p backend
+          cat << 'EOF' > backend/.env
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
+          API_KEY=${{ secrets.API_KEY }}
+          API_KEYDS=${{ secrets.API_KEYDS }}
+          MODEL=${{ secrets.MODEL }}
+          EOF
       
       - name: Build and start services
         run: |
