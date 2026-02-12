@@ -35,6 +35,12 @@ jobs:
           API_KEYDS=${{ secrets.API_KEYDS }}
           MODEL=${{ secrets.MODEL }}
           EOF
+          cat << 'EOF' > .env
+          TELEBOT_TOKEN=${{ secrets.TELEBOT_TOKEN }}
+          APPLICATION_URL=http://application:8010
+          WEB_APP_URL=http://localhost:5173
+          TINYURL_API_TOKEN=${{ secrets.TINYURL_API_TOKEN }}
+          EOF
       
       - name: Build and start services
         run: |
