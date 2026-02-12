@@ -63,10 +63,22 @@ jobs:
       
       - name: Run daily scrape job
         run: |
-          docker compose exec -T scraper curl -X POST http://localhost:8015/scrape \
-            -H "Content-Type: application/json" \
-            -d '{"article_limit": 100}' \
-            --max-time 3600
+          docker compose exec -T scraper python -c "
+          import requests
+          import sys
+          try:
+              response = requests.post(
+                  'http://localhost:8015/scrape',
+                  json={'article_limit': 100},
+                  timeout=3600
+              )
+              print(f'Status: {response.status_code}')
+              print(response.text)
+              sys.exit(0 if response.status_code == 200 else 1)
+          except Exception as e:
+              print(f'Error: {e}')
+              sys.exit(1)
+          "
       
       - name: Check scraper logs
         if: always()
