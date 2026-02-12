@@ -22,7 +22,8 @@ class CSVHandler:
     
     CSV_FILE = 'data/scraped_articles.csv'
     CSV_HEADERS = ['title', 'source', 'url', 'published_at', 'summary', 
-                   'image_url', 'country', 'topic']
+                   'image_url', 'country', 'topic', 'political_bias']
+    VALID_BIAS_LABELS = {'left', 'leaning-left', 'center', 'leaning-right', 'right'}
     
     @classmethod
     def initialize_csv(cls):
@@ -33,6 +34,49 @@ class CSVHandler:
             with open(cls.CSV_FILE, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.DictWriter(f, fieldnames=cls.CSV_HEADERS)
                 writer.writeheader()
+            return
+
+        cls._ensure_csv_schema()
+
+    @classmethod
+    def _ensure_csv_schema(cls):
+        """Ensure existing CSV has all required headers, add defaults if missing."""
+        if not os.path.exists(cls.CSV_FILE):
+            return
+
+        with open(cls.CSV_FILE, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            existing_headers = reader.fieldnames or []
+
+        if existing_headers == cls.CSV_HEADERS:
+            return
+
+        import tempfile
+
+        data_dir = os.path.dirname(cls.CSV_FILE) or '.'
+        os.makedirs(data_dir, exist_ok=True)
+
+        with open(cls.CSV_FILE, 'r', encoding='utf-8') as src, \
+            tempfile.NamedTemporaryFile('w', newline='', encoding='utf-8', delete=False, dir=data_dir) as tmp:
+            reader = csv.DictReader(src)
+            writer = csv.DictWriter(tmp, fieldnames=cls.CSV_HEADERS)
+            writer.writeheader()
+
+            for row in reader:
+                if not row:
+                    continue
+
+                migrated = {key: row.get(key, '') for key in cls.CSV_HEADERS}
+                writer.writerow(migrated)
+
+        os.replace(tmp.name, cls.CSV_FILE)
+
+    @classmethod
+    def _normalize_bias_label(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        label = str(value).strip().lower().replace('_', '-').replace(' ', '-')
+        return label if label in cls.VALID_BIAS_LABELS else None
     
     @classmethod
     def get_existing_urls(cls) -> set:
@@ -172,6 +216,11 @@ class CSVHandler:
         # Fill missing fields
         if not article.get('image_url'):
             article['image_url'] = ""
+
+        bias_label = cls._normalize_bias_label(article.get('political_bias'))
+        if not bias_label:
+            return False, "Invalid political bias label"
+        article['political_bias'] = bias_label
         
         return True, ""
 
@@ -245,6 +294,13 @@ class CSVHandler:
             # CRITICAL FIX: Apply comprehensive text cleaning to BOTH title AND summary
             article['title'] = clean_text_comprehensive(str(article.get('title', '')).strip())
             article['summary'] = clean_text_comprehensive(str(article.get('summary', '')).strip())
+
+            bias_label = cls._normalize_bias_label(article.get('political_bias'))
+            if not bias_label:
+                logger.debug(f"Invalid political bias label: {article.get('political_bias')}")
+                skipped += 1
+                continue
+            article['political_bias'] = bias_label
             
             # NEW: Validate summary quality (check for mid-sentence cutoffs)
             is_valid_summary, summary_issue = cls.validate_summary_quality(article['summary'])

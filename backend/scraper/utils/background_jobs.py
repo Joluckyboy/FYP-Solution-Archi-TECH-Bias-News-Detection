@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from config.sources import SINGAPORE_SOURCES, US_SOURCES
 from utils.csv_handler import CSVHandler
+from utils.bias_classifier import classify_political_bias
 from scrapers.custom_scrapers import retrieve_cna_urls, retrieve_straits_urls, scrape_cna, scrape_straits_times
 from scrapers.generic_scraper import scrape_generic_source
 
@@ -119,7 +120,16 @@ def _run_scrape_job(job_id, num_articles, sg_only):
                 
                 # Save after each source completes
                 if source_articles:
-                    cleaned = CSVHandler.validate_and_clean_batch(source_articles)
+                    classified_articles = []
+                    for article in source_articles:
+                        bias_label = classify_political_bias(article)
+                        if not bias_label:
+                            logger.warning(f"[{job_id}] Skipping article without bias label: {article.get('title', '')[:80]}")
+                            continue
+                        article['political_bias'] = bias_label
+                        classified_articles.append(article)
+
+                    cleaned = CSVHandler.validate_and_clean_batch(classified_articles)
                     saved_count = CSVHandler.append_articles(cleaned)
                     job['saved_articles'] = job.get('saved_articles', 0) + saved_count
                     logger.info(f"[{job_id}] ✓ {source['name']}: {saved_count} articles saved to CSV")
