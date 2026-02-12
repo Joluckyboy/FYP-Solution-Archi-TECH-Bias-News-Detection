@@ -38,6 +38,15 @@ services:
       - ENV=production
     restart: always
   
+  political_bias:
+    build:
+      context: ./backend/political_bias
+    ports:
+      - "9000:9000"
+    environment:
+      - ENV=production
+    restart: always
+
   factcheck:
     build:
       context: ./backend/fact-check
@@ -72,6 +81,7 @@ services:
       - "8015:8015"
     environment:
       - ENV=production
+      - BIAS_ENGINE_URL=http://political_bias:9000
     restart: always
     volumes:
       - ./backend/scraper/data:/app/data
