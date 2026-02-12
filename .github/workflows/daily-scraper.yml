@@ -4,6 +4,9 @@ on:
   schedule:
     # Run daily at 12 AM UTC (8 AM Singapore time)
     - cron: '0 0 * * *'
+
+  pull_request:
+    branches: [main]
   
   # Allow manual trigger for testing
   workflow_dispatch:
