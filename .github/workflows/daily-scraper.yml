@@ -67,14 +67,19 @@ jobs:
           import requests
           import sys
           try:
+              # Use async_mode=false to wait for completion (with 30min timeout)
               response = requests.post(
-                  'http://localhost:8015/scrape',
-                  json={'article_limit': 100},
-                  timeout=3600
+                  'http://localhost:8015/scraper/scrape-all-sources',
+                  params={
+                      'num_articles': 100,
+                      'sg_only': 'false',
+                      'async_mode': 'false'
+                  },
+                  timeout=1900
               )
               print(f'Status: {response.status_code}')
               print(response.text)
-              sys.exit(0 if response.status_code == 200 else 1)
+              sys.exit(0 if response.status_code in [200, 202] else 1)
           except Exception as e:
               print(f'Error: {e}')
               sys.exit(1)
