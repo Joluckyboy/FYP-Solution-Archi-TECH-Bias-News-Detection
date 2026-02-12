@@ -58,7 +58,7 @@ def classify_political_bias(
         return None
 
     api_base = (base_url or os.getenv("BIAS_ENGINE_URL", "http://political_bias:9000")).rstrip("/")
-    url = f"{api_base}/biasengine/rate_bias"
+    url = f"{api_base}/biasengine/rate_bias_no_perplexity"
 
     for attempt in range(1, max_retries + 1):
         try:
