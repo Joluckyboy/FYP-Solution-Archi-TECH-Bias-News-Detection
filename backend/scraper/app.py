@@ -426,8 +426,8 @@ class ScrapeAllSources(Resource):
         try:
             num_articles = get_requested_article_count(default=100)
             sg_only = request.args.get('sg_only', 'false').lower() == 'true'
-            # RESTORED: Default to synchronous (original behavior)
-            async_mode = request.args.get('async_mode', 'false').lower() == 'true'
+            # Default to async to avoid long-running sync timeouts
+            async_mode = request.args.get('async_mode', 'true').lower() == 'true'
             
             # OPTIONAL: Async mode with background job
             if async_mode:
@@ -439,9 +439,8 @@ class ScrapeAllSources(Resource):
                     'message': f'Background job started. Check status at /scraper/job-status/{job_id}'
                 })
             
-            # DEFAULT: Synchronous execution (like original app_old.py)
-            # This will block but return complete results
-            logger.info("Running synchronous scraping (original behavior)")
+            # Synchronous execution (blocks until completion)
+            logger.info("Running synchronous scraping")
             job_id = create_scrape_job(num_articles, sg_only)
             
             # Wait for completion
