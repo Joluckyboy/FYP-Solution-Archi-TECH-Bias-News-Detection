@@ -1,0 +1,102 @@
+name: Daily News Scraper
+
+on:
+  schedule:
+    # Run daily at 12 AM UTC (8 AM Singapore time)
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Build and start services
+        run: |
+          cd FYP-Solution-Archi-TECH-Bias-News-Detection
+          docker compose up -d --build
+          # Wait for scraper service to be ready
+          sleep 10
+      
+      - name: Run daily scrape job
+        run: |
+          cd FYP-Solution-Archi-TECH-Bias-News-Detection
+          docker compose exec -T scraper curl -X POST http://localhost:8015/scrape \
+            -H "Content-Type: application/json" \
+            -d '{"article_limit": 100}' \
+            --max-time 3600
+      
+      - name: Check scraper logs
+        if: always()
+        run: |
+          cd FYP-Solution-Archi-TECH-Bias-News-Detection
+          docker compose logs scraper | tail -50
+      
+      - name: Stop services
+        if: always()
+        run: |
+          cd FYP-Solution-Archi-TECH-Bias-News-Detection
+          docker compose down
+      
+      - name: Upload CSV to S3
+        if: success()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          cd FYP-Solution-Archi-TECH-Bias-News-Detection
+          pip install boto3
+          python << 'EOF'
+          import boto3
+          import os
+          from datetime import datetime
+          
+          s3 = boto3.client('s3',
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+            region_name=os.getenv('AWS_REGION', 'us-east-1')
+          )
+          
+          bucket = os.getenv('S3_BUCKET')
+          csv_file = 'backend/scraper/data/scraped_articles.csv'
+          
+          if os.path.exists(csv_file):
+            # Upload with timestamp backup
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            s3.upload_file(
+              csv_file,
+              bucket,
+              'scraped_articles.csv',
+              ExtraArgs={'ContentType': 'text/csv'}
+            )
+            s3.upload_file(
+              csv_file,
+              bucket,
+              f'backups/scraped_articles_{timestamp}.csv',
+              ExtraArgs={'ContentType': 'text/csv'}
+            )
+            print(f"✓ Uploaded to s3://{bucket}/scraped_articles.csv")
+            print(f"✓ Backup: s3://{bucket}/backups/scraped_articles_{timestamp}.csv")
+          else:
+            print(f"❌ CSV file not found: {csv_file}")
+            exit(1)
+          EOF
+        continue-on-error: true
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Daily scrape job failed"
+          echo "Check logs at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
