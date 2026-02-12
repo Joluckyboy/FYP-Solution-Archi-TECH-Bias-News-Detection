@@ -21,6 +21,18 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary software to free up ~30GB
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          # Clean up Docker
+          docker system prune -af --volumes
+          # Show available space
+          df -h
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -44,9 +56,10 @@ jobs:
       
       - name: Build and start services
         run: |
-          docker compose up -d --build
-          # Wait for scraper service to be ready
-          sleep 10
+          # Only build scraper and political_bias services to save disk space
+          docker compose up -d --build political_bias scraper
+          # Wait for services to be ready
+          sleep 15
       
       - name: Run daily scrape job
         run: |
