@@ -26,14 +26,12 @@ jobs:
       
       - name: Build and start services
         run: |
-          cd FYP-Solution-Archi-TECH-Bias-News-Detection
           docker compose up -d --build
           # Wait for scraper service to be ready
           sleep 10
       
       - name: Run daily scrape job
         run: |
-          cd FYP-Solution-Archi-TECH-Bias-News-Detection
           docker compose exec -T scraper curl -X POST http://localhost:8015/scrape \
             -H "Content-Type: application/json" \
             -d '{"article_limit": 100}' \
@@ -42,13 +40,11 @@ jobs:
       - name: Check scraper logs
         if: always()
         run: |
-          cd FYP-Solution-Archi-TECH-Bias-News-Detection
           docker compose logs scraper | tail -50
       
       - name: Stop services
         if: always()
         run: |
-          cd FYP-Solution-Archi-TECH-Bias-News-Detection
           docker compose down
       
       - name: Upload CSV to S3
@@ -59,7 +55,6 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
         run: |
-          cd FYP-Solution-Archi-TECH-Bias-News-Detection
           pip install boto3
           python << 'EOF'
           import boto3
