@@ -217,11 +217,16 @@ class CSVHandler:
         if not article.get('image_url'):
             article['image_url'] = ""
 
-        bias_label = cls._normalize_bias_label(article.get('political_bias'))
-        if not bias_label:
-            return False, "Invalid political bias label"
-        article['political_bias'] = bias_label
+        # Check if we're allowing empty bias labels
+        skip_bias = os.getenv('SKIP_BIAS_CLASSIFICATION', 'false').lower() == 'true'
         
+        bias_label = cls._normalize_bias_label(article.get('political_bias'))
+        
+        if not bias_label and not skip_bias:
+            return False, "Invalid political bias label"
+        
+        article['political_bias'] = bias_label or ''  # Empty string if no label
+
         return True, ""
 
     @classmethod

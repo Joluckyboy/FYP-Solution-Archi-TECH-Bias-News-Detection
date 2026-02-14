@@ -82,6 +82,12 @@ services:
     environment:
       - ENV=production
       - BIAS_ENGINE_URL=http://political_bias:9000
+      - SKIP_BIAS_CLASSIFICATION=${SKIP_BIAS_CLASSIFICATION:-false}
+      - S3_UPLOAD_ENABLED=${S3_UPLOAD_ENABLED:-false}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     restart: always
     volumes:
       - ./backend/scraper/data:/app/data

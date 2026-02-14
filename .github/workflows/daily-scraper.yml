@@ -1,148 +1,135 @@
-name: Daily News Scraper
+name: Daily Scraper - Optimized
 
 on:
   schedule:
-    # Run daily at 12 AM UTC (8 AM Singapore time)
-    - cron: '0 0 * * *'
-
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:  # Allow manual trigger
   pull_request:
-    branches: [main]
-  
-  # Allow manual trigger for testing
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 30
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      
-      - name: Free up disk space
+
+      - name: Cleanup
         run: |
-          # Remove unnecessary software to free up ~30GB
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          # Clean up Docker
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           docker system prune -af --volumes
-          # Show available space
-          df -h
-      
+          sudo apt-get clean
+          echo 3 | sudo tee /proc/sys/vm/drop_caches
+          free -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Create backend env file
+      - name: Create env files
         run: |
-          mkdir -p backend
           cat << 'EOF' > backend/.env
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
-          SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
           API_KEY=${{ secrets.API_KEY }}
-          API_KEYDS=${{ secrets.API_KEYDS }}
-          MODEL=${{ secrets.MODEL }}
           EOF
-          cat << 'EOF' > .env
-          TELEBOT_TOKEN=${{ secrets.TELEBOT_TOKEN }}
-          APPLICATION_URL=http://application:8010
-          WEB_APP_URL=http://localhost:5173
-          TINYURL_API_TOKEN=${{ secrets.TINYURL_API_TOKEN }}
-          EOF
-      
-      - name: Build and start services
+
+      - name: Build ONLY scraper
         run: |
-          # Only build scraper and political_bias services to save disk space
-          docker compose up -d --build political_bias scraper
-          # Wait for services to be ready
-          sleep 15
-      
-      - name: Run daily scrape job
+          docker compose build scraper
+          echo "Memory after build:"
+          free -h
+
+      - name: Start scraper
+        env:
+          SKIP_BIAS_CLASSIFICATION: "true"
+          S3_UPLOAD_ENABLED: "true"
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          docker compose up -d scraper
+          sleep 10
+
+      - name: Run scraping
+        timeout-minutes: 25
+        run: |
+          docker compose exec -T scraper python << 'PYEOF'
+          import requests, sys, time
+          
+          r = requests.post(
+              "http://localhost:8015/scraper/scrape-all-sources",
+              params={
+                  "num_articles": 100,
+                  "sg_only": "false",
+                  "async_mode": "true"
+              },
+              timeout=30
+          )
+          
+          if r.status_code not in [200, 202]:
+              print(f"Failed: {r.status_code}")
+              sys.exit(1)
+          
+          job_id = r.json().get("job_id")
+          print(f"Job: {job_id}")
+          
+          for i in range(60):
+              time.sleep(30)
+              try:
+                  s = requests.get(
+                      f"http://localhost:8015/scraper/job-status/{job_id}",
+                      timeout=10
+                  ).json()
+              except:
+                  continue
+              
+              status = s.get('status')
+              articles = s.get('saved_articles', 0)
+              s3_status = s.get('s3_upload', {}).get('status', 'pending')
+              
+              print(f"[{i*30}s] Status: {status} | Articles: {articles} | S3: {s3_status}")
+              
+              if status == "completed":
+                  s3_upload = s.get('s3_upload', {})
+                  if s3_upload.get('status') == 'success':
+                      print(f"✓ Complete! {articles} articles")
+                      print(f"✓ S3 Main: {s3_upload.get('main_url')}")
+                      print(f"✓ S3 Backup: {s3_upload.get('backup_url')}")
+                  else:
+                      print(f"⚠ Scraping done but S3 upload failed: {s3_upload.get('message')}")
+                  sys.exit(0)
+              
+              if status == "failed":
+                  print(f"❌ Failed: {s.get('error')}")
+                  sys.exit(1)
+          
+          print("⏱ Timeout")
+          sys.exit(1)
+          PYEOF
+
+      - name: Cleanup old articles
         run: |
           docker compose exec -T scraper python -c "
-          import requests
-          import sys
-          try:
-              # Use async_mode=false to wait for completion (with 30min timeout)
-              response = requests.post(
-                  'http://localhost:8015/scraper/scrape-all-sources',
-                  params={
-                      'num_articles': 100,
-                      'sg_only': 'false',
-                      'async_mode': 'false'
-                  },
-                  timeout=1900
-              )
-              print(f'Status: {response.status_code}')
-              print(response.text)
-              sys.exit(0 if response.status_code in [200, 202] else 1)
-          except Exception as e:
-              print(f'Error: {e}')
-              sys.exit(1)
+          from utils.cleanup_old_articles import cleanup_old_articles
+          stats = cleanup_old_articles()
+          print(f'Cleanup: {stats}')
           "
-      
-      - name: Check scraper logs
+
+      - name: Show logs
         if: always()
         run: |
-          docker compose logs scraper | tail -50
-      
+          echo "=== Scraper Logs ==="
+          docker compose logs scraper --tail 50
+          echo "=== Memory ==="
+          free -h
+
       - name: Stop services
         if: always()
         run: |
           docker compose down
-      
-      - name: Upload CSV to S3
-        if: success()
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-        run: |
-          pip install boto3
-          python << 'EOF'
-          import boto3
-          import os
-          from datetime import datetime
-          
-          s3 = boto3.client('s3',
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            region_name=os.getenv('AWS_REGION', 'us-east-1')
-          )
-          
-          bucket = os.getenv('S3_BUCKET')
-          csv_file = 'backend/scraper/data/scraped_articles.csv'
-          
-          if os.path.exists(csv_file):
-            # Upload with timestamp backup
-            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-            s3.upload_file(
-              csv_file,
-              bucket,
-              'scraped_articles.csv',
-              ExtraArgs={'ContentType': 'text/csv'}
-            )
-            s3.upload_file(
-              csv_file,
-              bucket,
-              f'backups/scraped_articles_{timestamp}.csv',
-              ExtraArgs={'ContentType': 'text/csv'}
-            )
-            print(f"✓ Uploaded to s3://{bucket}/scraped_articles.csv")
-            print(f"✓ Backup: s3://{bucket}/backups/scraped_articles_{timestamp}.csv")
-          else:
-            print(f"❌ CSV file not found: {csv_file}")
-            exit(1)
-          EOF
-        continue-on-error: true
-      
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "❌ Daily scrape job failed"
-          echo "Check logs at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          docker system prune -af
+          free -h
