@@ -7,11 +7,10 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40  # INCREASED from 30 to 40
 
     steps:
       - name: Checkout
@@ -42,7 +41,9 @@ jobs:
           echo "Memory after build:"
           free -h
 
-      - name: Start scraper
+      - name: Start scraper with S3 enabled
+        run: |
+          docker compose up -d scraper
         env:
           SKIP_BIAS_CLASSIFICATION: "true"
           S3_UPLOAD_ENABLED: "true"
@@ -50,15 +51,29 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Wait for scraper to be ready
         run: |
-          docker compose up -d scraper
-          sleep 10
+          echo "Waiting for scraper to start..."
+          sleep 15
+          
+          # Health check
+          for i in {1..30}; do
+            if curl -f http://localhost:8015/scraper/ > /dev/null 2>&1; then
+              echo "✓ Scraper is ready!"
+              break
+            fi
+            echo "Waiting for scraper... ($i/30)"
+            sleep 2
+          done
 
       - name: Run scraping
-        timeout-minutes: 25
+        timeout-minutes: 30
         run: |
           docker compose exec -T scraper python << 'PYEOF'
           import requests, sys, time
+          
+          print("Starting scrape job...")
           
           r = requests.post(
               "http://localhost:8015/scraper/scrape-all-sources",
@@ -71,11 +86,12 @@ jobs:
           )
           
           if r.status_code not in [200, 202]:
-              print(f"Failed: {r.status_code}")
+              print(f"❌ Failed to start job: {r.status_code}")
+              print(f"Response: {r.text}")
               sys.exit(1)
           
           job_id = r.json().get("job_id")
-          print(f"Job: {job_id}")
+          print(f"✓ Job started: {job_id}")
           
           for i in range(60):
               time.sleep(30)
@@ -84,47 +100,53 @@ jobs:
                       f"http://localhost:8015/scraper/job-status/{job_id}",
                       timeout=10
                   ).json()
-              except:
+              except Exception as e:
+                  print(f"Error checking status: {e}")
                   continue
               
               status = s.get('status')
               articles = s.get('saved_articles', 0)
+              progress = s.get('progress', 0)
+              completed = s.get('completed_sources', 0)
+              total = s.get('total_sources', 0)
               s3_status = s.get('s3_upload', {}).get('status', 'pending')
               
-              print(f"[{i*30}s] Status: {status} | Articles: {articles} | S3: {s3_status}")
+              print(f"[{i*30}s] Progress: {progress}% | Sources: {completed}/{total} | Articles: {articles} | S3: {s3_status}")
               
               if status == "completed":
                   s3_upload = s.get('s3_upload', {})
                   if s3_upload.get('status') == 'success':
-                      print(f"✓ Complete! {articles} articles")
-                      print(f"✓ S3 Main: {s3_upload.get('main_url')}")
-                      print(f"✓ S3 Backup: {s3_upload.get('backup_url')}")
+                      print(f"✅ Complete! {articles} articles scraped")
+                      print(f"✅ S3 Main: {s3_upload.get('main_url')}")
+                      print(f"✅ S3 Backup: {s3_upload.get('backup_url')}")
+                      sys.exit(0)
                   else:
-                      print(f"⚠ Scraping done but S3 upload failed: {s3_upload.get('message')}")
-                  sys.exit(0)
+                      print(f"⚠️  Scraping done but S3 upload failed: {s3_upload.get('message')}")
+                      sys.exit(1)
               
               if status == "failed":
-                  print(f"❌ Failed: {s.get('error')}")
+                  print(f"❌ Job failed: {s.get('error')}")
                   sys.exit(1)
           
-          print("⏱ Timeout")
+          print("⏱️  Timeout after 30 minutes")
           sys.exit(1)
           PYEOF
 
-      - name: Cleanup old articles
+      - name: Cleanup old articles (7+ days)
         run: |
           docker compose exec -T scraper python -c "
           from utils.cleanup_old_articles import cleanup_old_articles
           stats = cleanup_old_articles()
-          print(f'Cleanup: {stats}')
+          print(f'🧹 Cleanup complete: {stats}')
           "
 
-      - name: Show logs
+      - name: Show final logs
         if: always()
         run: |
-          echo "=== Scraper Logs ==="
-          docker compose logs scraper --tail 50
-          echo "=== Memory ==="
+          echo "=== Final Scraper Logs ==="
+          docker compose logs scraper --tail 100
+          echo ""
+          echo "=== Memory Usage ==="
           free -h
 
       - name: Stop services
