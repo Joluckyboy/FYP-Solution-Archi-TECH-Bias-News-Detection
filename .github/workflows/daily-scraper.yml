@@ -36,13 +36,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Create env files
+      - name: Create env files from template
         run: |
+          echo "Creating .env from template..."
+          
+          # Copy template
+          cp .env.template .env
+          
+          # Fill in secrets
+          cat >> .env << 'EOF'
+          
+          # AWS/S3 Configuration (added by GitHub Actions)
+          SKIP_BIAS_CLASSIFICATION=true
+          S3_UPLOAD_ENABLED=true
+          S3_BUCKET=${{ secrets.S3_BUCKET }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          
+          # Telegram Bot (from GitHub Secrets)
+          TELEBOT_TOKEN=${{ secrets.TELEBOT_TOKEN }}
+          TINYURL_API_TOKEN=${{ secrets.TINYURL_API_TOKEN }}
+          EOF
+          
+          # Create backend/.env
           cat << 'EOF' > backend/.env
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
           API_KEY=${{ secrets.API_KEY }}
           EOF
+          
+          echo "Environment files created"
 
       - name: Build ONLY scraper (skip political_bias)
         run: |
