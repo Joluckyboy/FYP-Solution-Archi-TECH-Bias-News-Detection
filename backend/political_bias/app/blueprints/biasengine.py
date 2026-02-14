@@ -85,3 +85,43 @@ def rate_bias():
     
     except Exception as e:
         return json.dumps({"status": 500, "message":e})
+    
+@biasengine.route('/scrape_bias', methods=["GET"])
+def scrape_bias():
+    try:
+        site = request.args.get("site")
+        title = request.args.get("title")
+        page_text = request.args.get("page_text")
+
+        example = str(site) + str(title) + str(page_text)
+
+        encodings = current_app.tokenizer.encode_plus(
+            example,
+            None,
+            add_special_tokens=True,
+            max_length=256,
+            padding='max_length',
+            return_token_type_ids=True,
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+
+        with torch.no_grad():
+            input_ids = encodings['input_ids'].to(current_app.device, dtype=torch.long)
+            attention_mask = encodings['attention_mask'].to(current_app.device, dtype=torch.long)
+            token_type_ids = encodings['token_type_ids'].to(current_app.device, dtype=torch.long)
+            output = current_app.model(input_ids, attention_mask, token_type_ids)
+            final_output = torch.sigmoid(output).cpu().detach().numpy().tolist()       
+
+        # translate into text 
+        final_output = final_output[0]
+        max_prob = max(final_output)
+        max_index = final_output.index(max_prob)
+        target_list = ['left', 'leaning-left', 'center', 'leaning-right','right']
+        label = target_list[max_index]
+
+        return json.dumps({"status": 200, "rating":label})
+    
+    except Exception as e:
+        return json.dumps({"status": 500, "message":e})

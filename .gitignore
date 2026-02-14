@@ -37,3 +37,6 @@ Thumbs.db
 # Coverage
 htmlcov/
 .coverage
+
+# model
+.pt
