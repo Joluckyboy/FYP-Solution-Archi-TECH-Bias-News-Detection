@@ -34,7 +34,38 @@ This directory contains GitHub Actions workflows for continuous integration and 
   - Black for formatting
   - isort for import organization
 
-### 2. PR Validation (`pr-validation.yml`)
+### 2. CD Pipeline (`cd.yml`)
+
+**Triggers:** Push to `main`, Manual
+
+**Jobs:**
+
+- **changes**: Detects which services have changed files using `dorny/paths-filter`
+- **build-and-push**: Builds and pushes Docker images to Amazon ECR (only for changed services)
+  - Tags images with both `latest` and commit SHA for rollback
+  - Uses GHA caching for faster builds
+  - All 11 services supported: database, sentiment, emotion, propaganda, political-bias, factcheck, analyzer, scraper, application, webapp, telebot
+- **deploy**: SSHs into the EC2 instance and pulls/restarts updated services
+  - Logs into ECR on the instance
+  - Runs `docker-compose pull` and `docker-compose up -d`
+  - Cleans up old Docker images
+
+| Push Changes | What Gets Deployed |
+|-------------|-------------------|
+| Only `application/` | Only application image rebuilt & deployed |
+| Only `frontend/` | Only webapp image rebuilt & deployed |
+| `backend/sentiment/` + `backend/emotion/` | Both sentiment and emotion rebuilt & deployed |
+| Multiple directories | All affected services rebuilt & deployed |
+
+**Required GitHub Secrets:**
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS IAM access key |
+| `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key |
+| `EC2_SSH_KEY` | Contents of the EC2 .pem key file |
+
+### 3. PR Validation (`pr-validation.yml`)
 
 **Triggers:** Pull Request events
 
@@ -50,7 +81,4 @@ This directory contains GitHub Actions workflows for continuous integration and 
 - **dependency-review**: Reviews dependency changes
   - Checks for security vulnerabilities in new dependencies
   - Fails on moderate+ severity issues
-
-
-
 

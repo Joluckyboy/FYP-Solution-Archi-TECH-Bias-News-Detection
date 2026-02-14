@@ -121,6 +121,13 @@ services:
       - bias_engine
     restart: always
 
+  webapp:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.web
+    ports:
+      - "5173:5173"
+    restart: always
 
   telebot:
     build:

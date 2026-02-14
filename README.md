@@ -2,7 +2,8 @@
 
 A comprehensive AI-powered news bias detection system built with microservices architecture, featuring sentiment analysis, emotion detection, propaganda identification, and fact-checking capabilities.
 
-[![CI status](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml)
+[![Continuous Integration](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/ci.yml)
+[![Deployment](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/Joluckyboy/FYP-Solution-Archi-TECH-Bias-News-Detection/actions/workflows/cd.yml)
 
 ## 📋 Table of Contents
 

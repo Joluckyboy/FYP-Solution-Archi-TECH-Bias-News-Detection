@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { ANALYZER_URL } from '@/config/config';
 import { Search, Filter, ExternalLink, Share2, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +24,7 @@ const FullCoveragePage = () => {
             try {
                 setLoading(true);
 
-                const response = await axios.get(`http://127.0.0.1:8017/dashboard/topic_details/${topicId}`);
+                const response = await axios.get(`${ANALYZER_URL}/dashboard/topic_details/${topicId}`);
                 setTopic(response.data);
                 setArticles(response.data.articles || []);
                 setLoading(false);
