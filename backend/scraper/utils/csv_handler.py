@@ -8,7 +8,7 @@ CSV handler with duplicate detection by title + source
 import csv
 import os
 import logging
-import re  # ← ADDED: Required for validate_summary_quality()
+import re
 from datetime import datetime
 from utils.topic_classifier import assign_topic, CONFIG_TOPICS
 from utils.text_processing import clean_text_comprehensive
@@ -226,6 +226,7 @@ class CSVHandler:
             return False, "Invalid political bias label"
         
         article['political_bias'] = bias_label or ''  # Empty string if no label
+        article['political_bias'] = bias_label or ''
 
         return True, ""
 
@@ -245,6 +246,7 @@ class CSVHandler:
             ' of.', ' the.', ' a.', ' an.', ' to.', ' in.', ' at.',
             ' for.', ' with.', ' by.', ' from.', ' and.', ' or.',
             'adefault', 'accordingto'  # Word merges
+            'adefault', 'accordingto'
         ]
         
         summary_lower = summary.lower()
@@ -265,20 +267,20 @@ class CSVHandler:
         - Comprehensive text cleaning (encoding, prefixes, boilerplate) for BOTH title AND summary
         - Deduplication by title+source
         - Summary quality validation
+        FIXED: Properly handles SKIP_BIAS_CLASSIFICATION
         """
         cleaned = []
         seen_urls = set()
         seen_pairs = set()  # Track (title, source) pairs
+        seen_pairs = set()
         skipped = 0
         
         for article in articles:
-            # Check URL duplicate
             normalized_url = article.get('url', '').strip().rstrip('/')
             if normalized_url in seen_urls:
                 skipped += 1
                 continue
             
-            # ENHANCED: Check title+source duplicate
             title_normalized = article.get('title', '').strip().lower()
             source = article.get('source', '').strip()
             pair = (title_normalized, source)
@@ -296,18 +298,23 @@ class CSVHandler:
                 skipped += 1
                 continue
             
-            # CRITICAL FIX: Apply comprehensive text cleaning to BOTH title AND summary
+            # Apply comprehensive text cleaning
             article['title'] = clean_text_comprehensive(str(article.get('title', '')).strip())
             article['summary'] = clean_text_comprehensive(str(article.get('summary', '')).strip())
 
+            # FIXED: Respect SKIP_BIAS_CLASSIFICATION
+            skip_bias = os.getenv('SKIP_BIAS_CLASSIFICATION', 'false').lower() == 'true'
             bias_label = cls._normalize_bias_label(article.get('political_bias'))
-            if not bias_label:
+            
+            if not bias_label and not skip_bias:
                 logger.debug(f"Invalid political bias label: {article.get('political_bias')}")
                 skipped += 1
                 continue
-            article['political_bias'] = bias_label
             
             # NEW: Validate summary quality (check for mid-sentence cutoffs)
+            article['political_bias'] = bias_label or ''  # Empty string if no label
+            
+            # Validate summary quality
             is_valid_summary, summary_issue = cls.validate_summary_quality(article['summary'])
             if not is_valid_summary:
                 logger.warning(f"⚠️  Summary quality issue: {summary_issue} - {article.get('title', '')[:50]}")

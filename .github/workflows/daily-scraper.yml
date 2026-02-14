@@ -141,11 +141,6 @@ jobs:
           try:
               r = requests.post(
                   "http://localhost:8015/scraper/scrape-all-sources",
-                  params={
-                      "num_articles": 100,
-                      "sg_only": "false",
-                      "async_mode": "true"
-                  },
                   timeout=30
               )
           except Exception as e:
@@ -249,7 +244,7 @@ jobs:
           from utils.csv_handler import CSVHandler
           
           s3 = S3Uploader()
-          result = s3.upload_csv(CSVHandler.CSV_FILE, create_backup=True)
+          result = s3.upload_csv(CSVHandler.CSV_FILE, create_backup=False)
           
           if result.get('success'):
               print("✅ Upload complete")

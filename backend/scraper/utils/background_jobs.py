@@ -179,7 +179,7 @@ def _run_scrape_job(job_id, num_articles, sg_only):
         
         # Upload results to S3
         s3_uploader = S3Uploader()
-        upload_result = s3_uploader.upload_csv(CSVHandler.CSV_FILE, create_backup=True)
+        upload_result = s3_uploader.upload_csv(CSVHandler.CSV_FILE, create_backup=False)
         
         if upload_result.get('success'):
             job['s3_upload'] = {
