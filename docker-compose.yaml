@@ -46,16 +46,7 @@ services:
     environment:
       - ENV=production
     restart: always
-  
-  political_bias:
-    build:
-      context: ./backend/political_bias
-    ports:
-      - "9000:9000"
-    environment:
-      - ENV=production
-    restart: always
-
+    
   factcheck:
     build:
       context: ./backend/fact-check
