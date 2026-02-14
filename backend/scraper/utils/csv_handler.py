@@ -225,7 +225,6 @@ class CSVHandler:
         if not bias_label and not skip_bias:
             return False, "Invalid political bias label"
         
-        article['political_bias'] = bias_label or ''  # Empty string if no label
         article['political_bias'] = bias_label or ''
 
         return True, ""
