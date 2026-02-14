@@ -1,6 +1,17 @@
 // API configuration
-const API_URL = "http://localhost:8010";
-const FACTCHECK_API_URL = "http://localhost:8016";
+// Defaults to localhost; overridden if useDeployedBackend is enabled in storage
+const PROD_HOST = "47.131.119.153";
+let API_URL = "http://localhost:8010";
+let FACTCHECK_API_URL = "http://localhost:8016";
+
+// Load environment setting from storage
+chrome.storage.sync.get(["useDeployedBackend"], (result) => {
+    if (result.useDeployedBackend) {
+        API_URL = `http://${PROD_HOST}:8010`;
+        FACTCHECK_API_URL = `http://${PROD_HOST}:8016`;
+    }
+    console.log("[Checkmate] API_URL:", API_URL);
+});
 
 // Open the side panel
 chrome.sidePanel.setOptions({

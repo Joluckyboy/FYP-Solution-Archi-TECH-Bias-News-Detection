@@ -121,6 +121,13 @@ services:
       - bias_engine
     restart: always
 
+  webapp:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    ports:
+      - "5173:5173"
+    restart: always
 
   telebot:
     build:
@@ -131,5 +138,9 @@ services:
       - .env
     environment:
       - ENV=production
+      - APPLICATION_URL=http://application:8010
+      - WEB_APP_URL=http://webapp:5173
+    depends_on:
+      - application
     restart: always
 
