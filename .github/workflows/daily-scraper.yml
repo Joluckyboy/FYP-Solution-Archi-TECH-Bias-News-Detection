@@ -1,31 +1,25 @@
-name: Daily Scraper
+name: Daily Scraper - Minimal
+
 on:
   schedule:
     - cron: '0 0 * * *'  # Daily at midnight UTC
   workflow_dispatch:  # Allow manual trigger
-  pull_request:
-    branches:
-      - main
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Increased from 40 to allow cleanup time
+    timeout-minutes: 45
 
     env:
-      # Core scraping settings
-      SKIP_BIAS_CLASSIFICATION: "true" 
+      # Scraping settings
+      SKIP_BIAS_CLASSIFICATION: "true"
       
-      # S3 upload settings
+      # S3 upload (ONLY required secrets)
       S3_UPLOAD_ENABLED: "true"
       S3_BUCKET: ${{ secrets.S3_BUCKET }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      
-      # Database settings (for scraper to save articles)
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      API_KEY: ${{ secrets.API_KEY }}
 
     steps:
       - name: Checkout
@@ -42,13 +36,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Create minimal env file for scraper
+      - name: Create minimal env files (S3 only)
         run: |
-          # Create .env ONLY with scraping-related variables
+          # 1. Root .env (for docker-compose --env-file)
           cat << 'EOF' > .env
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
-          API_KEY=${{ secrets.API_KEY }}
           SKIP_BIAS_CLASSIFICATION=true
           S3_UPLOAD_ENABLED=true
           S3_BUCKET=${{ secrets.S3_BUCKET }}
@@ -57,7 +48,19 @@ jobs:
           AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           EOF
           
-          echo "Environment file created (scraping only, no telebot/tinyurl)"
+          # 2. backend/.env (empty or minimal - required by docker-compose reference)
+          mkdir -p backend
+          cat << 'EOF' > backend/.env
+          # Minimal env file for docker-compose env_file reference
+          # Scraper doesn't need Supabase - only saves to CSV
+          SKIP_BIAS_CLASSIFICATION=true
+          EOF
+          
+          echo "✅ Minimal environment files created (S3 credentials only)"
+          echo "  - .env (root)"
+          ls -la .env
+          echo "  - backend/.env (minimal)"
+          ls -la backend/.env
 
       - name: Build scraper container
         run: |
@@ -66,15 +69,13 @@ jobs:
           echo "Memory after build:"
           free -h
 
-      - name: Verify environment variables
+      - name: Verify S3 credentials
         run: |
-          echo "Checking critical environment variables..."
+          echo "Checking S3 credentials..."
           echo "S3_BUCKET: ${S3_BUCKET:0:10}..."
           echo "AWS_REGION: $AWS_REGION"
-          echo "SKIP_BIAS_CLASSIFICATION: $SKIP_BIAS_CLASSIFICATION"
           echo "S3_UPLOAD_ENABLED: $S3_UPLOAD_ENABLED"
           
-          # Fail fast if AWS credentials missing
           if [ -z "$S3_BUCKET" ]; then
             echo "❌ ERROR: S3_BUCKET is not set!"
             exit 1
@@ -90,36 +91,34 @@ jobs:
             exit 1
           fi
           
-          echo "All required environment variables are set"
+          echo "✅ S3 credentials verified"
 
       - name: Start scraper container
         run: |
-          echo "Starting scraper container..."
+          echo "Starting scraper..."
           docker compose up -d scraper
           
           echo "Waiting for container to start..."
           sleep 10
           
-          echo "Initial container logs:"
-          docker compose logs scraper --tail 50
+          echo "Container logs:"
+          docker compose logs scraper
 
-      - name: Wait for scraper API to be ready
+      - name: Wait for scraper API
         run: |
-          echo "Waiting for scraper API to respond..."
+          echo "Waiting for scraper API..."
           
           for i in {1..30}; do
             if curl -f http://localhost:8015/scraper/ > /dev/null 2>&1; then
-              echo "Scraper API is ready!"
+              echo "✅ Scraper API is ready!"
               break
             fi
-            echo "Waiting... ($i/30)"
+            echo "⏳ Waiting... ($i/30)"
             sleep 2
           done
           
-          # Final verification
           if ! curl -f http://localhost:8015/scraper/ > /dev/null 2>&1; then
             echo "❌ Scraper failed to start!"
-            echo "Container logs:"
             docker compose logs scraper
             exit 1
           fi
@@ -131,11 +130,12 @@ jobs:
           import requests, sys, time
           
           print("=" * 60)
+          print("🗞️  DAILY NEWS SCRAPING")
           print("=" * 60)
           print("Config: SKIP_BIAS_CLASSIFICATION=true")
+          print("Output: CSV file → S3 upload")
           print("")
           
-          # Start scraping job
           try:
               r = requests.post(
                   "http://localhost:8015/scraper/scrape-all-sources",
@@ -147,21 +147,19 @@ jobs:
                   timeout=30
               )
           except Exception as e:
-              print(f"❌ Failed to connect to scraper: {e}")
+              print(f"❌ Failed to connect: {e}")
               sys.exit(1)
           
           if r.status_code not in [200, 202]:
-              print(f"❌ Failed to start job: HTTP {r.status_code}")
+              print(f"❌ Failed to start: HTTP {r.status_code}")
               print(f"Response: {r.text}")
               sys.exit(1)
           
           job_id = r.json().get("job_id")
-          print(f"Scraping job started!")
-          print(f"Job ID: {job_id}")
+          print(f"✅ Job started: {job_id}")
           print("")
           
-          # Poll for completion
-          for i in range(70):  # Max 35 minutes (70 * 30s)
+          for i in range(70):
               time.sleep(30)
               
               try:
@@ -182,44 +180,37 @@ jobs:
               s3_status = s.get('s3_upload', {}).get('status', 'pending')
               
               elapsed = i * 30
-              print(f"[{elapsed}s] Progress: {progress}% | Sources: {completed}/{total} | Articles: {articles} | S3: {s3_status}")
+              print(f"[{elapsed}s] {progress}% | {completed}/{total} sources | {articles} articles | S3: {s3_status}")
               
               if status == "completed":
                   print("")
                   print("=" * 60)
+                  print("✅ SCRAPING COMPLETE!")
                   print("=" * 60)
-                  print(f"Total articles scraped: {articles}")
+                  print(f"Articles scraped: {articles}")
                   
                   s3_upload = s.get('s3_upload', {})
                   if s3_upload.get('status') == 'success':
                       print("")
-                      print("S3 UPLOAD SUCCESSFUL:")
-                      print(f"  Main file: {s3_upload.get('main_url')}")
+                      print("📦 S3 UPLOAD SUCCESS:")
+                      print(f"  Main: {s3_upload.get('main_url')}")
                       print(f"  Backup: {s3_upload.get('backup_url')}")
                       print("")
                       sys.exit(0)
                   else:
                       print("")
-                      print(f"WARNING: S3 upload failed: {s3_upload.get('message')}")
-                      print(f"Articles were scraped but not uploaded to S3")
-                      print("")
-                      sys.exit(1)  # Fail if S3 upload fails
-
+                      print(f"❌ S3 upload failed: {s3_upload.get('message')}")
+                      sys.exit(1)
+              
               if status == "failed":
                   print("")
-                  print("=" * 60)
-                  print("SCRAPING FAILED")
-                  print("=" * 60)
+                  print("❌ JOB FAILED")
                   print(f"Error: {s.get('error')}")
-                  print("")
                   sys.exit(1)
           
           print("")
-          print("=" * 60)
-          print("TIMEOUT: Job did not complete in 35 minutes")
-          print("=" * 60)
-          print(f"Last status: Progress {progress}%, {articles} articles scraped")
-          print("")
+          print("⏱️  TIMEOUT (35 minutes)")
+          print(f"Last: {progress}%, {articles} articles")
           sys.exit(1)
           PYEOF
 
@@ -227,29 +218,28 @@ jobs:
         if: success()
         run: |
           echo ""
-          echo "=" * 60
-          echo "=" * 60
+          echo "🧹 CLEANUP OLD ARTICLES"
           echo ""
           
           docker compose exec -T scraper python << 'PYEOF'
           from utils.cleanup_old_articles import cleanup_old_articles
           
-          print("Running cleanup to remove articles older than 7 days...")
           stats = cleanup_old_articles()
           
-          print("")
           print("=" * 60)
-          print(f"  Removed: {stats['removed']} old articles")
-          print(f"  Kept: {stats['kept']} recent articles (last 7 days)")
-          print(f"  Cutoff date: {stats['cutoff_date']}")
+          print("✅ CLEANUP COMPLETE!")
+          print("=" * 60)
+          print(f"Removed: {stats['removed']} old articles")
+          print(f"Kept: {stats['kept']} recent articles")
+          print(f"Cutoff: {stats['cutoff_date']}")
           print("")
           PYEOF
 
-      - name: Upload cleaned dataset to S3
+      - name: Upload cleaned dataset
         if: success()
         run: |
           echo ""
-          echo "Uploading cleaned dataset to S3..."
+          echo "📦 Uploading cleaned dataset..."
           echo ""
           
           docker compose exec -T scraper python << 'PYEOF'
@@ -260,52 +250,32 @@ jobs:
           result = s3.upload_csv(CSVHandler.CSV_FILE, create_backup=True)
           
           if result.get('success'):
-              print("Cleaned dataset uploaded to S3")
-              print(f"  Main: {result.get('main_url')}")
-              print(f"  Backup: {result.get('backup_url')}")
+              print("✅ Upload complete")
+              print(f"Main: {result.get('main_url')}")
+              print(f"Backup: {result.get('backup_url')}")
           else:
-              print(f"Upload failed: {result.get('message')}")
+              print(f"❌ Failed: {result.get('message')}")
               exit(1)
           PYEOF
 
-      - name: Show final logs
+      - name: Final logs
         if: always()
         run: |
           echo ""
-          echo "========================================="
-          echo "Final Scraper Logs (last 100 lines)"
-          echo "========================================="
+          echo "Final Logs:"
           docker compose logs scraper --tail 100
-          echo ""
 
-      - name: Show resource usage
+      - name: Cleanup
         if: always()
         run: |
-          echo ""
-          echo "========================================="
-          echo "System Resource Usage"
-          echo "========================================="
-          free -h
-          echo ""
-          df -h
-          echo ""
-
-      - name: Cleanup containers
-        if: always()
-        run: |
-          echo "Stopping containers..."
           docker compose down
-          
-          echo "Cleaning up Docker resources..."
           docker system prune -af
-          
-          echo "Final memory state:"
           free -h
 
       - name: Summary
         if: success()
         run: |
           echo ""
-          echo "════════════════════════════════════════"
-          echo "DAILY SCRAPING WORKFLOW COMPLETE"
-          echo "════════════════════════════════════════"
+          echo "WORKFLOW COMPLETE"
+          echo "S3 upload done"
+          echo ""
