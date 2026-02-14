@@ -10,7 +10,9 @@ from utils.csv_handler import CSVHandler
 from utils.bias_classifier import classify_political_bias
 from scrapers.custom_scrapers import retrieve_cna_urls, retrieve_straits_urls, scrape_cna, scrape_straits_times
 from scrapers.generic_scraper import scrape_generic_source
-
+# Upload to S3 if enabled
+from utils.s3_uploader import S3Uploader
+import os
 logger = logging.getLogger(__name__)
 
 # Global job tracking
@@ -120,14 +122,25 @@ def _run_scrape_job(job_id, num_articles, sg_only):
                 
                 # Save after each source completes
                 if source_articles:
-                    classified_articles = []
-                    for article in source_articles:
-                        bias_label = classify_political_bias(article)
-                        if not bias_label:
-                            logger.warning(f"[{job_id}] Skipping article without bias label: {article.get('title', '')[:80]}")
-                            continue
-                        article['political_bias'] = bias_label
-                        classified_articles.append(article)
+                    # Check if we should skip bias classification
+                    skip_bias = os.getenv('SKIP_BIAS_CLASSIFICATION', 'false').lower() == 'true'
+                    
+                    if skip_bias:
+                        logger.info(f"[{job_id}] Skipping bias classification (SKIP_BIAS_CLASSIFICATION=true)")
+                        # Save articles without bias labels (empty string)
+                        for article in source_articles:
+                            article['political_bias'] = ''
+                        classified_articles = source_articles
+                    else:
+                        # Normal path: classify bias
+                        classified_articles = []
+                        for article in source_articles:
+                            bias_label = classify_political_bias(article)
+                            if not bias_label:
+                                logger.warning(f"[{job_id}] Skipping article without bias label: {article.get('title', '')[:80]}")
+                                continue
+                            article['political_bias'] = bias_label
+                            classified_articles.append(article)
 
                     cleaned = CSVHandler.validate_and_clean_batch(classified_articles)
                     saved_count = CSVHandler.append_articles(cleaned)
@@ -161,6 +174,26 @@ def _run_scrape_job(job_id, num_articles, sg_only):
         job['status'] = 'completed'
         job['completed_at'] = datetime.now().isoformat()
         job['progress'] = 100
+        
+        logger.info(f"[{job_id}] Job complete: {job['saved_articles']} total articles saved")
+        
+        # Upload results to S3
+        s3_uploader = S3Uploader()
+        upload_result = s3_uploader.upload_csv(CSVHandler.CSV_FILE, create_backup=False)
+        
+        if upload_result.get('success'):
+            job['s3_upload'] = {
+                'status': 'success',
+                'main_url': upload_result.get('main_url'),
+                'backup_url': upload_result.get('backup_url')
+            }
+            logger.info(f"[{job_id}] ✓ S3 upload successful")
+        else:
+            job['s3_upload'] = {
+                'status': 'failed',
+                'message': upload_result.get('message')
+            }
+            logger.warning(f"[{job_id}] S3 upload failed: {upload_result.get('message')}")
         
         logger.info(f"[{job_id}] Job complete: {job['saved_articles']} total articles saved")
     
