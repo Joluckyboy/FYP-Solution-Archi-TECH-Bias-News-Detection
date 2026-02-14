@@ -20,6 +20,15 @@ services:
       - ENV=production
     restart: always
 
+  bias_engine:
+    build:
+      context: ./backend/political_bias
+    ports:
+      - "9000:9000"
+    environment:
+      - ENV=production
+    restart: always
+
   emotion:
     build:
       context: ./backend/emotion
@@ -109,6 +118,7 @@ services:
       - SCRAPER_URL=http://scraper:8015
       - FACTCHECK_URL=http://factcheck:8016
       - ANALYZER_URL=http://analyzer:8017
+      - BIAS_URL=http://biasengine:9000
     depends_on:
       - database
       - sentiment
@@ -117,6 +127,7 @@ services:
       - scraper
       - factcheck
       - analyzer
+      - bias_engine
     restart: always
 
 

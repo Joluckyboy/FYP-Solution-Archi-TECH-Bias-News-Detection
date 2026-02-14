@@ -37,3 +37,7 @@ Thumbs.db
 # Coverage
 htmlcov/
 .coverage
+
+.claude
+nul
+.mcp.json
