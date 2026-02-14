@@ -1,18 +1,20 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 const TopicCard = ({ topic }) => {
-    const { title, image, sourceCount, biasDistribution } = topic;
+    const { id, title, image, sourceCount, biasDistribution } = topic;
+    const navigate = useNavigate();
 
     // Calculate total for percentages if not provided, though we expect pre-calculated percentages or counts
     const total = biasDistribution.left + biasDistribution.leaning_left + biasDistribution.center + biasDistribution.leaning_right + biasDistribution.right;
-    const leftPct = ((biasDistribution.left + biasDistribution.leaning_left) / total) * 100;
-    const centerPct = (biasDistribution.center / total) * 100;
-    const rightPct = ((biasDistribution.right + biasDistribution.leaning_right) / total) * 100;
+    const leftPct = total > 0 ? ((biasDistribution.left + biasDistribution.leaning_left) / total) * 100 : 0;
+    const centerPct = total > 0 ? (biasDistribution.center / total) * 100 : 0;
+    const rightPct = total > 0 ? ((biasDistribution.right + biasDistribution.leaning_right) / total) * 100 : 0;
 
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border-none shadow-md">
             {/* Image Section */}
-            <div className="relative h-48 w-full overflow-hidden">
+            <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
                 <img
                     src={image}
                     alt={title}
@@ -36,15 +38,15 @@ const TopicCard = ({ topic }) => {
                 {/* Bias Bar Chart */}
                 <div className="mt-2">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1 font-semibold">
-                        <span className="text-blue-600">Left {Math.round(leftPct)}%</span>
+                        <span className="text-red-600">Left {Math.round(leftPct)}%</span>
                         <span className="text-gray-500">Center {Math.round(centerPct)}%</span>
-                        <span className="text-red-600">Right {Math.round(rightPct)}%</span>
+                        <span className="text-blue-600">Right {Math.round(rightPct)}%</span>
                     </div>
 
                     <div className="h-3 w-full flex rounded-full overflow-hidden bg-gray-100">
                         {/* Left Segment */}
                         <div
-                            className="h-full bg-blue-500 first:rounded-l-full relative group"
+                            className="h-full bg-red-500 first:rounded-l-full relative group"
                             style={{ width: `${leftPct}%` }}
                         >
                         </div>
@@ -58,22 +60,25 @@ const TopicCard = ({ topic }) => {
 
                         {/* Right Segment */}
                         <div
-                            className="h-full bg-red-500 last:rounded-r-full relative group"
+                            className="h-full bg-blue-500 last:rounded-r-full relative group"
                             style={{ width: `${rightPct}%` }}
                         >
                         </div>
                     </div>
 
-                    <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
+                    {/* <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
                         <span>Democratic</span>
                         <span>Independent</span>
                         <span>Republican</span>
-                    </div>
+                    </div> */}
                 </div>
             </CardContent>
 
             <CardFooter className="p-4 pt-0">
-                <button className="w-full py-2 bg-secondary/10 hover:bg-secondary/20 text-secondary-foreground text-sm font-medium rounded-md transition-colors">
+                <button
+                    className="w-full py-2 bg-secondary/10 hover:bg-secondary/20 text-secondary-foreground text-sm font-medium rounded-md transition-colors"
+                    onClick={() => navigate(`/full-coverage/${id}`)}
+                >
                     View Full Coverage
                 </button>
             </CardFooter>

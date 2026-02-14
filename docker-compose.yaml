@@ -47,6 +47,15 @@ services:
       - ENV=production
     restart: always
   
+  political_bias:
+    build:
+      context: ./backend/political_bias
+    ports:
+      - "9000:9000"
+    environment:
+      - ENV=production
+    restart: always
+
   factcheck:
     build:
       context: ./backend/fact-check
@@ -65,8 +74,12 @@ services:
       - "8017:8017"
     environment:
       - ENV=production
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
+    env_file:
+      - ./backend/.env
     volumes:
-      - ./datasets:/app/datasets
+      - ./backend/scraper/data:/backend/scraper/data:ro
     restart: always
 
 
@@ -77,17 +90,21 @@ services:
       - "8015:8015"
     environment:
       - ENV=production
+      - BIAS_ENGINE_URL=http://political_bias:9000
     restart: always
-
+    volumes:
+      - ./backend/scraper/data:/app/data
+      
   application:
     build:
       context: ./application
     ports:
       - "8010:8010"
     volumes:
-      - ./datasets:/datasets:ro
+      - ./backend/scraper/data:/backend/scraper/data:ro
     environment:
       - ENV=production
+      - SCRAPER_DATA_DIR=/backend/scraper/data
       - DATABASE_URL=http://database:8011
       - SENTIMENT_URL=http://sentiment:8012
       - EMOTION_URL=http://emotion:8013
@@ -106,6 +123,7 @@ services:
       - analyzer
       - bias_engine
     restart: always
+
 
   telebot:
     build:

@@ -38,5 +38,6 @@ Thumbs.db
 htmlcov/
 .coverage
 
-# model
-.pt
+.claude
+nul
+.mcp.json

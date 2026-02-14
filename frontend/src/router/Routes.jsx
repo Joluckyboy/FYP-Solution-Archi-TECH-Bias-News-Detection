@@ -4,16 +4,18 @@ import { lazy } from "react";
 // Pages
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ResultsPage = lazy(() => import("@/pages/ResultsPage"));
+const PopupPage = lazy(() => import("@/pages/PopupPage"));
 const GamesPage = lazy(() => import("@/pages/GamesHubPage"));
-const OutletBiasPage = lazy(() => import("@/pages/OutletBiasPage"));
 
 // Indiv Games and Quizzes Pages
 /* const BrainBoostersPage = lazy(() => import("@/pages/GamesQuizzes/BrainBoostersPage")); */
 const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQuizPage"));
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
-const LatestNewsPage = lazy(() => import("@/pages/LatestNewsPage"));
+const FullCoveragePage = lazy(() => import("@/pages/FullCoveragePage"));
 // Dashboard
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+// How It Works
+const HowItWorksPage = lazy(() => import("@/pages/HowItWorksPage"));
 
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
@@ -21,9 +23,13 @@ export const PUBLIC_ROUTES = [
     { path: "/games", element: <GamesPage /> },
     { path: "/games/quizzes", element: <GamesQuizPage /> },
     { path: "/games/personality-quiz", element: <PersonalityQuizPage /> },
-    { path: "/outlet-bias", element: <OutletBiasPage /> },
-    { path: "/latest-news-coverage", element: <LatestNewsPage /> },
+    { path: "/full-coverage/:topicId", element: <FullCoveragePage /> },
     { path: "/*", element: <Navigate to="/" /> },
     { path: "/dashboard", element: <DashboardPage /> },
+    { path: "/how-it-works", element: <HowItWorksPage /> },
+    { path: "/*", element: <Navigate to="/" /> },
 ];
+
+// Popup route (no layout)
+export const POPUP_ROUTE = { path: "/popup", element: <PopupPage /> };
 
