@@ -93,3 +93,54 @@ def rate_bias():
 @biasengine.route('/rate_bias_no_perplexity', methods=["GET"])
 def rate_bias_no_perplexity():
     return _rate_bias(use_perplexity=False)
+
+@biasengine.route('/get_topics', methods=["GET"])
+def get_topics():
+
+    try:
+        output = ""
+        counter = 0
+        site = request.args.get("site")
+        title = request.args.get("title")
+        page_text = request.args.get("page_text")
+
+        while output == "" and counter < 3:
+            try:
+                # get prompts
+                sys_prompt = prompts.topics_sys_prompt
+                user_prompt = prompts.topics_user_prompt + "<article>" + str(site) + " | " + str(title) + " | " + str(page_text) + "</article>"
+
+                # Initialize the client (uses PERPLEXITY_API_KEY environment variable)
+                client = Perplexity(api_key=current_app.pkey)
+
+                # Make the API call with a preset
+                completion = client.chat.completions.create(
+                    model="sonar-pro",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": sys_prompt
+                        },
+                        {
+                            "role": "user",
+                            "content": user_prompt
+                        }
+                    ]
+                )
+                
+                #check output format
+                temp_output = json.loads(completion.choices[0].message.content)
+                keys = list(temp_output.keys())
+                if "covered" in keys and "omitted" in keys:
+                    output = temp_output
+                else:
+                    raise(Exception)
+                
+                # increment counter
+                counter += 1
+            except:
+                pass
+    
+        resp = json.dumps({'status': 200, 'topics': output})
+    except Exception as e:
+        return json.dumps({'status':500, 'message':str(e)})
