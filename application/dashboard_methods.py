@@ -4,7 +4,9 @@ import os
 import re
 import pandas as pd
 
-SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/backend/scraper/data")
+import s3_sync
+
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/app/data")
 SCRAPED_DATA_PATH = os.path.join(SCRAPER_DATA_DIR, "scraped_articles.csv")
 
 BIAS_LABELS = ["Left", "Center", "Right"]
@@ -52,6 +54,8 @@ def load_dashboard_data(country: str | None = None, outlet: str | None = None):
     If a bias column exists (bias / bias_type / bias_label / ...), use it.
     Otherwise, bias counts default to Center.
     """
+    s3_sync.ensure_scraped_csv()
+
     if not os.path.exists(SCRAPED_DATA_PATH):
         raise FileNotFoundError(f"Missing required file: {SCRAPED_DATA_PATH}")
 
