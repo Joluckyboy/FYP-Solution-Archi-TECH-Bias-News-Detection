@@ -1,4 +1,3 @@
-
 services:
   database:
     build: 
@@ -25,6 +24,8 @@ services:
       context: ./backend/political_bias
     ports:
       - "9000:9000"
+    env_file:
+      - ./backend/.env
     environment:
       - ENV=production
     restart: always
@@ -37,7 +38,7 @@ services:
     environment:
       - ENV=production
     restart: always
-  
+
   propaganda:
     build:
       context: ./backend/propaganda
@@ -46,7 +47,7 @@ services:
     environment:
       - ENV=production
     restart: always
-    
+
   factcheck:
     build:
       context: ./backend/fact-check
@@ -63,45 +64,36 @@ services:
       context: ./backend/analyzer
     ports:
       - "8017:8017"
-    environment:
-      - ENV=production
-      - TRANSFORMERS_OFFLINE=1
-      - HF_HUB_OFFLINE=1
     env_file:
       - ./backend/.env
-    volumes:
-      - ./backend/scraper/data:/backend/scraper/data:ro
+    environment:
+      - ENV=production
+      - SCRAPER_DATA_DIR=/app/data
+      - TRANSFORMERS_OFFLINE=1
+      - HF_HUB_OFFLINE=1
     restart: always
-
 
   scraper:
     build:
       context: ./backend/scraper
     ports:
       - "8015:8015"
+    env_file:
+      - ./backend/.env
     environment:
       - ENV=production
-      - BIAS_ENGINE_URL=http://political_bias:9000
-      - SKIP_BIAS_CLASSIFICATION=${SKIP_BIAS_CLASSIFICATION:-false}
-      - S3_UPLOAD_ENABLED=${S3_UPLOAD_ENABLED:-false}
-      - S3_BUCKET=${S3_BUCKET}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     restart: always
-    volumes:
-      - ./backend/scraper/data:/app/data
-      
+
   application:
     build:
       context: ./application
     ports:
       - "8010:8010"
-    volumes:
-      - ./backend/scraper/data:/backend/scraper/data:ro
+    env_file:
+      - ./backend/.env
     environment:
       - ENV=production
-      - SCRAPER_DATA_DIR=/backend/scraper/data
+      - SCRAPER_DATA_DIR=/app/data
       - DATABASE_URL=http://database:8011
       - SENTIMENT_URL=http://sentiment:8012
       - EMOTION_URL=http://emotion:8013
@@ -109,7 +101,7 @@ services:
       - SCRAPER_URL=http://scraper:8015
       - FACTCHECK_URL=http://factcheck:8016
       - ANALYZER_URL=http://analyzer:8017
-      - BIAS_URL=http://biasengine:9000
+      - BIAS_URL=http://bias_engine:9000
     depends_on:
       - database
       - sentiment
@@ -121,15 +113,13 @@ services:
       - bias_engine
     restart: always
 
-
   telebot:
     build:
       context: ./telebot
     ports:
       - "8020:8020"
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       - ENV=production
     restart: always
-
