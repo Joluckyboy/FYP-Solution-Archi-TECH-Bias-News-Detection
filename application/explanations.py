@@ -3,14 +3,19 @@ from pathlib import Path
 from typing import Dict, Any, List
 import pandas as pd
 from datetime import date, timedelta
+import os
+
+import s3_sync
 
 def _repo_root() -> Path:
     return Path("/application")
 
 def _datasets_dir() -> Path:
-    return Path("/backend/scraper/data") 
+    return Path(os.getenv("SCRAPER_DATA_DIR", "/app/data"))
 
 def load_scraper_stats() -> Dict[str, Any]:
+
+    s3_sync.ensure_scraped_csv()
     
     csv_path = _datasets_dir() / "scraped_articles.csv"
     

@@ -101,7 +101,7 @@ services:
       - SCRAPER_URL=http://scraper:8015
       - FACTCHECK_URL=http://factcheck:8016
       - ANALYZER_URL=http://analyzer:8017
-      - BIAS_URL=http://biasengine:9000
+      - BIAS_URL=http://bias_engine:9000
     depends_on:
       - database
       - sentiment

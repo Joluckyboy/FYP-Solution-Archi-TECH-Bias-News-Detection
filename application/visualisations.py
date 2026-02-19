@@ -6,10 +6,12 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
+import s3_sync
+
 # =========================================================
 # Paths
 # =========================================================
-SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/backend/scraper/data")
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/app/data")
 SCRAPED_ARTICLES_PATH = Path(SCRAPER_DATA_DIR) / "scraped_articles.csv"
 
 # =========================================================
@@ -69,6 +71,8 @@ def _slugify(s: str) -> str:
 
 
 def _read_scraped_articles() -> pd.DataFrame:
+    s3_sync.ensure_scraped_csv()
+
     if not SCRAPED_ARTICLES_PATH.exists():
         return pd.DataFrame()
 
