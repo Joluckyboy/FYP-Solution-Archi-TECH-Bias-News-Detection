@@ -10,9 +10,11 @@ from collections import Counter
 try:
     from .clustering import TopicClusteredService
     from .summary import SummaryService
+    from . import s3_sync
 except ImportError:
     from clustering import TopicClusteredService
     from summary import SummaryService
+    import s3_sync
 
 app = Flask(__name__)
 CORS(app)
@@ -44,9 +46,11 @@ def _get_summary_service():
 
 print("Analyzer Model Loaded.")
 
-# Path to Scraper Data (Shared Volume)
-SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/backend/scraper/data")
+# Path to Scraper Data (downloaded from S3 on startup)
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/app/data")
 SCRAPED_DATA_PATH = os.path.join(SCRAPER_DATA_DIR, "scraped_articles.csv")
+
+s3_sync.ensure_scraped_csv()
 
 # Fallback Kaggle dataset if needed
 DATASET_PATH = os.path.join(
@@ -173,6 +177,7 @@ def _fetch_topics_data():
     1) scraped_articles.csv (topic column)
     No fallback (to avoid HuggingFace downloads in restricted environments)
     """
+    s3_sync.ensure_scraped_csv()
     df = _safe_read_csv(SCRAPED_DATA_PATH)
     if df is not None and len(df) > 0 and "topic" in df.columns:
         print(f"Loading topics directly from scraped CSV: {SCRAPED_DATA_PATH} ({len(df)} rows)")

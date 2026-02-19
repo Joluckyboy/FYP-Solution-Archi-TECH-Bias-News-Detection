@@ -47,9 +47,9 @@ const HowItWorksPage = () => {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold text-green-600">
-              {stats?.coreStats?.todayArticles || 0}
+              {stats?.coreStats?.yesterdayArticles || 0}
             </CardTitle>
-            <p>New articles today</p>
+            <p>Articles scraped yesterday</p>
           </CardHeader>
         </Card>
         <Card>
@@ -107,7 +107,7 @@ const HowItWorksPage = () => {
       {trendData.length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Articles Collected — Last 14 Days</CardTitle>
+            <CardTitle>Articles Collected: Last 7 Days</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
