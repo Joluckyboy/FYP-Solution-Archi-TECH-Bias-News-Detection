@@ -19,6 +19,7 @@ const PopupPage = () => {
   // Toggle states
   const [pageOverlayEnabled, setPageOverlayEnabled] = useState(false);
   const [contextMenuEnabled, setContextMenuEnabled] = useState(true);
+  const [useDeployedBackend, setUseDeployedBackend] = useState(false);
 
   const [API_URL, setAPI_URL] = useState(null);
 
@@ -413,10 +414,11 @@ const PopupPage = () => {
   useEffect(() => {
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.get(
-        ["pageOverlayEnabled", "contextMenuEnabled"],
+        ["pageOverlayEnabled", "contextMenuEnabled", "useDeployedBackend"],
         (result) => {
           setPageOverlayEnabled(result.pageOverlayEnabled ?? false);
           setContextMenuEnabled(result.contextMenuEnabled ?? true);
+          setUseDeployedBackend(result.useDeployedBackend ?? false);
         },
       );
     }
@@ -548,6 +550,15 @@ const PopupPage = () => {
     setContextMenuEnabled(checked);
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.set({ contextMenuEnabled: checked });
+    }
+  };
+
+  const handleBackendToggle = (checked) => {
+    setUseDeployedBackend(checked);
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.sync.set({ useDeployedBackend: checked });
+      // Reload the service worker to pick up the new URL
+      chrome.runtime.reload();
     }
   };
 
@@ -849,6 +860,17 @@ const PopupPage = () => {
             <Switch
               checked={contextMenuEnabled}
               onCheckedChange={handleContextMenuToggle}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Use Cloud Backend</p>
+              <p className="text-xs text-gray-400">{useDeployedBackend ? "AWS (47.131.119.153)" : "Local (localhost)"}</p>
+            </div>
+            <Switch
+              checked={useDeployedBackend}
+              onCheckedChange={handleBackendToggle}
             />
           </div>
         </CardContent>

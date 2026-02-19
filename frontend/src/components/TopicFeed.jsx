@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import TopicCard from './TopicCard';
 import axios from 'axios';
+import { ANALYZER_URL } from '@/config/config';
 import { Loader2 } from 'lucide-react';
 
 const TopicFeed = ({ compact = false }) => {
@@ -11,7 +12,7 @@ const TopicFeed = ({ compact = false }) => {
     useEffect(() => {
         const fetchTopics = async () => {
             try {
-                const response = await axios.get('http://127.0.0.1:8017/dashboard/topics');
+                const response = await axios.get(`${ANALYZER_URL}/dashboard/topics`);
                 setTopics(response.data.topics);
                 setLoading(false);
             } catch (err) {
