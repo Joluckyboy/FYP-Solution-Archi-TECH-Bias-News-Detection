@@ -36,7 +36,7 @@ def health_check2():
 async def analyze_text(input: TextInput):
     with torch.inference_mode():
         # Tokenize text and get token IDs
-        tokenized_text = tokenizer.encode_plus(input.text, return_tensors="pt", truncation=False)
+        tokenized_text = tokenizer(input.text, return_tensors="pt", truncation=False)
         input_ids = tokenized_text.input_ids[0]  # Get token IDs (without truncation)
         
         max_chunk_size = 510  # BERT max token limit (512) - CLS/SEP tokens
