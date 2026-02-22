@@ -12,6 +12,7 @@ from utils.csv_handler import CSVHandler
 from scrapers.custom_scrapers import retrieve_cna_urls, retrieve_straits_urls, scrape_cna, scrape_straits_times
 from scrapers.generic_scraper import scrape_generic_source
 from utils.s3_uploader import S3Uploader
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,10 @@ def _run_scrape_job(job_id, num_articles, sg_only):
     """Scrape all sources, save to CSV, upload to S3."""
     try:
         job = active_jobs[job_id]
+
+        # restore CSV from S3 before scraping
+        _restore_csv_from_s3()
+        
         sources = SINGAPORE_SOURCES if sg_only else {**SINGAPORE_SOURCES, **US_SOURCES}
 
         job['total_sources'] = len(sources)
@@ -161,3 +166,21 @@ def _run_scrape_job(job_id, num_articles, sg_only):
         job['status'] = 'failed'
         job['error'] = str(e)
         job['completed_at'] = datetime.now().isoformat()
+
+def _restore_csv_from_s3():
+    """Download existing CSV from S3 into local file before scraping."""
+    try:
+        s3_uploader = S3Uploader()
+        s3_key = 'scraped_articles/scraped_articles.csv'
+        os.makedirs('data', exist_ok=True)
+        success = s3_uploader.download_csv(s3_key, CSVHandler.CSV_FILE)
+        if success:
+            with open(CSVHandler.CSV_FILE, 'r', encoding='utf-8') as f:
+                count = sum(1 for _ in f) - 1  # minus header
+            logger.info(f"Restored {count} existing articles from S3.")
+        else:
+            logger.info("No existing CSV in S3, starting fresh.")
+            CSVHandler.initialize_csv()
+    except Exception as e:
+        logger.warning(f"Could not restore CSV from S3: {e}. Starting fresh.")
+        CSVHandler.initialize_csv()
