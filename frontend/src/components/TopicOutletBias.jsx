@@ -66,7 +66,7 @@ export default function TopicOutletBias() {
   const biasGroups = data.topicOutletBiasGroups?.[selectedTopic] || {};
   const allOutlets = BUCKET_ORDER.flatMap(bucket => biasGroups[bucket] || []);
   const totalOutlets = new Set(allOutlets.map(item => item.outlet)).size;
-  const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
+  // const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
   const getSortedOutlets = (outlets) => {
     return outlets
       .sort((a, b) => a.outlet.localeCompare(b.outlet))
@@ -103,7 +103,7 @@ export default function TopicOutletBias() {
       <div className="flex-1 grid grid-cols-5 gap-4 items-start hover:none">
         {BUCKET_ORDER.map((bucket) => {
           const outlets = getSortedOutlets(biasGroups[bucket] || []);
-          const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
+          // const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
           // const percentage = totalArticles > 0 ? ((bucketArticles / totalArticles) * 100).toFixed(1) : '0.0';
 
           return (
