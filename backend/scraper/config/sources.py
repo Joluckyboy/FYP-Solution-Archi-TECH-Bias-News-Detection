@@ -54,12 +54,6 @@ US_SOURCES = {
         'country': 'United States',
         'type': 'custom'
     },
-    'washingtonpost': {
-        'url': 'https://www.washingtonpost.com',
-        'name': 'The Washington Post',
-        'country': 'United States',
-        'type': 'generic'
-    },
     'nbcnews': {
         'url': 'https://www.nbcnews.com',
         'name': 'NBC News',

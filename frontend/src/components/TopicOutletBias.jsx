@@ -113,16 +113,6 @@ export default function TopicOutletBias() {
 
           return (
             <div key={bucket} className="flex flex-col gap-4 h-full hover:none">
-              {/* Label Box */}
-              <div className={`w-full h-24 p-4 rounded-xl border shadow-sm flex flex-col justify-center text-center ${BUCKET_COLORS[bucket]} hover:none`}>
-                <div className="text-lg font-black tracking-wide hover:none"> 
-                  {BUCKET_LABELS[bucket].charAt(0).toUpperCase() + BUCKET_LABELS[bucket].slice(1).toLowerCase()}
-                </div>
-                <div className="text-sm font-mono text-gray-600 mt-1 hover:none">
-                  {percentage}%
-                </div>
-              </div>
-              
               {/* Outlet Box */}
               <div className={`w-full h-56 p-3 rounded-xl border shadow-sm overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${BUCKET_COLORS[bucket]} hover:none`}>
                 {outlets.length > 0 ? (
