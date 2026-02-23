@@ -80,7 +80,7 @@ export default function TopicOutletBias() {
 
   return (
     <div className="h-full flex flex-col hover:none p-6">
-      {/* Header - Fixed height */}
+      {/* Header */}
       <div className="flex flex-row items-start justify-between mb-6 h-20 hover:none">
         <div className="text-left hover:none">
           <div className="text-2xl font-bold mb-1 hover:none">
@@ -113,7 +113,7 @@ export default function TopicOutletBias() {
 
           return (
             <div key={bucket} className="flex flex-col gap-4 h-full hover:none">
-              {/* ✅ LABEL BOX */}
+              {/* Label Box */}
               <div className={`w-full h-24 p-4 rounded-xl border shadow-sm flex flex-col justify-center text-center ${BUCKET_COLORS[bucket]} hover:none`}>
                 <div className="text-lg font-black tracking-wide hover:none"> 
                   {BUCKET_LABELS[bucket].charAt(0).toUpperCase() + BUCKET_LABELS[bucket].slice(1).toLowerCase()}
@@ -123,14 +123,14 @@ export default function TopicOutletBias() {
                 </div>
               </div>
               
-              {/* ✅ OUTLET BOX */}
+              {/* Outlet Box */}
               <div className={`w-full h-56 p-3 rounded-xl border shadow-sm overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${BUCKET_COLORS[bucket]} hover:none`}>
                 {outlets.length > 0 ? (
                   outlets.map((item, idx) => (
                     <div 
                       key={idx} 
-                      className="truncate py-2 hover:none border-b border-gray-100/50 last:border-b-0 text-base leading-relaxed"  // text-base + py-2
-                      style={{ lineHeight: '1.4' }}  // Comfortable spacing
+                      className="truncate py-2 hover:none border-b border-gray-100/50 last:border-b-0 text-base leading-relaxed" 
+                      style={{ lineHeight: '1.4' }}
                     >
                       {item.outlet}
                     </div>

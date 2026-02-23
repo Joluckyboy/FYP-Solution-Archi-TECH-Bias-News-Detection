@@ -23,7 +23,7 @@ const HowItWorksPage = () => {
     load();
   }, []);
 
-  if (loading) return <div className="flex justify-center p-20">Loading scraper stats...</div>;
+  if (loading) return <div className="flex justify-center p-20">Loading explanations... Please wait!</div>;
 
   // Transform trend data for chart
   const trendData = stats?.dailyTrend?.map(item => ({
@@ -107,7 +107,7 @@ const HowItWorksPage = () => {
       {trendData.length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Articles Collected: Last 7 Days</CardTitle>
+            <CardTitle>Articles Collected in the Past Week</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
