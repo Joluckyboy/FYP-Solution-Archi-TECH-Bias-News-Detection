@@ -231,9 +231,6 @@ const LandingPage = () => {
 
       <div className="ml-12 mr-12">
 
-        {/* Topics Divider */}
-        <div className="w-full h-px bg-black border-0 mb-12"></div>
-
         {/* Latest Topics Card */}
         <div className="mb-12">
           <Card className="w-full h-[600px] flex flex-col">
