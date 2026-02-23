@@ -4,13 +4,8 @@ import get_api from "@/config/config";
 import axios from "axios";
 
 const BUCKET_ORDER = ['left', 'leaning-left', 'center', 'leaning-right', 'right'];
-const BUCKET_LABELS = {
-  left: 'Left',
-  'leaning-left': 'Lean Left',
-  center: 'Center',
-  'leaning-right': 'Lean Right',
-  right: 'Right',
-};
+// const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right',};
+
 const BUCKET_COLORS = {
   left: 'bg-blue-200 border-blue-300',
   'leaning-left': 'bg-blue-100 border-blue-200',
@@ -109,7 +104,7 @@ export default function TopicOutletBias() {
         {BUCKET_ORDER.map((bucket) => {
           const outlets = getSortedOutlets(biasGroups[bucket] || []);
           const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
-          const percentage = totalArticles > 0 ? ((bucketArticles / totalArticles) * 100).toFixed(1) : '0.0';
+          // const percentage = totalArticles > 0 ? ((bucketArticles / totalArticles) * 100).toFixed(1) : '0.0';
 
           return (
             <div key={bucket} className="flex flex-col gap-4 h-full hover:none">
