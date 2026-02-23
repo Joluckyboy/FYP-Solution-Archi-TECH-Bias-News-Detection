@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
 import get_api from "@/config/config";
 import TrendingKeywords from "../components/TrendingKeywords";
-import OutletBiasChart from "../components/OutletBiasChart";
-import TopicOutletDistribution from "../components/TopicOutletDistribution";
+import TopicOutletBias from "@/components/TopicOutletBias";
 import TopicFeed from "@/components/TopicFeed";
 
 import { CustomInput } from "@/components/ui/custom-input";
@@ -17,7 +16,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BadgeCheck, Scale, AlertCircle, Gauge, SmilePlus } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 
 import axios from "axios";
 
@@ -247,46 +246,37 @@ const LandingPage = () => {
           </Card>
         </div>
 
-        {/* Trending Keywords Card */}
-        <div className="mb-12">
-          <Card className="w-full h-[400px]">
-            <CardHeader>
-              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <TrendingKeywords />
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Visualisations */}
-        <div className="grid grid-cols-2 gap-8 mb-12">
-          {/* Articles per Outlet, filterable by topic */}
-          <Card className="h-[500px]">
-            <CardHeader>
-              <CardTitle className="text-left checkmate-gradient">Topic Coverage</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <TopicOutletDistribution />
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 gap-8 mb-12">
           {/* Outlet Bias */}
-          <Card className="h-[500px]">
-            <CardHeader>
+          <Card className="h-[650px] flex flex-col">  {/* ✅ flex-col */}
+            <CardHeader className="flex-none">  {/* ✅ flex-none */}
               <CardTitle className="checkmate-gradient">
-                Outlet Bias Distribution
+                Political Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <OutletBiasChart />
-              <p className="text-sm">Ratings do not reflect accuracy or credibility, they reflect perspective only.</p>
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">  {/* ✅ flex-1 + overflow-hidden */}
+              <TopicOutletBias />
             </CardContent>
+            <CardFooter className="h-20 px-8 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-100 flex items-center flex-none">  {/* ✅ h-20 + flex-none */}
+              <p className="text-sm text-gray-600 italic m-0">
+                Ratings reflect outlet perspective only, not accuracy or credibility.
+              </p>
+            </CardFooter>
           </Card>
         </div>
 
-        {/* Final Divider */}
-        <div className="w-full h-px bg-black border-0 mb-8"></div>
+        {/* Trending Keywords Card */}
+        <div className="mb-12">
+        <Card className="w-full h-[300px]">
+          <CardHeader>
+            <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <TrendingKeywords />
+          </CardContent>
+        </Card>
+        </div>
 
         {/* Link to Explanations */}
         <div className="text-center">

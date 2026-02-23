@@ -309,14 +309,56 @@ def load_visualisations_data() -> Dict[str, Any]:
         topic_outlet = ordered
 
     # -----------------------------------------------------
-    # Outlet bias groups: group_key -> [outlet names]
+    # Topic coverage: topic_slug -> { outlet -> count }
     # -----------------------------------------------------
+    
+    topic_outlet_bias_groups: Dict[str, Dict[str, List[Dict[str, int]]]] = {}
+    bias_col = _detect_bias_column(df)
+
+    if "topic" in df.columns and "source" in df.columns and bias_col:
+        grouped = df.groupby(["topic", "source", bias_col]).size().reset_index(name="count")
+        for _, row in grouped.iterrows():
+            topic_raw = str(row.get("topic", "")).strip() or "General News"
+            topic_slug = _slugify(topic_raw)
+            outlet = str(row.get("source", "")).strip() or "Unknown"
+            bias_raw = str(row.get(bias_col, ""))
+            bias_group = _normalize_bias_to_group(bias_raw)
+            count = int(row.get("count", 0))
+
+            if topic_slug not in topic_outlet_bias_groups:
+                topic_outlet_bias_groups[topic_slug] = {
+                    "left": [],
+                    "leaning-left": [],
+                    "center": [],
+                    "leaning-right": [],
+                    "right": [],
+                }
+
+            if bias_group and bias_group in topic_outlet_bias_groups[topic_slug]:
+                topic_outlet_bias_groups[topic_slug][bias_group].append(
+                    {"outlet": outlet, "count": count}
+                )
+
+        # Sort each bias group by count
+        for topic_slug, bias_map in topic_outlet_bias_groups.items():
+            for bias_group, outlets in bias_map.items():
+                outlets.sort(key=lambda x: x["count"], reverse=True)
+
+    # Ensure default exists
+    topic_outlet_bias_groups.setdefault(
+    "general-news",
+    {"left": [], "leaning-left": [], "center": [], "leaning-right": [], "right": []},
+    )
+
+    # --------------------------------------------------------------
+    # Outlet bias groups: group_key -> [outlet names] {FIRST DRAFT}
+    # --------------------------------------------------------------
     bias_groups: Dict[str, List[str]] = {
-        "left": [],
-        "leaning-left": [],
-        "center": [],
-        "leaning-right": [],
-        "right": [],
+    "left": [],
+    "leaning-left": [],
+    "center": [],
+    "leaning-right": [],
+    "right": [],
     }
 
     bias_col = _detect_bias_column(df)
@@ -342,4 +384,5 @@ def load_visualisations_data() -> Dict[str, Any]:
         "trendingKeywords": trending,
         "topicOutletDistribution": topic_outlet,
         "outletBiasGroups": bias_groups,
+        "topicOutletBiasGroups": topic_outlet_bias_groups
     }

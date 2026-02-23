@@ -59,23 +59,30 @@ export default function TrendingKeywords() {
           No trending keywords yet.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {topKeywords.map((keyword, index) => {
-            const display = titleCase(keyword);
-
-            return (
+          <div className="space-y-4 pt-2">
+          {/* Row 1: Keywords 1-4 */}
+          <div className="grid grid-cols-4 gap-4">
+            {topKeywords.slice(0, 4).map((keyword, index) => (
               <div
-                key={`${keyword}-${index}`}
-                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 
-                           hover:from-blue-100 hover:to-purple-100 transition-all duration-200 
-                           rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px]
-                           text-lg font-semibold text-gray-900 leading-tight truncate"
-                title={display}
+                key={index}
+                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate"
               >
-                {display}
+                {titleCase(keyword)}
               </div>
-            );
-          })}
+            ))}
+          </div>
+          
+          {/* Row 2: Keywords 5-8 */}
+          <div className="grid grid-cols-4 gap-4">
+            {topKeywords.slice(4, 8).map((keyword, index) => (
+              <div
+                key={index + 4}
+                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate"
+              >
+                {titleCase(keyword)}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
