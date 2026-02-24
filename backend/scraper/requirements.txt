@@ -14,3 +14,4 @@ gunicorn
 requests
 APScheduler==3.10.4
 boto3
+langdetect==1.0.9
