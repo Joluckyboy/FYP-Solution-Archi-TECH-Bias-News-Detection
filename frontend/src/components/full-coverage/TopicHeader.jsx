@@ -1,5 +1,3 @@
-import React from 'react';
-
 const TopicHeader = ({ title }) => {
     return (
         <div className="mb-8">

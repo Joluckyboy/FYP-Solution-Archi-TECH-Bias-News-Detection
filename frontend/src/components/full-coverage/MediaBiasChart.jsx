@@ -1,6 +1,5 @@
-import React from 'react';
 
-const MediaBiasChart = ({ topic, articles, metrics }) => {
+const MediaBiasChart = ({ articles, metrics }) => {
     const getSourceIcon = (source) =>
         `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
 

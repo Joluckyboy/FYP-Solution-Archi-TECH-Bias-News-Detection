@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 
 const FeaturedCoverageGrid = ({ featuredLeft, featuredCenter, featuredRight }) => {

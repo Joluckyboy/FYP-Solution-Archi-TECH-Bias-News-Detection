@@ -1,4 +1,3 @@
-import React from 'react';
 import { Info, EyeOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 

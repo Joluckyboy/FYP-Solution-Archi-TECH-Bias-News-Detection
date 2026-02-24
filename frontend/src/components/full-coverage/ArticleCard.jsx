@@ -1,4 +1,3 @@
-import React from 'react';
 import { Copy } from "lucide-react";
 
 const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
@@ -6,7 +5,6 @@ const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
         `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
 
     const getBiasLabel = (rawBias) => {
-        const b = (rawBias || "").toLowerCase();
         return { label: rawBias || "Unknown", color: "bg-slate-200 text-slate-700" };
     };
 
