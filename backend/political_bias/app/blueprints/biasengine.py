@@ -139,8 +139,12 @@ def get_topics():
                 # increment counter
                 counter += 1
             except:
+                # increment counter
+                counter += 1
                 pass
     
         resp = json.dumps({'status': 200, 'topics': output})
+        return resp
+    
     except Exception as e:
         return json.dumps({'status':500, 'message':str(e)})
