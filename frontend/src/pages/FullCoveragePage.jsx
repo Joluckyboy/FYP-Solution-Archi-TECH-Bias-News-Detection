@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ANALYZER_URL } from '@/config/config';
-import { Search, Filter, ExternalLink, Share2, Info, AlertTriangle } from "lucide-react";
+import { Search, Filter, Copy, Info, Eye, EyeOff, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const FullCoveragePage = () => {
@@ -16,14 +15,14 @@ const FullCoveragePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [articles, setArticles] = useState([]);
-    const [filter, setFilter] = useState("all"); // all, left, center, right
+    const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [copiedIdx, setCopiedIdx] = useState(null);
 
     useEffect(() => {
         const fetchTopicDetails = async () => {
             try {
                 setLoading(true);
-
                 const response = await axios.get(`${ANALYZER_URL}/dashboard/topic_details/${topicId}`);
                 setTopic(response.data);
                 setArticles(response.data.articles || []);
@@ -34,27 +33,20 @@ const FullCoveragePage = () => {
                 setLoading(false);
             }
         };
-
-        if (topicId) {
-            fetchTopicDetails();
-        }
+        if (topicId) fetchTopicDetails();
     }, [topicId]);
 
-    // Derived metrics
+    // ─── Derived metrics ────────────────────────────────────────────────────────
     const getBiasMetrics = () => {
-        if (!topic || !topic.bias_distribution) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
+        if (!topic || !topic.bias_distribution) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
         const dist = topic.bias_distribution;
-
-        // Raw counts (handling potential missing keys)
         const leftRaw = dist.left || 0;
         const leaningLeftRaw = dist.leaning_left || 0;
         const centerRaw = dist.center || 0;
         const leaningRightRaw = dist.leaning_right || 0;
         const rightRaw = dist.right || 0;
-
         const total = leftRaw + leaningLeftRaw + centerRaw + leaningRightRaw + rightRaw;
-        if (total === 0) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
-
+        if (total === 0) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
         return {
             left: Math.round((leftRaw / total) * 100),
             leaningLeft: Math.round((leaningLeftRaw / total) * 100),
@@ -68,10 +60,12 @@ const FullCoveragePage = () => {
 
     const metrics = getBiasMetrics();
 
-    // Featured articles selection (picking top one for each category)
-    const getFeaturedArticle = (biasCategory) => {
+    // ─── Lead articles (backend-computed, with client fallback) ─────────────────
+    const getLeadArticle = (biasCategory) => {
+        if (topic?.lead_articles?.[biasCategory]) return topic.lead_articles[biasCategory];
+        // fallback: first matching article
         return articles.find(a => {
-            const b = (a.bias || "").toLowerCase();
+            const b = (a.political_bias || a.bias || "").toLowerCase();
             if (biasCategory === "left") return b.includes("left");
             if (biasCategory === "right") return b.includes("right");
             if (biasCategory === "center") return b.includes("center");
@@ -79,19 +73,15 @@ const FullCoveragePage = () => {
         });
     };
 
-    const featuredLeft = getFeaturedArticle("left");
-    const featuredCenter = getFeaturedArticle("center");
-    const featuredRight = getFeaturedArticle("right");
+    const featuredLeft = getLeadArticle("left");
+    const featuredCenter = getLeadArticle("center");
+    const featuredRight = getLeadArticle("right");
 
-    // Filtering articles
+    // ─── Filter ──────────────────────────────────────────────────────────────────
     const filteredArticles = articles.filter(a => {
-        const b = (a.bias || "").toLowerCase();
+        const b = (a.political_bias || a.bias || "").toLowerCase();
         const title = (a.title || "").toLowerCase();
-
-        // Search filter
         if (searchQuery && !title.includes(searchQuery.toLowerCase())) return false;
-
-        // Category filter
         if (filter === "all") return true;
         if (filter === "left") return b.includes("left");
         if (filter === "right") return b.includes("right");
@@ -99,9 +89,27 @@ const FullCoveragePage = () => {
         return true;
     });
 
-    const getSourceIcon = (source) => {
-        // Simple placeholder logic for logos
-        return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
+    const getSourceIcon = (source) =>
+        `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
+
+
+    // ─── Copy handler ────────────────────────────────────────────────────────────
+    const handleCopy = (url, idx) => {
+        navigator.clipboard.writeText(url).then(() => {
+            setCopiedIdx(idx);
+            setTimeout(() => setCopiedIdx(null), 2000);
+        });
+    };
+
+    // ─── Bias display helpers ─────────────────────────────────────────────────────
+    const getBiasLabel = (rawBias) => {
+        const b = (rawBias || "").toLowerCase();
+        if (b === "left") return { label: "Left", color: "bg-red-600 text-white" };
+        if (b.includes("leaning") && b.includes("left")) return { label: "Lean Left", color: "bg-red-400 text-white" };
+        if (b === "center") return { label: "Center", color: "bg-slate-400 text-white" };
+        if (b.includes("leaning") && b.includes("right")) return { label: "Lean Right", color: "bg-blue-400 text-white" };
+        if (b === "right") return { label: "Right", color: "bg-blue-700 text-white" };
+        return { label: rawBias || "Unknown", color: "bg-slate-200 text-slate-700" };
     };
 
     if (loading) {
@@ -126,88 +134,83 @@ const FullCoveragePage = () => {
             <div className="container mx-auto p-12 text-center text-red-500">
                 <h2 className="text-2xl font-bold mb-4">Error Loading Topic</h2>
                 <p>{error || "Topic not found"}</p>
-                <Button onClick={() => navigate('/')} className="mt-4" variant="outline">
-                    Go Back
-                </Button>
+                <Button onClick={() => navigate('/')} className="mt-4" variant="outline">Go Back</Button>
             </div>
         );
     }
+
+    const silentOutlets = topic.silent_outlets || {};
+    const framingDiff = topic.framing_differences || {};
+    const linguisticFraming = topic.linguistic_framing || {};
+    const comparativeAnalysis = topic.comparative_analysis || "";
+
+    // Parse comparative_analysis text into { left, center, right } sentences
+    const parsedComparative = (() => {
+        const result = { left: "", center: "", right: "" };
+        if (!comparativeAnalysis) return result;
+        const lines = comparativeAnalysis.split("\n").filter(Boolean);
+        for (const line of lines) {
+            if (/^LEFT:/i.test(line)) result.left = line.replace(/^LEFT:\s*/i, "").trim();
+            else if (/^CENTER:/i.test(line)) result.center = line.replace(/^CENTER:\s*/i, "").trim();
+            else if (/^RIGHT:/i.test(line)) result.right = line.replace(/^RIGHT:\s*/i, "").trim();
+        }
+        return result;
+    })();
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
             <div className="container mx-auto px-6 py-8 max-w-7xl">
 
-                {/* Topic Header and Summary */}
+                {/* ── Topic Header ──────────────────────────────────────────────── */}
                 <div className="mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6 leading-tight">
                         {topic.title}
                     </h1>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Premium Contextual Insight Card */}
-                        <div className="lg:col-span-2 relative overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
-                            {/* Decorative Gradient Background */}
-                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600"></div>
 
+                        {/* Daily Briefing card */}
+                        <div className="lg:col-span-2 relative overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600" />
                             <div className="p-6 md:p-8">
-                                <div className="flex items-start justify-between mb-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-blue-50 rounded-lg">
-                                            <Info className="h-5 w-5 text-blue-600" />
-                                        </div>
-                                        <h3 className="text-lg font-bold text-slate-800">
-                                            Daily Briefing & AI Analysis
-                                        </h3>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                        <Info className="h-5 w-5 text-blue-600" />
                                     </div>
+                                    <h3 className="text-lg font-bold text-slate-800">Daily Briefing &amp; AI Analysis</h3>
                                 </div>
 
-                                {/* Selection Bias Alert */}
-                                {topic.selection_bias_alert && (
-                                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-lg flex gap-3 items-start">
-                                        <div className="p-1 bg-red-100 rounded-full mt-0.5">
-                                            <AlertTriangle className="h-4 w-4 text-red-600" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-red-800 text-sm">Selection Bias Detected</h4>
-                                            <p className="text-sm text-red-700 mt-1">{topic.selection_bias_alert}</p>
-                                        </div>
+                                {/* ── Feature 2: Silent Outlets alerts ── */}
+                                {(silentOutlets.left_silent || silentOutlets.right_silent || silentOutlets.center_silent) && (
+                                    <div className="mb-4 space-y-2">
+                                        {silentOutlets.left_silent && (
+                                            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                                                <EyeOff className="h-4 w-4 flex-shrink-0" />
+                                                <span><strong>Left outlets are silent</strong> — this story has no left-leaning coverage despite significant attention elsewhere.</span>
+                                            </div>
+                                        )}
+                                        {silentOutlets.right_silent && (
+                                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                                                <EyeOff className="h-4 w-4 flex-shrink-0" />
+                                                <span><strong>Right outlets are silent</strong> — this story has no right-leaning coverage despite significant attention elsewhere.</span>
+                                            </div>
+                                        )}
+                                        {silentOutlets.center_silent && (
+                                            <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                                                <EyeOff className="h-4 w-4 flex-shrink-0" />
+                                                <span><strong>Center outlets are silent</strong> — no centrist coverage found for this story.</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
                                 <div className="space-y-6">
-                                    {/* Content Split Logic */}
-                                    {(() => {
-                                        const rawText = topic.contextual_insight || "Analysis in progress...";
-                                        // Split into Summary and Analysis if possible
-                                        let summary = rawText;
-                                        let analysis = "";
-
-                                        if (rawText.toLowerCase().includes("coverage analysis:")) {
-                                            const parts = rawText.split(/coverage analysis:/i);
-                                            summary = parts[0].replace("Event Summary:", "").trim();
-                                            analysis = parts[1].trim();
-                                        }
-
-                                        return (
-                                            <>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Event Summary</h4>
-                                                    <p className="text-slate-900 text-lg leading-relaxed whitespace-pre-line">
-                                                        {summary}
-                                                    </p>
-                                                </div>
-
-                                                {analysis && (
-                                                    <div className="pt-4 border-t border-slate-100">
-                                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Contextual Analysis</h4>
-                                                        <p className="text-slate-600 text-base leading-relaxed italic">
-                                                            "{analysis}"
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </>
-                                        );
-                                    })()}
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Event Summary</h4>
+                                        <p className="text-slate-900 text-lg leading-relaxed whitespace-pre-line">
+                                            {(topic.contextual_insight || "Analysis in progress...").split(/coverage analysis:/i)[0].trim()}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -217,93 +220,59 @@ const FullCoveragePage = () => {
                             <h3 className="font-semibold text-slate-700 mb-6">Media Bias Chart</h3>
 
                             <div className="w-full flex justify-between h-32 gap-2 px-2">
-                                {/* Left */}
-                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                                    <span className="text-xs font-medium text-slate-500">{metrics.left}%</span>
-                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.left > 0 ? "bg-blue-700" : "bg-gray-200"}`}
-                                        style={{ height: `${Math.max(4, metrics.left)}%` }}
-                                        title={`Left: ${metrics.left}%`}></div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-blue-700">Left</span>
-                                </div>
-
-                                {/* Leaning Left */}
-                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                                    <span className="text-xs font-medium text-slate-500">{metrics.leaningLeft}%</span>
-                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.leaningLeft > 0 ? "bg-blue-400" : "bg-gray-200"}`}
-                                        style={{ height: `${Math.max(4, metrics.leaningLeft)}%` }}
-                                        title={`Leaning Left: ${metrics.leaningLeft}%`}></div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-blue-400">L. Left</span>
-                                </div>
-
-                                {/* Center */}
-                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                                    <span className="text-xs font-medium text-slate-500">{metrics.center}%</span>
-                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.center > 0 ? "bg-purple-500" : "bg-gray-200"}`}
-                                        style={{ height: `${Math.max(4, metrics.center)}%` }}
-                                        title={`Center: ${metrics.center}%`}></div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-purple-500">Center</span>
-                                </div>
-
-                                {/* Leaning Right */}
-                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                                    <span className="text-xs font-medium text-slate-500">{metrics.leaningRight}%</span>
-                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.leaningRight > 0 ? "bg-red-400" : "bg-gray-200"}`}
-                                        style={{ height: `${Math.max(4, metrics.leaningRight)}%` }}
-                                        title={`Leaning Right: ${metrics.leaningRight}%`}></div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-red-400">L. Right</span>
-                                </div>
-
-                                {/* Right */}
-                                <div className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                                    <span className="text-xs font-medium text-slate-500">{metrics.right}%</span>
-                                    <div className={`w-full rounded-t-sm transition-all duration-500 ${metrics.raw.right > 0 ? "bg-red-600" : "bg-gray-200"}`}
-                                        style={{ height: `${Math.max(4, metrics.right)}%` }}
-                                        title={`Right: ${metrics.right}%`}></div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-red-600">Right</span>
-                                </div>
+                                {[
+                                    { key: "left", label: "Left", pct: metrics.left, hasData: metrics.raw.left > 0, barColor: "bg-red-600" },
+                                    { key: "leaningLeft", label: "L. Left", pct: metrics.leaningLeft, hasData: metrics.raw.leaningLeft > 0, barColor: "bg-red-400" },
+                                    { key: "center", label: "Center", pct: metrics.center, hasData: metrics.raw.center > 0, barColor: "bg-slate-400" },
+                                    { key: "leaningRight", label: "L. Right", pct: metrics.leaningRight, hasData: metrics.raw.leaningRight > 0, barColor: "bg-blue-400" },
+                                    { key: "right", label: "Right", pct: metrics.right, hasData: metrics.raw.right > 0, barColor: "bg-blue-700" },
+                                ].map(({ key, label, pct, hasData, barColor }) => (
+                                    <div key={key} className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
+                                        <span className="text-xs font-medium text-slate-500">{pct}%</span>
+                                        <div className={`w-full rounded-t-sm transition-all duration-500 ${hasData ? barColor : "bg-gray-200"}`}
+                                            style={{ height: `${Math.max(4, pct)}%` }}
+                                            title={`${label}: ${pct}%`} />
+                                        <span className="text-[10px] uppercase font-bold text-slate-400">{label}</span>
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Polarization Analysis / Source Map */}
+                            {/* Polarization Analysis — icon + outlet name pills  */}
                             <div className="mt-8 pt-6 border-t border-slate-100 w-full">
                                 <h4 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">Polarization Analysis</h4>
-
                                 {(() => {
-                                    // Extract unique sources with their bias
                                     const uniqueSources = {};
                                     articles.forEach(a => {
                                         if (a.source && !uniqueSources[a.source]) {
                                             uniqueSources[a.source] = {
                                                 source: a.source,
-                                                bias: (a.bias || "").toLowerCase()
+                                                bias: (a.political_bias || a.bias || "").toLowerCase()
                                             };
                                         }
                                     });
                                     const sources = Object.values(uniqueSources);
-
                                     return (
                                         <div className="flex flex-col items-center">
                                             <p className="text-sm text-slate-500 mb-4">
                                                 This story is covered by <span className="font-bold text-slate-800">{sources.length}</span> unique sources.
                                             </p>
-
-                                            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+                                            <div className="flex flex-wrap justify-center gap-2">
                                                 {sources.map((s, i) => {
-                                                    let bgClass = "bg-slate-100 border-slate-200";
-                                                    if (s.bias.includes("left")) bgClass = "bg-blue-100 border-blue-200";
-                                                    else if (s.bias.includes("right")) bgClass = "bg-red-100 border-red-200";
-                                                    else if (s.bias.includes("center")) bgClass = "bg-purple-100 border-purple-200";
+                                                    let pillClass = "bg-slate-100 border-slate-200 text-slate-700";
+                                                    if (s.bias.includes("left")) pillClass = "bg-red-100 border-red-200 text-red-800";
+                                                    else if (s.bias.includes("right")) pillClass = "bg-blue-100 border-blue-200 text-blue-800";
+                                                    else if (s.bias.includes("center")) pillClass = "bg-grey-100 border-grey-200 text-grey-800";
 
                                                     return (
-                                                        <div key={i}
-                                                            className={`h-8 w-8 rounded-full flex items-center justify-center border ${bgClass} p-1`}
-                                                            title={`${s.source} (${s.bias})`}
-                                                        >
+                                                        <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${pillClass}`}
+                                                            title={`${s.source} (${s.bias})`}>
                                                             <img
                                                                 src={getSourceIcon(s.source)}
                                                                 alt={s.source}
-                                                                className="h-full w-full object-cover rounded-full"
+                                                                className="h-4 w-4 rounded-full object-cover flex-shrink-0"
                                                                 onError={(e) => { e.target.style.display = 'none'; }}
                                                             />
+                                                            <span className="max-w-[80px] truncate">{s.source}</span>
                                                         </div>
                                                     );
                                                 })}
@@ -316,176 +285,131 @@ const FullCoveragePage = () => {
                     </div>
                 </div>
 
-                {/* Featured Coverage */}
+                {/* ── Featured Coverage ─────────────────────────────────────────── */}
                 <div className="mb-12">
                     <h2 className="text-2xl font-bold text-slate-800 mb-6">Featured Coverage of Story</h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-
-
-                        {/* Left Coverage */}
-                        <div className="flex flex-col">
-                            <h3 className="text-center font-medium text-slate-500 mb-2">Left</h3>
-                            <Card
-                                className="bg-red-50 border-red-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
-                                onClick={() => featuredLeft && window.open(featuredLeft.url, '_blank')}
-                            >
-                                <CardContent className="p-5 flex flex-col h-full">
-                                    {featuredLeft ? (
-                                        <>
-                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-red-700 leading-snug">
-                                                {featuredLeft.title}
-                                            </h4>
-                                            <div className="mt-auto pt-4 border-t border-red-200/50">
-                                                <p className="font-medium text-slate-700">{featuredLeft.source}</p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
-                                            No left-leaning coverage found.
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Center Coverage */}
-                        <div className="flex flex-col">
-                            <h3 className="text-center font-medium text-slate-500 mb-2">Center</h3>
-                            <Card
-                                className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
-                                onClick={() => featuredCenter && window.open(featuredCenter.url, '_blank')}
-                            >
-                                <CardContent className="p-5 flex flex-col h-full">
-                                    {featuredCenter ? (
-                                        <>
-                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-purple-700 leading-snug">
-                                                {featuredCenter.title}
-                                            </h4>
-                                            <div className="mt-auto pt-4 border-t border-slate-100">
-                                                <p className="font-medium text-slate-700">{featuredCenter.source}</p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
-                                            No center coverage found.
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Right Coverage */}
-                        <div className="flex flex-col">
-                            <h3 className="text-center font-medium text-slate-500 mb-2">Right</h3>
-                            <Card
-                                className="bg-blue-50 border-blue-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col"
-                                onClick={() => featuredRight && window.open(featuredRight.url, '_blank')}
-                            >
-                                <CardContent className="p-5 flex flex-col h-full">
-                                    {featuredRight ? (
-                                        <>
-                                            <h4 className="text-lg font-semibold text-slate-900 mb-4 group-hover:text-blue-700 leading-snug">
-                                                {featuredRight.title}
-                                            </h4>
-                                            <div className="mt-auto pt-4 border-t border-blue-200/50">
-                                                <p className="font-medium text-slate-700">{featuredRight.source}</p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">
-                                            No right-leaning coverage found.
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Framing Gap / Sidebar */}
-                        <div className="hidden lg:flex flex-col justify-center bg-gray-100 rounded-lg p-6">
-                            <h3 className="font-semibold text-slate-700 mb-4">Framing Gap</h3>
-
-                            {topic.framing_gap ? (
-                                <div className="space-y-4 text-sm">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Left Sources Use</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {topic.framing_gap.left_keywords?.map((word, i) => (
-                                                <Badge key={i} variant="secondary" className="bg-red-200 text-red-800 hover:bg-red-200">
-                                                    "{word}"
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="border-t border-slate-200" />
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Right Sources Use</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {topic.framing_gap.right_keywords?.map((word, i) => (
-                                                <Badge key={i} variant="secondary" className="bg-blue-200 text-blue-800 hover:bg-blue-200">
-                                                    "{word}"
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 text-sm">
-                                    <p className="text-slate-500 italic text-xs mb-2">
-                                        Not enough data to determine framing differences yet.
-                                    </p>
-                                    <div className="flex justify-between items-center opacity-50">
-                                        <span className="text-slate-600">Left</span>
-                                        <span className="w-16 h-2 bg-red-400 rounded-full"></span>
-                                    </div>
-                                    <div className="flex justify-between items-center opacity-50">
-                                        <span className="text-slate-600">Center</span>
-                                        <span className="w-16 h-2 bg-purple-400 rounded-full"></span>
-                                    </div>
-                                    <div className="flex justify-between items-center opacity-50">
-                                        <span className="text-slate-600">Right</span>
-                                        <span className="w-16 h-2 bg-blue-400 rounded-full"></span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                            { label: "Left", article: featuredLeft, cardClass: "bg-red-50 border-red-200", hoverColor: "group-hover:text-red-700", dividerColor: "border-red-200/50", emptyMsg: "No left-leaning coverage found." },
+                            { label: "Center", article: featuredCenter, cardClass: "bg-white border-slate-200", hoverColor: "group-hover:text-purple-700", dividerColor: "border-slate-100", emptyMsg: "No center coverage found." },
+                            { label: "Right", article: featuredRight, cardClass: "bg-blue-50 border-blue-200", hoverColor: "group-hover:text-blue-700", dividerColor: "border-blue-200/50", emptyMsg: "No right-leaning coverage found." },
+                        ].map(({ label, article, cardClass, hoverColor, dividerColor, emptyMsg }) => (
+                            <div key={label} className="flex flex-col">
+                                <h3 className="text-center font-medium text-slate-500 mb-2">{label}</h3>
+                                <Card className={`${cardClass} shadow-sm hover:shadow-md transition-shadow cursor-pointer group h-full flex flex-col`}
+                                    onClick={() => article && window.open(article.url, '_blank')}>
+                                    <CardContent className="p-5 flex flex-col h-full">
+                                        {article ? (
+                                            <>
+                                                <h4 className={`text-lg font-semibold text-slate-900 mb-3 ${hoverColor} leading-snug`}>
+                                                    {article.title}
+                                                </h4>
+                                                {article.summary && (
+                                                    <p className="text-sm text-slate-600 line-clamp-3 mb-3">{article.summary}</p>
+                                                )}
+                                                <div className={`mt-auto pt-4 border-t ${dividerColor} flex items-center justify-between`}>
+                                                    <p className="font-medium text-slate-700 text-sm">{article.source}</p>
+                                                    {article.published_at && (
+                                                        <span className="text-xs text-slate-400">{String(article.published_at).slice(0, 10)}</span>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-slate-500 italic text-sm">{emptyMsg}</div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        ))}
                     </div>
+
+                    {/* ── Framing Differences panel ── */}
+                    {(framingDiff.left?.length > 0 || framingDiff.center?.length > 0 || framingDiff.right?.length > 0 || linguisticFraming.left || linguisticFraming.center || linguisticFraming.right) && (
+                        <div className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                                <Eye className="h-4 w-4 text-slate-500" />
+                                <h3 className="font-semibold text-slate-700">Framing Differences in Headline</h3>
+                                <span className="text-xs text-slate-400 ml-1">— distinctive keywords each political leaning focuses on</span>
+                            </div>
+                            <div className="grid grid-cols-3 divide-x divide-slate-100">
+                                {[
+                                    { key: "left", label: "Left Coverage", headerClass: "text-red-700 bg-red-50", badgeClass: "bg-red-100 text-red-800", barColor: "bg-red-500" },
+                                    { key: "center", label: "Center Coverage", headerClass: "text-slate-600 bg-slate-50", badgeClass: "bg-slate-200 text-slate-700", barColor: "bg-slate-400" },
+                                    { key: "right", label: "Right Coverage", headerClass: "text-blue-700 bg-blue-50", badgeClass: "bg-blue-100 text-blue-800", barColor: "bg-blue-500" },
+                                ].map(({ key, label, headerClass, badgeClass, barColor }) => {
+                                    const lf = linguisticFraming[key] || {};
+                                    const passivePct = lf.passive_pct ?? null;
+                                    const activePct = lf.active_pct ?? null;
+                                    const topAgents = lf.top_agents || [];
+                                    return (
+                                        <div key={key}>
+                                            <div className={`px-4 py-2 text-xs font-bold uppercase tracking-wider ${headerClass}`}>{label}</div>
+                                            {/* Keyword badges */}
+                                            <div className="px-4 pt-4 pb-2 flex flex-wrap gap-2 min-h-[60px]">
+                                                {(framingDiff[key] || []).length > 0
+                                                    ? framingDiff[key].map((word, i) => (
+                                                        <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}`}>{word}</span>
+                                                    ))
+                                                    : <span className="text-xs text-slate-400 italic">Not enough data</span>
+                                                }
+                                            </div>
+                                            {/* Passive / Active voice bar */}
+                                            {passivePct !== null && (
+                                                <div className="px-4 pb-4 pt-1">
+                                                    <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                                        <span>Active <span className="font-semibold">{activePct}%</span></span>
+                                                        <span>Passive <span className="font-semibold">{passivePct}%</span></span>
+                                                    </div>
+                                                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                        <div className={`h-full rounded-full ${barColor} opacity-70`} style={{ width: `${activePct}%` }} />
+                                                    </div>
+                                                    {topAgents.length > 0 && (
+                                                        <div className="mt-2 flex flex-wrap gap-1 items-center">
+                                                            <span className="text-xs text-slate-400">Agents:</span>
+                                                            {topAgents.map((a, i) => (
+                                                                <span key={i} className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{a}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Article List Section */}
+                {/* ── Article List Section ──────────────────────────────────────── */}
                 <div>
+
                     {/* Controls */}
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6">
                         <div className="flex items-baseline gap-6 mb-4 md:mb-0">
                             <h2 className="text-2xl font-bold text-slate-800">{articles.length} Articles</h2>
                             <div className="flex gap-4 text-sm font-medium">
-                                <button onClick={() => setFilter("left")} className={`${filter === "left" ? "text-red-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
-                                    Left ({articles.filter(a => (a.bias || "").toLowerCase().includes("left")).length})
-                                </button>
-                                <button onClick={() => setFilter("center")} className={`${filter === "center" ? "text-purple-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
-                                    Center ({articles.filter(a => (a.bias || "").toLowerCase().includes("center")).length})
-                                </button>
-                                <button onClick={() => setFilter("right")} className={`${filter === "right" ? "text-blue-600 font-bold" : "text-slate-500 hover:text-slate-800"}`}>
-                                    Right ({articles.filter(a => (a.bias || "").toLowerCase().includes("right")).length})
-                                </button>
+                                {["left", "center", "right"].map(f => {
+                                    const count = articles.filter(a => (a.political_bias || a.bias || "").toLowerCase().includes(f)).length;
+                                    const activeColor = f === "left" ? "text-red-600" : f === "center" ? "text-slate-500" : "text-blue-700";
+                                    return (
+                                        <button key={f} onClick={() => setFilter(f)}
+                                            className={`capitalize ${filter === f ? `${activeColor} font-bold` : "text-slate-500 hover:text-slate-800"}`}>
+                                            {f.charAt(0).toUpperCase() + f.slice(1)} ({count})
+                                        </button>
+                                    );
+                                })}
                                 {filter !== "all" && (
-                                    <button onClick={() => setFilter("all")} className="text-slate-400 hover:text-slate-600 underline">
-                                        Clear
-                                    </button>
+                                    <button onClick={() => setFilter("all")} className="text-slate-400 hover:text-slate-600 underline">Clear</button>
                                 )}
                             </div>
                         </div>
-
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <div className="relative w-full md:w-64">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input
-                                    placeholder="Search articles..."
-                                    className="pl-9 bg-white"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
+                                <Input placeholder="Search articles..." className="pl-9 bg-white"
+                                    value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                             </div>
                             <Button variant="outline" size="icon">
                                 <Filter className="h-4 w-4" />
@@ -493,54 +417,86 @@ const FullCoveragePage = () => {
                         </div>
                     </div>
 
-                    <div className="w-full h-px bg-slate-200 mb-8"></div>
+                    <div className="w-full h-px bg-slate-200 mb-8" />
 
-                    {/* Summary Box Redundant? Maybe "Summary from all articles" as in design */}
-                    <div className="bg-gray-200 rounded-lg p-6 mb-8 text-center text-slate-600 italic">
-                        &lt; summary from all left/centre/right articles &gt;
-                    </div>
-
-                    {/* List */}
-                    <div className="space-y-4">
-                        {filteredArticles.map((article, idx) => (
-                            <div key={idx} className="flex gap-4 p-4 bg-white rounded-lg hover:shadow-md transition-shadow border border-slate-100 items-start">
-                                {/* Logo / Icon */}
-                                <div className="h-12 w-12 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
-                                    <img
-                                        src={getSourceIcon(article.source)}
-                                        alt={article.source}
-                                        className="h-full w-full object-cover p-2"
-                                        onError={(e) => { e.target.src = `https://placehold.co/40x40?text=${article.source?.charAt(0) || "N"}` }}
-                                    />
-                                </div>
-
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-lg text-slate-900 hover:text-blue-600 cursor-pointer" onClick={() => window.open(article.url, '_blank')}>
-                                        {article.title}
-                                    </h3>
-                                    <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-                                        <span className="font-medium text-slate-700">{article.source}</span>
-                                        <span>•</span>
-                                        <Badge variant="secondary" className="text-xs uppercase tracking-wider font-normal bg-slate-100 text-slate-600">
-                                            {article.bias}
-                                        </Badge>
-                                        {/* Add Date if available */}
-                                    </div>
-                                    <p className="text-slate-600 mt-2 text-sm line-clamp-2">
-                                        &lt;mini summary&gt;
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => window.open(article.url, '_blank')}>
-                                        <ExternalLink className="h-4 w-4 text-slate-400 hover:text-slate-600" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                        <Share2 className="h-4 w-4 text-slate-400 hover:text-slate-600" />
-                                    </Button>
-                                </div>
+                    {/* ── Comparative Coverage Analysis (LLM) ── */}
+                    {(parsedComparative.left || parsedComparative.center || parsedComparative.right) && (
+                        <div className="mb-8 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-indigo-500" />
+                                <h3 className="font-semibold text-slate-700">Comparative Coverage Analysis</h3>
+                                <span className="text-xs text-slate-400 ml-1">— AI analysis of how each side frames this story</span>
                             </div>
-                        ))}
+                            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                {[
+                                    { key: "left", label: "Left Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-50/50" },
+                                    { key: "center", label: "Center Framing", headerClass: "text-slate-600", dotClass: "bg-slate-400", bgClass: "bg-slate-50/50" },
+                                    { key: "right", label: "Right Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-50/50" },
+                                ].map(({ key, label, headerClass, dotClass, bgClass }) => (
+                                    <div key={key} className={`p-5 ${bgClass}`}>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className={`h-2 w-2 rounded-full ${dotClass}`} />
+                                            <p className={`text-xs font-bold uppercase tracking-wider ${headerClass}`}>{label}</p>
+                                        </div>
+                                        <p className="text-sm text-slate-700 leading-relaxed">
+                                            {parsedComparative[key] || <span className="text-slate-400 italic">No data available</span>}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Article list ── */}
+                    <div className="space-y-4">
+                        {filteredArticles.map((article, idx) => {
+                            const biasLabel = getBiasLabel(article.political_bias || article.bias);
+                            return (
+                                <div key={idx} className="flex gap-4 p-4 bg-white rounded-lg hover:shadow-md transition-shadow border border-slate-100 items-start">
+                                    {/* Logo */}
+                                    <div className="h-12 w-12 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
+                                        <img
+                                            src={getSourceIcon(article.source)}
+                                            alt={article.source}
+                                            className="h-full w-full object-cover p-2"
+                                            onError={(e) => { e.target.style.display = "none"; }}
+                                        />
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-lg text-slate-900 hover:text-blue-600 cursor-pointer leading-tight"
+                                            onClick={() => window.open(article.url, '_blank')}>
+                                            {article.title}
+                                        </h3>
+
+                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="font-medium text-slate-700 text-sm">{article.source}</span>
+                                            <span className="text-slate-300">•</span>
+                                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${biasLabel.color}`}>
+                                                {biasLabel.label}
+                                            </span>
+                                        </div>
+
+                                        {/* Summary from CSV */}
+                                        {article.summary && (
+                                            <p className="text-slate-600 mt-2 text-sm line-clamp-2">{article.summary}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Copies URL */}
+                                    <button
+                                        className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded hover:bg-slate-100 transition-colors"
+                                        title={copiedIdx === idx ? "Copied!" : "Copy link"}
+                                        onClick={() => handleCopy(article.url, idx)}
+                                    >
+                                        {copiedIdx === idx
+                                            ? <span className="text-green-500 text-xs font-bold">✓</span>
+                                            : <Copy className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                                        }
+                                    </button>
+                                </div>
+                            );
+                        })}
 
                         {filteredArticles.length === 0 && (
                             <div className="text-center py-12 text-slate-500">
@@ -548,7 +504,6 @@ const FullCoveragePage = () => {
                             </div>
                         )}
                     </div>
-
                 </div>
 
             </div>
