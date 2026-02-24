@@ -11,8 +11,12 @@ import json
 import asyncio
 import logging
 import concurrent.futures
+import os
+import pandas as pd
+from pathlib import Path
+import s3_sync
 
-from api_models import URLInput, NewsItem, URLwithBG
+from api_models import NewsItem, URLwithBG
 import methods as methods
 import dashboard_methods as dashboard_methods
 import visualisations as visualisations
@@ -24,6 +28,25 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# ------------------------ KEYWORDS SECTION ----------------------- #
+
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/app/data")
+SCRAPED_ARTICLES_PATH = Path(SCRAPER_DATA_DIR) / "scraped_articles.csv"
+
+def read_scraped_articles():
+    """Load scraped articles CSV"""
+    s3_sync.ensure_scraped_csv()  
+    if not SCRAPED_ARTICLES_PATH.exists():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(SCRAPED_ARTICLES_PATH)
+        for col in ['title', 'summary', 'source', 'url', 'published_at', 'country', 'topic', 'politicalbias']:
+            if col in df.columns:
+                df[col] = df[col].fillna('').astype(str).str.strip()
+        return df
+    except Exception:
+        return pd.DataFrame()
 
 # ------------------------ BACKGROUND THREAD TO PRE-SCRAPE AND ANALYSE ----------------------- #
 def periodic_query():
@@ -121,6 +144,64 @@ def get_visualisations():
     except Exception as e:
         logger.exception("Failed to load visualisations data")
         raise HTTPException(status_code=500, detail="Failed to load visualisations data")
+    
+@app.get("/application/articles/keyword/{keyword}")
+def get_articles_by_keyword(keyword: str):
+    """
+    Search articles containing keyword in title OR summary (case-insensitive).
+    Matches if: exact phrase OR all words OR at least 2/3 words present.
+    """
+    try:
+        df = read_scraped_articles()
+        if df.empty:
+            return {"articles": []}
+        
+        # Normalize keyword: lowercase + split multi-words
+        keyword_lower = keyword.lower().strip()
+        keywords = [w for w in keyword_lower.split() if w.strip()]
+        
+        def matches_article(row):
+            title_lower = str(row.get('title', '')).lower()
+            summary_lower = str(row.get('summary', '')).lower()
+            text = title_lower + ' ' + summary_lower
+            
+            # 1. Exact phrase match (highest priority)
+            if keyword_lower and keyword_lower in text:
+                return True
+            
+            # 2. All words present (any order)
+            if all(word in text for word in keywords):
+                return True
+            
+            # 3. Exactly 2 out of 3+ words
+            if len(keywords) >= 3:
+                matches = sum(1 for word in keywords if word in text)
+                if matches >= 2:  # At least 2 words from 3+ word query
+                    return True
+            
+            # 4. For 1-2 word queries: require ALL words
+            if len(keywords) <= 2:
+                return all(word in text for word in keywords)
+            
+            return False
+        
+        # Apply matching + select safe columns
+        mask = df.apply(matches_article, axis=1)
+        
+        cols = [
+            'title', 'summary', 'source', 'url', 'published_at', 
+            'image_url', 'country', 'topic', 'political_bias'
+        ]
+        
+        # Filter to only existing columns (safe)
+        available_cols = [col for col in cols if col in df.columns]
+        results = df[mask][available_cols].head(50).to_dict('records')
+        
+        return {"articles": results}
+        
+    except Exception as e:
+        logger.exception("Failed to search articles by keyword")
+        raise HTTPException(status_code=500, detail="Search failed")
     
 @app.get("/application/scraper_stats")
 def get_scraper_stats():

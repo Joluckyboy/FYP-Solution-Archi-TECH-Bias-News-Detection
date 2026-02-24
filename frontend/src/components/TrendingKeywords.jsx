@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import get_api from "@/config/config";
 import axios from "axios";
+import { Button } from "@/components/ui/button";
 
 const titleCase = (value) => {
   if (typeof value !== "string") return "";
@@ -14,6 +16,7 @@ const titleCase = (value) => {
 
 export default function TrendingKeywords() {
   const [keywords, setKeywords] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -22,7 +25,6 @@ export default function TrendingKeywords() {
       try {
         const api = await get_api();
         const res = await axios.get(`${api}/application/visualisations`);
-
         const raw = res?.data?.trendingKeywords;
 
         // Accept BOTH shapes:
@@ -52,30 +54,45 @@ export default function TrendingKeywords() {
 
   const topKeywords = useMemo(() => keywords.slice(0, 8), [keywords]);
 
+  const handleKeywordClick = (keyword) => {
+    navigate(`/keywords/${encodeURIComponent(keyword)}`); 
+  };
+
   return (
     <div className="h-full p-2 max-h-[340px] overflow-hidden">
       {topKeywords.length === 0 ? (
         <div className="h-full flex items-center justify-center text-sm text-gray-500">
-          No trending keywords yet.
+          Loading...
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {topKeywords.map((keyword, index) => {
-            const display = titleCase(keyword);
-
-            return (
-              <div
-                key={`${keyword}-${index}`}
-                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 
-                           hover:from-blue-100 hover:to-purple-100 transition-all duration-200 
-                           rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px]
-                           text-lg font-semibold text-gray-900 leading-tight truncate"
-                title={display}
+        <div className="space-y-4 pt-2">
+          {/* Row 1: Keywords 1-4 */}
+          <div className="grid grid-cols-4 gap-4">
+            {topKeywords.slice(0, 4).map((keyword, index) => (
+              <Button
+                key={index}
+                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate h-auto"  // KEEP ALL STYLES
+                variant="ghost"  
+                onClick={() => handleKeywordClick(keyword)}
               >
-                {display}
-              </div>
-            );
-          })}
+                {titleCase(keyword)}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Row 2: Keywords 5-8 */}
+          <div className="grid grid-cols-4 gap-4">
+            {topKeywords.slice(4, 8).map((keyword, index) => (
+              <Button
+                key={index + 4}
+                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate h-auto"  // SAME STYLES
+                variant="ghost"
+                onClick={() => handleKeywordClick(keyword)}  
+              >
+                {titleCase(keyword)}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
     </div>
