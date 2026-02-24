@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import ArticleCard from './ArticleCard';
+import FramingAnalysisPanel from './FramingAnalysisPanel';
 
-const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, handleCopy }) => {
+const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
     const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -112,6 +113,12 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
                     </div>
                 </div>
             )}
+
+            {/* Framing Differences in Headline */}
+            <FramingAnalysisPanel
+                framingDiff={framingDiff}
+                linguisticFraming={linguisticFraming}
+            />
 
             {/* Article list */}
             <div className="space-y-4">
