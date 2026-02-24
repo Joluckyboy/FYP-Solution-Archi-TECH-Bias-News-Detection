@@ -111,3 +111,115 @@ class SummaryService:
             print(f"Deep summarization failed for topic {topic['id']}: {e}")
 
         return topic
+
+    def generate_comparative_analysis(self, topic: dict[str, Any]) -> dict[str, Any]:
+        """
+        Calls Perplexity with up to 3 article URLs per bias group (9 total).
+        Asks the model to compare how Left / Center / Right framing differs.
+        Stores the result in topic['comparative_analysis'].
+        """
+        if not self.api_key:
+            return topic
+
+        try:
+            arts = topic.get("articles", [])
+
+            # Group URLs by bias (up to 3 each)
+            groups: dict[str, list[str]] = {"left": [], "center": [], "right": []}
+            for a in arts:
+                b = str(a.get("political_bias", "")).lower()
+                url = a.get("url", "")
+                if not url:
+                    continue
+                if "left" in b and len(groups["left"]) < 3:
+                    groups["left"].append(url)
+                elif "right" in b and len(groups["right"]) < 3:
+                    groups["right"].append(url)
+                elif len(groups["center"]) < 3:
+                    groups["center"].append(url)
+
+            all_urls = groups["left"] + groups["center"] + groups["right"]
+            if not all_urls:
+                return topic
+
+            def fmt(label, urls):
+                if not urls:
+                    return ""
+                bullet = "\n".join(f"  - {u}" for u in urls)
+                return f"{label}:\n{bullet}"
+
+            url_block = "\n\n".join(
+                filter(
+                    None,
+                    [
+                        fmt("Left-leaning sources", groups["left"]),
+                        fmt("Center sources", groups["center"]),
+                        fmt("Right-leaning sources", groups["right"]),
+                    ],
+                )
+            )
+
+            payload = {
+                "model": "sonar",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a media bias analyst. You will be given news article URLs "
+                            "grouped by political leaning. Visit each URL and write a SHORT comparative "
+                            "analysis in exactly this format:\n\n"
+                            "LEFT: <one sentence on how left-leaning outlets frame this story>\n"
+                            "CENTER: <one sentence on how center outlets frame this story>\n"
+                            "RIGHT: <one sentence on how right-leaning outlets frame this story>\n\n"
+                            "Focus on: language choice, who they blame or credit, what they emphasise or downplay. "
+                            "Be concise and factual. No citations. No extra text outside the three lines."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Compare how these articles cover the same story:\n\n{url_block}",
+                    },
+                ],
+                "max_tokens": 250,
+                "temperature": 0.3,
+                "return_citations": False,
+            }
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+
+            print(
+                f"Generating Comparative Analysis for Topic {topic['id']} ({len(all_urls)} URLs)..."
+            )
+            import time as _time
+
+            for attempt in range(3):
+                try:
+                    resp = requests.post(
+                        "https://api.perplexity.ai/chat/completions",
+                        json=payload,
+                        headers=headers,
+                        timeout=40,
+                    )
+                    if resp.status_code == 200:
+                        raw = resp.json()["choices"][0]["message"]["content"].strip()
+                        # Strip citation markers
+                        import re
+
+                        raw = re.sub(r"\[[\d,\s]+\]", "", raw).strip()
+                        topic["comparative_analysis"] = raw
+                        break
+                    elif resp.status_code == 429:
+                        _time.sleep(2 ** (attempt + 1))
+                    else:
+                        print(f"Comparative analysis API error: {resp.status_code}")
+                        break
+                except Exception as exc:
+                    print(f"Comparative analysis request failed: {exc}")
+                    _time.sleep(1)
+
+        except Exception as e:
+            print(f"Comparative analysis failed for topic {topic.get('id')}: {e}")
+
+        return topic

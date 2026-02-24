@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 const TopicCard = ({ topic }) => {
     const { id, title, image, sourceCount, biasDistribution } = topic;
     const navigate = useNavigate();
+    const hasImage = image && image.startsWith("http");
 
     // Calculate total for percentages if not provided, though we expect pre-calculated percentages or counts
     const total = biasDistribution.left + biasDistribution.leaning_left + biasDistribution.center + biasDistribution.leaning_right + biasDistribution.right;
@@ -15,11 +16,16 @@ const TopicCard = ({ topic }) => {
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border-none shadow-md">
             {/* Image Section */}
             <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
-                <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                />
+                {hasImage ? (
+                    <img
+                        src={image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                        onError={(e) => { e.target.style.display = "none"; e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900"); }}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900" />
+                )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                     <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-md">
                         {title}
