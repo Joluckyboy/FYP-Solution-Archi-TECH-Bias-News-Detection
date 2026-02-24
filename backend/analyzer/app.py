@@ -52,11 +52,7 @@ def get_topic_details(topic_id):
     if not topic:
         return jsonify({"error": "Topic not found"}), 404
 
-    svc = get_summary_service()
-    if svc:
-        topic = svc.enrich_topic_with_deep_summary(topic)
-        topic = svc.generate_comparative_analysis(topic)
-
+    # Returning base data ONLY - no LLM enrichment here to keep it fast
     return jsonify(
         {
             "id": topic["id"],
@@ -73,7 +69,31 @@ def get_topic_details(topic_id):
             "framing_differences": topic.get("framing_differences", {}),
             "lead_articles": topic.get("lead_articles", {}),
             "linguistic_framing": topic.get("linguistic_framing", {}),
+        }
+    ), 200
+
+
+@app.route("/dashboard/topic_enrichment/<int:topic_id>", methods=["GET"])
+def get_topic_enrichment(topic_id):
+    topics_data, error = fetch_topics_data()
+    if error:
+        return jsonify({"error": error}), 404
+
+    topic = next((t for t in topics_data if t["id"] == topic_id), None)
+    if not topic:
+        return jsonify({"error": "Topic not found"}), 404
+
+    # Perform LLM enrichment
+    svc = get_summary_service()
+    if svc:
+        topic = svc.enrich_topic_with_deep_summary(topic)
+        topic = svc.generate_comparative_analysis(topic)
+
+    return jsonify(
+        {
+            "contextual_insight": topic.get("contextual_insight", ""),
             "comparative_analysis": topic.get("comparative_analysis", ""),
+            "has_deep_summary": topic.get("has_deep_summary", False),
         }
     ), 200
 
