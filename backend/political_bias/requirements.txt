@@ -8,3 +8,4 @@ perplexityai
 uvicorn
 gunicorn
 boto3
+filelock
