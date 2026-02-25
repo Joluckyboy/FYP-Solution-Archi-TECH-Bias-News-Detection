@@ -28,8 +28,8 @@ services:
       - ./backend/.env
     environment:
       - ENV=production
-    restart: always
-
+    volumes:
+      - bias_model_cache:/app/bias_model
   emotion:
     build:
       context: ./backend/emotion
@@ -135,4 +135,7 @@ services:
     depends_on:
       - application
     restart: always
+
+volumes:
+  bias_model_cache: 
 
