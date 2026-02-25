@@ -4,7 +4,7 @@ import get_api from "@/config/config";
 import axios from "axios";
 
 const BUCKET_ORDER = ['left', 'leaning-left', 'center', 'leaning-right', 'right'];
-// const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right',};
+const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right',};
 
 const BUCKET_COLORS = {
   left: 'bg-blue-200 border-blue-300',
@@ -16,7 +16,7 @@ const BUCKET_COLORS = {
 
 export default function TopicOutletBias() {
   const [data, setData] = useState(null);
-  const [selectedTopic, setSelectedTopic] = useState('general-news');
+  const [selectedTopic, setSelectedTopic] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -47,6 +47,14 @@ export default function TopicOutletBias() {
     fetchData();
   }, []);
 
+  // Auto-select first topic alphabetically when data loads
+  useEffect(() => {
+    const topics = Object.keys(data?.topicOutletDistribution || {});
+    if (topics.length > 0 && selectedTopic === "") {
+      setSelectedTopic(topics[0]); // First topic (business)
+    }
+  }, [data?.topicOutletDistribution, selectedTopic]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[500px]">
@@ -66,7 +74,7 @@ export default function TopicOutletBias() {
   const biasGroups = data.topicOutletBiasGroups?.[selectedTopic] || {};
   const allOutlets = BUCKET_ORDER.flatMap(bucket => biasGroups[bucket] || []);
   const totalOutlets = new Set(allOutlets.map(item => item.outlet)).size;
-  // const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
+  const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
   const getSortedOutlets = (outlets) => {
     return outlets
       .sort((a, b) => a.outlet.localeCompare(b.outlet))
@@ -103,11 +111,20 @@ export default function TopicOutletBias() {
       <div className="flex-1 grid grid-cols-5 gap-4 items-start hover:none">
         {BUCKET_ORDER.map((bucket) => {
           const outlets = getSortedOutlets(biasGroups[bucket] || []);
-          // const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
-          // const percentage = totalArticles > 0 ? ((bucketArticles / totalArticles) * 100).toFixed(1) : '0.0';
+          const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
+          const percentage = totalArticles > 0 ? ((bucketArticles / totalArticles) * 100).toFixed(1) : '0.0';
 
           return (
             <div key={bucket} className="flex flex-col gap-4 h-full hover:none">
+              {/* Label Box */}
+              <div className={`w-full h-24 p-4 rounded-xl border shadow-sm flex flex-col justify-center text-center ${BUCKET_COLORS[bucket]} hover:none`}>
+                <div className="text-2xl font-black tracking-wide hover:none">
+                  {BUCKET_LABELS[bucket].charAt(0).toUpperCase() + BUCKET_LABELS[bucket].slice(1).toLowerCase()}
+                </div>
+                <div className="text-sm font-mono text-gray-600 mt-1 hover:none">
+                  {percentage}%
+                </div>
+              </div>
               {/* Outlet Box */}
               <div className={`w-full h-56 p-3 rounded-xl border shadow-sm overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${BUCKET_COLORS[bucket]} hover:none`}>
                 {outlets.length > 0 ? (
