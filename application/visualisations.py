@@ -280,33 +280,25 @@ def load_visualisations_data() -> Dict[str, Any]:
 
     # -----------------------------------------------------
     # Topic coverage: topic_slug -> { outlet -> count }
-    # Frontend default value is "general-news".
+    # Alphabetical order, Business as frontend default
     # -----------------------------------------------------
     topic_outlet: Dict[str, Dict[str, int]] = {}
     if "topic" in df.columns and "source" in df.columns:
         grouped = df.groupby(["topic", "source"]).size().reset_index(name="count")
         for _, row in grouped.iterrows():
-            topic_raw = str(row.get("topic", "")).strip() or "General News"
+            topic_raw = str(row.get("topic", "")).strip()
             outlet = str(row.get("source", "")).strip() or "Unknown"
             count = int(row.get("count", 0))
-
+            
+            if not topic_raw:  # Skip empty topics
+                continue
+                
             topic_slug = _slugify(topic_raw)
-            if topic_slug in {"general", "generalnews", "general-news", "general-news-"}:
-                topic_slug = "general-news"
-
             topic_outlet.setdefault(topic_slug, {})
             topic_outlet[topic_slug][outlet] = count
 
-    # ensure default exists so UI loads with data instead of “No data”
-    topic_outlet.setdefault("general-news", topic_outlet.get("general-news", {}))
-
-    # put general-news first
-    if "general-news" in topic_outlet:
-        ordered = {"general-news": topic_outlet["general-news"]}
-        for k, v in topic_outlet.items():
-            if k != "general-news":
-                ordered[k] = v
-        topic_outlet = ordered
+    # Alphabetical order 
+    topic_outlet = dict(sorted(topic_outlet.items()))
 
     # -----------------------------------------------------
     # Topic coverage: topic_slug -> { outlet -> count }
