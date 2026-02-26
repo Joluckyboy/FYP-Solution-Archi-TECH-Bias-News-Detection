@@ -137,6 +137,13 @@ class TopicClusteredService:
         framing_differences = self._compute_framing_differences(group)
         linguistic_framing = self._analyze_linguistic_framing(group)
 
+        # Most common CSV topic category in the cluster (drives filter pills)
+        topic_name = ""
+        if "topic" in group.columns:
+            mode_vals = group["topic"].dropna().mode()
+            if not mode_vals.empty:
+                topic_name = str(mode_vals.iloc[0])
+
         return {
             "id": int(cluster_id),
             "title": rep["title"],
@@ -145,6 +152,7 @@ class TopicClusteredService:
             "bias_distribution": bias_distribution,
             "latest_date": latest_date_str,
             "contextual_insight": summary_text,
+            "topic_name": topic_name,
             # Analysis fields
             "silent_outlets": silent_outlets,
             "lead_articles": lead_articles,

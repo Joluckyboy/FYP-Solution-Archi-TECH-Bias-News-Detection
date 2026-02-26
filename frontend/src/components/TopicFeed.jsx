@@ -4,26 +4,47 @@ import axios from 'axios';
 import { ANALYZER_URL } from '@/config/config';
 import { Loader2 } from 'lucide-react';
 
-const TopicFeed = ({ compact = false }) => {
-    const [topics, setTopics] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+/**
+ * TopicFeed can operate in two modes:
+ *  1. Managed externally – pass `topics` + `loading` + `error` props (used by LandingPage
+ *     so the filter pills share the same data).
+ *  2. Self-contained – omit those props; the component fetches its own data (legacy / standalone).
+ */
+const TopicFeed = ({
+    compact = false,
+    topics: topicsProp = null,
+    loading: loadingProp = null,
+    error: errorProp = null,
+    selectedTopic = null,
+}) => {
+    const [topicsInternal, setTopicsInternal] = useState([]);
+    const [loadingInternal, setLoadingInternal] = useState(true);
+    const [errorInternal, setErrorInternal] = useState(null);
+
+    const isManaged = topicsProp !== null;
+    const topics = isManaged ? topicsProp : topicsInternal;
+    const loading = isManaged ? loadingProp : loadingInternal;
+    const error = isManaged ? errorProp : errorInternal;
 
     useEffect(() => {
+        if (isManaged) return; // parent controls data
         const fetchTopics = async () => {
             try {
                 const response = await axios.get(`${ANALYZER_URL}/dashboard/topics`);
-                setTopics(response.data.topics);
-                setLoading(false);
+                setTopicsInternal(response.data.topics);
+                setLoadingInternal(false);
             } catch (err) {
                 console.error("Failed to fetch topics:", err);
-                setError("Failed to load topics. Please ensure the backend analyzer service is running.");
-                setLoading(false);
+                setErrorInternal("Failed to load topics. Please ensure the backend analyzer service is running.");
+                setLoadingInternal(false);
             }
         };
-
         fetchTopics();
-    }, []);
+    }, [isManaged]);
+
+    const filteredTopics = selectedTopic
+        ? topics.filter(t => t.topicName === selectedTopic)
+        : topics;
 
     if (loading) {
         return (
@@ -45,9 +66,14 @@ const TopicFeed = ({ compact = false }) => {
         <div className={compact ? "w-full" : "container mx-auto py-8"}>
             {!compact && <h2 className="text-3xl font-bold mb-6 tracking-tight">Latest Topics</h2>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {topics.map(topic => (
+                {filteredTopics.map(topic => (
                     <TopicCard key={topic.id} topic={topic} />
                 ))}
+                {filteredTopics.length === 0 && (
+                    <div className="col-span-3 text-center py-12 text-muted-foreground">
+                        No topics found for this category.
+                    </div>
+                )}
             </div>
         </div>
     );

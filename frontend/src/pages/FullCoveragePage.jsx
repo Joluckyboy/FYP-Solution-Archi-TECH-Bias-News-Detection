@@ -10,7 +10,6 @@ import TopicHeader from "@/components/full-coverage/TopicHeader";
 import DailyBriefingCard from "@/components/full-coverage/DailyBriefingCard";
 import MediaBiasChart from "@/components/full-coverage/MediaBiasChart";
 import FeaturedCoverageGrid from "@/components/full-coverage/FeaturedCoverageGrid";
-import FramingAnalysisPanel from "@/components/full-coverage/FramingAnalysisPanel";
 import ArticleListSection from "@/components/full-coverage/ArticleListSection";
 
 const FullCoveragePage = () => {
@@ -148,17 +147,14 @@ const FullCoveragePage = () => {
                     featuredRight={featuredRight}
                 />
 
-                <FramingAnalysisPanel
-                    framingDiff={topic.framing_differences || {}}
-                    linguisticFraming={topic.linguistic_framing || {}}
-                />
-
                 <ArticleListSection
                     articles={articles}
                     topic={topic}
                     enrichmentLoading={enrichmentLoading}
                     copiedIdx={copiedIdx}
                     handleCopy={handleCopy}
+                    framingDiff={topic.framing_differences || {}}
+                    linguisticFraming={topic.linguistic_framing || {}}
                 />
             </div>
         </div>
