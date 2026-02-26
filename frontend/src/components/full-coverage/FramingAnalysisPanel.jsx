@@ -15,9 +15,9 @@ const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {
             </div>
             <div className="grid grid-cols-3 divide-x divide-slate-100">
                 {[
-                    { key: "left", label: "Left Coverage", headerClass: "text-red-700 bg-red-50", badgeClass: "bg-red-100 text-red-800", barColor: "bg-red-500" },
-                    { key: "center", label: "Center Coverage", headerClass: "text-slate-600 bg-slate-50", badgeClass: "bg-slate-200 text-slate-700", barColor: "bg-slate-400" },
-                    { key: "right", label: "Right Coverage", headerClass: "text-blue-700 bg-blue-50", badgeClass: "bg-blue-100 text-blue-800", barColor: "bg-blue-500" },
+                    { key: "left", label: "Left Coverage", headerClass: "text-blue-700 bg-blue-100", badgeClass: "bg-blue-100 text-blue-800", barColor: "bg-blue-500" },
+                    { key: "center", label: "Center Coverage", headerClass: "text-purple-600 bg-purple-100", badgeClass: "bg-purple-200 text-purple-700", barColor: "bg-purple-400" },
+                    { key: "right", label: "Right Coverage", headerClass: "text-red-700 bg-red-100", badgeClass: "bg-red-100 text-red-800", barColor: "bg-red-500" },
                 ].map(({ key, label, headerClass, badgeClass, barColor }) => {
                     const lf = linguisticFraming[key] || {};
                     const passivePct = lf.passive_pct ?? null;
