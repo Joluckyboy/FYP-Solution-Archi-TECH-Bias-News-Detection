@@ -1,3 +1,4 @@
+import time as _time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -12,6 +13,14 @@ from .helpers import (
 
 app = Flask(__name__)
 CORS(app)
+
+# ---------------------------------------------------------------------------
+# In-memory enrichment cache
+# Stores Perplexity results so each topic is only enriched once per TTL window.
+# Structure: { topic_id: {"data": {...}, "ts": float} }
+# ---------------------------------------------------------------------------
+_ENRICHMENT_CACHE: dict = {}
+_ENRICHMENT_TTL: int = 3600  # 1 hour in seconds
 
 print("Analyzer starting (lazy model loading).")
 s3_sync.ensure_scraped_csv()
@@ -28,12 +37,14 @@ def dashboard_topics():
             {
                 "id": t["id"],
                 "title": t["title"],
+                "topicName": t.get("topic_name", ""),
                 "image": t.get("image") or "https://placehold.co/600x400?text=No+Image",
                 "sourceCount": t.get("source_count", 0),
                 "biasDistribution": t.get(
                     "bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)
                 ),
                 "date": t.get("latest_date", ""),
+                "frontUrl": t["articles"][0]["url"] if t.get("articles") else None,
             }
             for t in topics_data
         ]
@@ -75,6 +86,14 @@ def get_topic_details(topic_id):
 
 @app.route("/dashboard/topic_enrichment/<int:topic_id>", methods=["GET"])
 def get_topic_enrichment(topic_id):
+    # ── Check cache first ────────────────────────────────────────────────────
+    now = _time.time()
+    cached = _ENRICHMENT_CACHE.get(topic_id)
+    if cached and (now - cached["ts"]) < _ENRICHMENT_TTL:
+        print(f"[enrichment cache] HIT for topic {topic_id}")
+        return jsonify(cached["data"]), 200
+
+    # ── Cache miss — fetch base topic data ───────────────────────────────────
     topics_data, error = fetch_topics_data()
     if error:
         return jsonify({"error": error}), 404
@@ -83,19 +102,23 @@ def get_topic_enrichment(topic_id):
     if not topic:
         return jsonify({"error": "Topic not found"}), 404
 
-    # Perform LLM enrichment
+    # ── Perform LLM enrichment ───────────────────────────────────────────────
     svc = get_summary_service()
     if svc:
         topic = svc.enrich_topic_with_deep_summary(topic)
         topic = svc.generate_comparative_analysis(topic)
 
-    return jsonify(
-        {
-            "contextual_insight": topic.get("contextual_insight", ""),
-            "comparative_analysis": topic.get("comparative_analysis", ""),
-            "has_deep_summary": topic.get("has_deep_summary", False),
-        }
-    ), 200
+    result = {
+        "contextual_insight": topic.get("contextual_insight", ""),
+        "comparative_analysis": topic.get("comparative_analysis", ""),
+        "has_deep_summary": topic.get("has_deep_summary", False),
+    }
+
+    # ── Store in cache ───────────────────────────────────────────────────────
+    _ENRICHMENT_CACHE[topic_id] = {"data": result, "ts": now}
+    print(f"[enrichment cache] STORED for topic {topic_id}")
+
+    return jsonify(result), 200
 
 
 @app.route("/dashboard/trending_keywords", methods=["GET"])
