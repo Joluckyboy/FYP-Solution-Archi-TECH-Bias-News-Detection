@@ -176,12 +176,27 @@ def remove_old_articles(articles: list[dict]) -> list[dict]:
             kept.append(a)
             continue
         try:
-            if datetime.strptime(pub[:10], "%Y-%m-%d").date() >= cutoff:
+            # Try multiple date formats
+            pub_date = None
+            pub_clean = pub.strip()
+            for fmt in ["%d/%m/%Y", "%Y-%m-%d", "%d/%m/%y"]:
+                try:
+                    pub_date = datetime.strptime(pub_clean, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            if pub_date is None:
+                # Unable to parse date, keep article
+                kept.append(a)
+                logger.debug(f"Unable to parse date '{pub}', keeping article")
+            elif pub_date >= cutoff:
                 kept.append(a)
             else:
                 removed += 1
-        except Exception:
+        except Exception as e:
             kept.append(a)
+            logger.warning(f"Error processing article date '{pub}': {e}")
     logger.info(f"Cleanup: removed {removed} old articles, kept {len(kept)}.")
     return kept
 
