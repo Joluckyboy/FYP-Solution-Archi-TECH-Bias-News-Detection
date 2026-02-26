@@ -116,7 +116,7 @@ class TopicClusteredService:
 
         rep = group.iloc[0]
         # Date handling
-        dates = pd.to_datetime(group["published_at"], errors="coerce")
+        dates = pd.to_datetime(group["published_at"], errors="coerce", dayfirst=True)
         latest_date = dates.max()
         latest_date_str = (
             latest_date.strftime("%Y-%m-%d") if not pd.isnull(latest_date) else ""
@@ -216,6 +216,7 @@ class TopicClusteredService:
         group_sorted["_parsed_date"] = pd.to_datetime(
             group_sorted.get("published_at", group_sorted.get("date", None)),
             errors="coerce",
+            dayfirst=True,
         )
         group_sorted = group_sorted.sort_values("_parsed_date", ascending=False)
 
