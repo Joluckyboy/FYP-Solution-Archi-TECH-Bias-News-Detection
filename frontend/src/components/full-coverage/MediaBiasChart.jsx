@@ -1,7 +1,19 @@
 
 const MediaBiasChart = ({ articles, metrics }) => {
-    const getSourceIcon = (source) =>
-        `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
+    const SG_DOMAINS = {
+        "channel newsasia": "channelnewsasia.com",
+        "the straits times": "straitstimes.com",
+        "today online": "todayonline.com",
+        "the business times": "businesstimes.com.sg",
+        "mothership": "mothership.sg",
+        "yahoo news singapore": "sg.yahoo.com",
+    };
+
+    const getSourceIcon = (source) => {
+        const key = source?.toLowerCase().trim();
+        const domain = SG_DOMAINS[key] ?? `${key?.replace(/\s+/g, '')}.com`;
+        return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=32`;
+    };
 
     return (
         <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100 h-full">
