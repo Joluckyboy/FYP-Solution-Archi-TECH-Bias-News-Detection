@@ -28,7 +28,8 @@ def load_scraper_stats() -> Dict[str, Any]:
     if len(df) == 0:
         return {"error": "Empty CSV", "coreStats": {"yesterdayArticles": 0, "todayArticles": 0, "cumulativeTotal": 0}}
     
-    df['published_at'] = pd.to_datetime(df['published_at'], errors='coerce')
+    # Parse dates - try multiple formats (DD/MM/YYYY, YYYY-MM-DD, etc)
+    df['published_at'] = pd.to_datetime(df['published_at'], format='mixed', dayfirst=True, errors='coerce')
     
     yesterday_sgt = pd.Timestamp.now(ZoneInfo("Asia/Singapore")).normalize() - pd.Timedelta(days=1)
     
