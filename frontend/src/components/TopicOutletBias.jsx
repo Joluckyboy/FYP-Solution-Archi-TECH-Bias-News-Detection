@@ -4,12 +4,12 @@ import get_api from "@/config/config";
 import axios from "axios";
 
 const BUCKET_ORDER = ['left', 'leaning-left', 'center', 'leaning-right', 'right'];
-const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right',};
+const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right', };
 
 const BUCKET_COLORS = {
   left: 'bg-blue-200 border-blue-300',
   'leaning-left': 'bg-blue-100 border-blue-200',
-  center: 'bg-gray-100 border-gray-200',
+  center: 'bg-purple-100 border-purple-200',
   'leaning-right': 'bg-red-100 border-red-200',
   right: 'bg-red-200 border-red-300',
 };
@@ -78,7 +78,7 @@ export default function TopicOutletBias() {
   const getSortedOutlets = (outlets) => {
     return outlets
       .sort((a, b) => a.outlet.localeCompare(b.outlet))
-      .slice(0, 8); 
+      .slice(0, 8);
   };
 
   return (
@@ -129,9 +129,9 @@ export default function TopicOutletBias() {
               <div className={`w-full h-56 p-3 rounded-xl border shadow-sm overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${BUCKET_COLORS[bucket]} hover:none`}>
                 {outlets.length > 0 ? (
                   outlets.map((item, idx) => (
-                    <div 
-                      key={idx} 
-                      className="truncate py-2 hover:none border-b border-gray-100/50 last:border-b-0 text-base leading-relaxed" 
+                    <div
+                      key={idx}
+                      className="truncate py-2 hover:none border-b border-gray-100/50 last:border-b-0 text-base leading-relaxed"
                       style={{ lineHeight: '1.4' }}
                     >
                       {item.outlet}
