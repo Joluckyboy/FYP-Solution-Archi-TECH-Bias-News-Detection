@@ -8,21 +8,35 @@ from ..models.bertclass import BERTClass
 def get_model():
     model_local_dir = os.getenv("BIAS_MODEL_DIR", "/app/bias_model")
     model_local_path = os.path.join(model_local_dir, "best_model_ba_12_wd.pt")
+    version_file = os.path.join(model_local_dir, ".model_version")
     lock_path = model_local_path + ".lock"
+    expected_version = os.getenv("MODEL_VERSION", "v1")
 
     os.makedirs(model_local_dir, exist_ok=True)
 
     # File lock ensures only 1 worker downloads, others wait
     with filelock.FileLock(lock_path):
-        if not os.path.exists(model_local_path):
+        # Check if cached model matches the expected version
+        cached_version = None
+        if os.path.exists(version_file):
+            with open(version_file, "r") as f:
+                cached_version = f.read().strip()
+
+        needs_download = (
+            not os.path.exists(model_local_path) or cached_version != expected_version
+        )
+
+        if needs_download:
             bucket = os.getenv("S3_MODEL_BUCKET")
             key = os.getenv("S3_MODEL_KEY", "bias_model/best_model_ba_12_wd.pt")
-            print(f"[bias_model] Downloading from s3://{bucket}/{key}")
+            print(f"[bias_model] Downloading {expected_version} from s3://{bucket}/{key}")
             s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION", "ap-southeast-1"))
             s3.download_file(bucket, key, model_local_path)
-            print(f"[bias_model] Downloaded to {model_local_path}")
+            with open(version_file, "w") as f:
+                f.write(expected_version)
+            print(f"[bias_model] Downloaded {expected_version} to {model_local_path}")
         else:
-            print(f"[bias_model] Using cached model at {model_local_path}")
+            print(f"[bias_model] Using cached model {cached_version} at {model_local_path}")
 
     # Load model
     model = BERTClass()
