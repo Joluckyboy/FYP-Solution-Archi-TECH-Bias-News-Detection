@@ -1,8 +1,20 @@
 import { Copy } from "lucide-react";
 
 const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
-    const getSourceIcon = (source) =>
-        `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${source?.toLowerCase().replace(/\s/g, '')}.com&size=32`;
+    const SG_DOMAINS = {
+        "channel newsasia": "channelnewsasia.com",
+        "the straits times": "straitstimes.com",
+        "today online": "todayonline.com",
+        "the business times": "businesstimes.com.sg",
+        "mothership": "mothership.sg",
+        "yahoo news singapore": "sg.yahoo.com",
+    };
+
+    const getSourceIcon = (source) => {
+        const key = source?.toLowerCase().trim();
+        const domain = SG_DOMAINS[key] ?? `${key?.replace(/\s+/g, '')}.com`;
+        return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=32`;
+    };
 
     const getBiasLabel = (rawBias) => {
         return { label: rawBias || "Unknown", color: "bg-slate-200 text-slate-700" };
@@ -17,7 +29,7 @@ const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
                 <img
                     src={getSourceIcon(article.source)}
                     alt={article.source}
-                    className="h-full w-full object-cover p-2"
+                    className="h-full w-full object-contain"
                     onError={(e) => { e.target.style.display = "none"; }}
                 />
             </div>

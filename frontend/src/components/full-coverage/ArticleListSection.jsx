@@ -43,7 +43,7 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
                     <div className="flex gap-4 text-sm font-medium">
                         {["left", "center", "right"].map(f => {
                             const count = articles.filter(a => (a.political_bias || a.bias || "").toLowerCase().includes(f)).length;
-                            const activeColor = f === "left" ? "text-red-600" : f === "center" ? "text-slate-500" : "text-blue-700";
+                            const activeColor = f === "left" ? "text-blue-600" : f === "center" ? "text-purple-500" : "text-red-700";
                             return (
                                 <button key={f} onClick={() => setFilter(f)}
                                     className={`capitalize ${filter === f ? `${activeColor} font-bold` : "text-slate-500 hover:text-slate-800"}`}>
@@ -95,9 +95,9 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
                             ))
                         ) : (
                             [
-                                { key: "left", label: "Left Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-50/50" },
-                                { key: "center", label: "Center Framing", headerClass: "text-slate-600", dotClass: "bg-slate-400", bgClass: "bg-slate-50/50" },
-                                { key: "right", label: "Right Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-50/50" },
+                                { key: "left", label: "Left Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-100" },
+                                { key: "center", label: "Center Framing", headerClass: "text-purple-600", dotClass: "bg-purple-400", bgClass: "bg-purple-100" },
+                                { key: "right", label: "Right Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-100" },
                             ].map(({ key, label, headerClass, dotClass, bgClass }) => (
                                 <div key={key} className={`p-5 ${bgClass}`}>
                                     <div className="flex items-center gap-2 mb-3">

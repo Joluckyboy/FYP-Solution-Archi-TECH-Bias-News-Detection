@@ -70,15 +70,15 @@ const TopicCard = ({ topic }) => {
                 {/* Bias Bar Chart */}
                 <div className="mt-2">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1 font-semibold">
-                        <span className="text-red-600">Left {Math.round(leftPct)}%</span>
-                        <span className="text-gray-500">Center {Math.round(centerPct)}%</span>
-                        <span className="text-blue-600">Right {Math.round(rightPct)}%</span>
+                        <span className="text-blue-500">Left {Math.round(leftPct)}%</span>
+                        <span className="text-purple-500">Center {Math.round(centerPct)}%</span>
+                        <span className="text-red-500">Right {Math.round(rightPct)}%</span>
                     </div>
 
                     <div className="h-3 w-full flex rounded-full overflow-hidden bg-gray-100">
-                        <div className="h-full bg-red-500 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
-                        <div className="h-full bg-gray-300 relative group" style={{ width: `${centerPct}%` }} />
-                        <div className="h-full bg-blue-500 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
+                        <div className="h-full bg-blue-400 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
+                        <div className="h-full bg-purple-500 relative group" style={{ width: `${centerPct}%` }} />
+                        <div className="h-full bg-red-400 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
                     </div>
                 </div>
             </CardContent>

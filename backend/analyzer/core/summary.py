@@ -11,25 +11,47 @@ class SummaryService:
     def __init__(self):
         self.api_key = os.getenv("API_KEY")
 
-    def _summarize_with_perplexity(self, article_urls):
+    def _summarize_with_perplexity(self, articles: list[dict]) -> str | None:
+        """Summarize a news story using article headlines as search context.
+
+        Passes structured headline + source pairs so Perplexity can search
+        the web for the story without needing direct URL access.
+        """
         if not self.api_key:
             return None
 
         url = "https://api.perplexity.ai/chat/completions"
 
-        # Format URLs for the user message
-        urls_list = "\n".join([f"- {u}" for u in article_urls])
+        # Build a readable article list using titles and sources
+        article_lines = []
+        for i, a in enumerate(articles, 1):
+            title = a.get("title", "").strip()
+            source = a.get("source", "").strip()
+            excerpt = a.get("summary", "").strip()
+            line = f"{i}. [{source}] {title}"
+            if excerpt:
+                line += f"\n   Excerpt: {excerpt[:200]}"
+            article_lines.append(line)
+
+        articles_text = "\n".join(article_lines)
 
         payload = {
             "model": "sonar",
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a specialized news summarizer. Your task is to visit the provided news article URLs and summarize them into a concise list of 3-5 bullet points that reflect the consensus facts.\n\nCRITICAL STRICTNESS RULES:\n1. YOU MUST VISIT AND READ THE CONTENT OF THE PROVIDED URLS.\n2. USE ONLY THE CONTENT FOUND IN THESE SPECIFIC ARTICLES.\n3. DO NOT PERFORM ANY OTHER BROAD WEB SEARCHES OR USE EXTERNAL KNOWLEDGE UNRELATED TO THESE URLS.\n4. If the provided URLs are inaccessible or yield no content, state 'Insufficient information to generate summary'.\n5. Focus on the core facts reported in these specific articles.\n6. ABSOLUTELY NO CITATION MARKERS (e.g., [1], [2]) are allowed in the output. The output must be clean plain text.",
+                    "content": (
+                        "You are a news summarizer. You will be given a list of news article headlines "
+                        "with their sources. Use these headlines as search queries to find and summarize "
+                        "the news story they cover.\n\n"
+                        "Write a concise summary of 3-5 bullet points covering the key facts of this story. "
+                        "Focus on what happened, who is involved, and why it matters. "
+                        "ABSOLUTELY NO citation markers (e.g. [1], [2]) in the output. Clean plain text only."
+                    ),
                 },
                 {
                     "role": "user",
-                    "content": f"Here are the URLs of the articles to summarize:\n{urls_list}",
+                    "content": f"Summarize the news story covered by these articles:\n\n{articles_text}",
                 },
             ],
             "max_tokens": 300,
@@ -46,8 +68,6 @@ class SummaryService:
                 response = requests.post(url, json=payload, headers=headers, timeout=30)
                 if response.status_code == 200:
                     content = response.json()["choices"][0]["message"]["content"]
-                    # Post-processing: Remove distinct citation markers like [1], [1, 2], [1][2] using regex
-                    # This pattern matches brackets containing digits, commas, or spaces
                     cleaned_content = re.sub(r"\[[\d,\s]+\]", "", content)
                     return cleaned_content.strip()
                 elif response.status_code == 429:
@@ -59,7 +79,6 @@ class SummaryService:
                     print(
                         f"Perplexity API Error: {response.status_code} - {response.text}"
                     )
-                    # Don't retry for other client errors (4xx)
                     if 400 <= response.status_code < 500:
                         return None
             except Exception as e:
@@ -80,7 +99,7 @@ class SummaryService:
             # Reconstruct context from articles dict
             arts = topic.get("articles", [])
 
-            # Select unique articles (up to 3) for context
+            # Select unique articles (up to 5) for headline context
             seen_titles = set()
             unique_arts = []
             for a in arts:
@@ -88,16 +107,14 @@ class SummaryService:
                 if title not in seen_titles:
                     unique_arts.append(a)
                     seen_titles.add(title)
-                if len(unique_arts) >= 3:
+                if len(unique_arts) >= 5:
                     break
 
-            article_urls = [art.get("url") for art in unique_arts if art.get("url")]
-
-            if article_urls:
+            if unique_arts:
                 print(
-                    f"Generating On-Demand Summary for Topic {topic['id']} using {len(article_urls)} URLs..."
+                    f"Generating On-Demand Summary for Topic {topic['id']} using {len(unique_arts)} articles..."
                 )
-                perplexity_summary = self._summarize_with_perplexity(article_urls)
+                perplexity_summary = self._summarize_with_perplexity(unique_arts)
 
                 if perplexity_summary:
                     deep_summary_text = f"{perplexity_summary}"
@@ -124,28 +141,30 @@ class SummaryService:
         try:
             arts = topic.get("articles", [])
 
-            # Group URLs by bias (up to 3 each)
+            # Group article headlines by bias (up to 3 each)
             groups: dict[str, list[str]] = {"left": [], "center": [], "right": []}
             for a in arts:
                 b = str(a.get("political_bias", "")).lower()
-                url = a.get("url", "")
-                if not url:
+                title = a.get("title", "").strip()
+                source = a.get("source", "").strip()
+                if not title:
                     continue
+                entry = f"[{source}] {title}" if source else title
                 if "left" in b and len(groups["left"]) < 3:
-                    groups["left"].append(url)
+                    groups["left"].append(entry)
                 elif "right" in b and len(groups["right"]) < 3:
-                    groups["right"].append(url)
+                    groups["right"].append(entry)
                 elif len(groups["center"]) < 3:
-                    groups["center"].append(url)
+                    groups["center"].append(entry)
 
-            all_urls = groups["left"] + groups["center"] + groups["right"]
-            if not all_urls:
+            all_entries = groups["left"] + groups["center"] + groups["right"]
+            if not all_entries:
                 return topic
 
-            def fmt(label, urls):
-                if not urls:
+            def fmt(label, entries):
+                if not entries:
                     return ""
-                bullet = "\n".join(f"  - {u}" for u in urls)
+                bullet = "\n".join(f"  - {e}" for e in entries)
                 return f"{label}:\n{bullet}"
 
             url_block = "\n\n".join(
@@ -165,9 +184,9 @@ class SummaryService:
                     {
                         "role": "system",
                         "content": (
-                            "You are a media bias analyst. You will be given news article URLs "
-                            "grouped by political leaning. Visit each URL and write a SHORT comparative "
-                            "analysis in exactly this format:\n\n"
+                            "You are a media bias analyst. You will be given news article headlines "
+                            "grouped by political leaning. Use these headlines to search for the story "
+                            "and write a SHORT comparative analysis in exactly this format:\n\n"
                             "LEFT: <one sentence on how left-leaning outlets frame this story>\n"
                             "CENTER: <one sentence on how center outlets frame this story>\n"
                             "RIGHT: <one sentence on how right-leaning outlets frame this story>\n\n"
@@ -177,7 +196,7 @@ class SummaryService:
                     },
                     {
                         "role": "user",
-                        "content": f"Compare how these articles cover the same story:\n\n{url_block}",
+                        "content": f"Compare how these outlets cover the same story:\n\n{url_block}",
                     },
                 ],
                 "max_tokens": 250,
@@ -190,7 +209,7 @@ class SummaryService:
             }
 
             print(
-                f"Generating Comparative Analysis for Topic {topic['id']} ({len(all_urls)} URLs)..."
+                f"Generating Comparative Analysis for Topic {topic['id']} ({len(all_entries)} headlines)..."
             )
             import time as _time
 
