@@ -28,17 +28,35 @@ def load_scraper_stats() -> Dict[str, Any]:
     if len(df) == 0:
         return {"error": "Empty CSV", "coreStats": {"yesterdayArticles": 0, "todayArticles": 0, "cumulativeTotal": 0}}
     
-    # Parse dates - try multiple formats (DD/MM/YYYY, YYYY-MM-DD, etc)
-    df['published_at'] = pd.to_datetime(df['published_at'], format='mixed', dayfirst=True, errors='coerce')
+    # Parse dates safely for mixed formats.
+    # Important: with dayfirst=True, ISO strings like 2026-03-01 can be misread as 2026-01-03.
+    published_raw = df['published_at'].astype(str).str.strip()
+    iso_mask = published_raw.str.match(r'^\d{4}-\d{2}-\d{2}$', na=False)
+
+    parsed_dates = pd.Series(pd.NaT, index=df.index, dtype='datetime64[ns]')
+    parsed_dates.loc[iso_mask] = pd.to_datetime(
+        published_raw.loc[iso_mask],
+        format='%Y-%m-%d',
+        errors='coerce'
+    )
+    parsed_dates.loc[~iso_mask] = pd.to_datetime(
+        published_raw.loc[~iso_mask],
+        dayfirst=True,
+        errors='coerce'
+    )
+
+    df['published_at'] = parsed_dates
     
-    yesterday_sgt = pd.Timestamp.now(ZoneInfo("Asia/Singapore")).normalize() - pd.Timedelta(days=1)
+    now_sgt = pd.Timestamp.now(ZoneInfo("Asia/Singapore"))
+    today_sgt = now_sgt.normalize()
+    yesterday_sgt = today_sgt - pd.Timedelta(days=1)
     
     yesterday_articles = len(df[
         df['published_at'].dt.tz_localize(None).dt.date == yesterday_sgt.date()
     ])
     
     today_articles = len(df[
-        df['published_at'].dt.tz_localize(None).dt.date == pd.Timestamp.now().normalize().date()
+        df['published_at'].dt.tz_localize(None).dt.date == today_sgt.date()
     ])
 
     cumulative = len(df)
