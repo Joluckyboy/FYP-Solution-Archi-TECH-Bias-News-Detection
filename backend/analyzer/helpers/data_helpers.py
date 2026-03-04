@@ -192,6 +192,18 @@ def fetch_topics_data() -> tuple[list | None, str | None]:
         print("Returning cached topics.")
         return _topics_cache, None
 
+    if "cluster_id" in df.columns and df["cluster_id"].notna().any():
+        print(f"Building topics from cluster_id ({len(df)} rows)...")
+        try:
+            topics = _build_topics_from_cluster_id(df)  # ← new function (Change 2)
+            _topics_cache = topics
+            _topics_cache_time = now
+            _topics_cache_csv_mtime = csv_mtime
+            return topics, None
+        except Exception as e:
+            print(f"cluster_id grouping failed: {e}")
+            traceback.print_exc()
+
     print(f"Running TopicClusteredService on {len(df)} rows...")
     try:
         topics = get_topic_service().cluster_articles(df)
@@ -218,6 +230,114 @@ def fetch_topics_data() -> tuple[list | None, str | None]:
         "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
     )
 
+# ---------------------------------------------------------------------------
+# Primary builder — groups by precomputed cluster_id  (no ML at request time)
+# ---------------------------------------------------------------------------
+
+def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
+    required = {"title", "source", "url", "published_at", "cluster_id"}
+    missing  = required - set(df.columns)
+    if missing:
+        raise ValueError(f"CSV missing columns: {missing}")
+
+    df = df.copy().fillna("")
+    df = _parse_published_at(df)
+    df["cluster_id"] = (
+        df["cluster_id"].astype(str).str.strip().replace("", "unclustered")
+    )
+
+    topics_out: list[dict[str, Any]] = []
+
+    for cluster_id, group in df.groupby("cluster_id", dropna=False):
+        group      = group.sort_values(
+            "published_at_dt", ascending=False, na_position="last"
+        )
+        latest_row = group.iloc[0]
+
+        # Representative image — first article with a real http URL
+        image_url = "https://placehold.co/600x400?text=No+Image"
+        if "image_url" in group.columns:
+            valid = group["image_url"].astype(str).str.strip()
+            valid = valid[valid.str.startswith("http")]
+            if not valid.empty:
+                image_url = valid.iloc[0]
+
+        # Latest date as ISO string
+        latest_date = ""
+        pub_dt = latest_row.get("published_at_dt")
+        if pd.notna(pub_dt) and str(pub_dt) != "NaT":
+            latest_date = pub_dt.isoformat()
+
+        # Most common CSV topic category (drives filter pills on frontend)
+        topic_name = ""
+        if "topic" in group.columns:
+            mode_vals = group["topic"].dropna().mode()
+            if not mode_vals.empty:
+                topic_name = str(mode_vals.iloc[0])
+
+        # Contextual insight from top summaries
+        top_summaries: list[str] = []
+        if "summary" in group.columns:
+            top_summaries = [
+                s for s in group["summary"].astype(str).str.strip() if s
+            ][:5]
+        contextual_insight = (
+            "Event Summary:\n" + "\n\n".join(top_summaries)
+            if top_summaries else "Summary not available yet."
+        )
+
+        keep_cols = [
+            c for c in [
+                "title", "source", "url", "published_at",
+                "summary", "image_url", "political_bias",
+            ] if c in group.columns
+        ]
+
+        topics_out.append({
+            "id":                  _stable_id(str(cluster_id)),
+            "cluster_id":          str(cluster_id),
+            "topic_name":          topic_name,
+            "title":               str(latest_row["title"]),
+            "image":               image_url,
+            "source_count":        int(len(group)),
+            "bias_distribution":   _bias_distribution(group),
+            "latest_date":         latest_date,
+            "contextual_insight":  contextual_insight,
+            # Analysis fields populated lazily via /dashboard/topic_enrichment
+            "silent_outlets":      {},
+            "lead_articles":       {},
+            "framing_differences": {},
+            "linguistic_framing":  {},
+            "articles":            group[keep_cols].to_dict(orient="records"),
+        })
+
+    # Hottest first (most sources), most recent as tiebreaker
+    topics_out.sort(
+        key=lambda t: (t["source_count"], t.get("latest_date", "")),
+        reverse=True,
+    )
+    return topics_out
+
+def _stable_id(value: str) -> int:
+    """Same as _topic_id but accepts any string."""
+    return int(hashlib.md5(str(value).encode("utf-8")).hexdigest()[:8], 16)
+
+
+def _bias_distribution(group: pd.DataFrame) -> dict:
+    counts = {
+        "left": 0, "leaning_left": 0, "center": 0,
+        "leaning_right": 0, "right": 0,
+    }
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    for b in col:
+        if   b == "left":   counts["left"]          += 1
+        elif b == "right":  counts["right"]         += 1
+        elif b == "center": counts["center"]        += 1
+        elif "left"  in b:  counts["leaning_left"]  += 1
+        elif "right" in b:  counts["leaning_right"] += 1
+        else:               counts["center"]        += 1
+    total = max(sum(counts.values()), 1)
+    return {k: round(v / total * 100, 1) for k, v in counts.items()}
 
 # ---------------------------------------------------------------------------
 # Keyword extraction

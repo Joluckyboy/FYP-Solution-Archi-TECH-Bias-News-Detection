@@ -1,3 +1,4 @@
+import os
 import time as _time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -158,6 +159,91 @@ def topic_coverage():
 def health():
     return jsonify({"status": "ok", "service": "analyzer"}), 200
 
+# ---------------------------------------------------------------------------
+# NEW — called by bias-classifier sidecar after upload_csv()
+# ---------------------------------------------------------------------------
+
+@app.route("/dashboard/cluster", methods=["POST"])
+def cluster_and_save():
+    """
+    Called once per day by the ECS bias-classifier container after it finishes
+    uploading the cleaned CSV to S3.
+
+    Steps:
+      1. Force re-download fresh CSV from S3 (bypass local 12h cache)
+      2. Run TopicClusteredService → assign cluster_id to every article
+      3. Write cluster_id back into the local CSV file
+      4. Upload enriched CSV to S3 (overwrites cleaned CSV)
+      5. Bust in-memory topics cache so next /dashboard/topics
+         request reads the new cluster_ids immediately
+
+    Returns JSON: { "status": "ok", "articles": N, "clusters": N }
+    """
+    import boto3
+    import analyzer.helpers.data_helpers as _dh
+    from .core.services import get_topic_service
+
+    S3_BUCKET  = os.environ.get("S3_BUCKET")
+    S3_KEY     = os.environ.get("SCRAPER_S3_KEY", "scraped_articles/scraped_articles.csv")
+    AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-1")
+
+    if not S3_BUCKET:
+        return jsonify({"error": "S3_BUCKET env var not set"}), 500
+
+    os.makedirs(os.path.dirname(SCRAPED_DATA_PATH), exist_ok=True)
+
+    # ── 1. Force download fresh CSV from S3 ───────────────────────────────────
+    # Bypass the 12h TTL — we know S3 just got a new file from bias-classifier.
+    try:
+        s3 = boto3.client("s3", region_name=AWS_REGION)
+        s3.download_file(S3_BUCKET, S3_KEY, SCRAPED_DATA_PATH)
+        print(f"[cluster] Downloaded fresh CSV from s3://{S3_BUCKET}/{S3_KEY}")
+    except Exception as e:
+        return jsonify({"error": f"S3 download failed: {e}"}), 500
+
+    # ── 2. Read CSV ───────────────────────────────────────────────────────────
+    df = _safe_read_csv(SCRAPED_DATA_PATH)
+    if df is None or df.empty:
+        return jsonify({"error": "CSV is empty after download"}), 500
+
+    # ── 3. Cluster ────────────────────────────────────────────────────────────
+    try:
+        svc    = get_topic_service()
+        topics = svc.cluster_articles(df)
+    except Exception as e:
+        return jsonify({"error": f"Clustering failed: {e}"}), 500
+
+    # Build title → cluster_id lookup
+    cluster_map: dict[str, str] = {}
+    for topic in topics:
+        cid = str(topic["id"])
+        for article in topic.get("articles", []):
+            title = article.get("title", "")
+            if title:
+                cluster_map[title] = cid
+
+    df["cluster_id"] = df["title"].map(cluster_map).fillna("unclustered")
+
+    # ── 4. Save locally + upload enriched CSV to S3 ───────────────────────────
+    df.to_csv(SCRAPED_DATA_PATH, index=False)
+
+    try:
+        s3.upload_file(SCRAPED_DATA_PATH, S3_BUCKET, S3_KEY)
+        print(f"[cluster] Uploaded enriched CSV → s3://{S3_BUCKET}/{S3_KEY}")
+    except Exception as e:
+        return jsonify({"error": f"S3 upload failed: {e}"}), 500
+
+    # ── 5. Bust in-memory topics cache ────────────────────────────────────────
+    _dh._topics_cache           = None
+    _dh._topics_cache_time      = 0.0
+    _dh._topics_cache_csv_mtime = 0.0
+
+    print(f"[cluster] Done. {len(topics)} clusters from {len(df)} articles.")
+    return jsonify({
+        "status":   "ok",
+        "articles": len(df),
+        "clusters": len(topics),
+    }), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8017)
