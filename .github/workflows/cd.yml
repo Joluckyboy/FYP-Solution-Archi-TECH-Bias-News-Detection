@@ -25,6 +25,7 @@ jobs:
       application: ${{ steps.filter.outputs.application }}
       webapp: ${{ steps.filter.outputs.webapp }}
       telebot: ${{ steps.filter.outputs.telebot }}
+      bias_classifier_task: ${{ steps.filter.outputs.bias_classifier_task }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -47,6 +48,8 @@ jobs:
               - 'backend/analyzer/**'
             scraper:
               - 'backend/scraper/**'
+            bias_classifier_task:
+              - 'backend/bias_classifier_task/**'
             application:
               - 'application/**'
             webapp:
@@ -101,6 +104,11 @@ jobs:
             ecr_repo: checkmate/scraper
             dockerfile: dockerfile
             changed: ${{ needs.changes.outputs.scraper }}
+          - name: bias-classifier
+            context: ./backend/bias_classifier_task
+            ecr_repo: checkmate/bias-classifier
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.bias_classifier_task }}
           - name: application
             context: ./application
             ecr_repo: checkmate/application
