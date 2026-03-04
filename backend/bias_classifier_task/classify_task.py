@@ -1,19 +1,23 @@
 """
-ECS Task: Orchestrates scraping + political bias classification.
+ECS Task: Orchestrates scraping + political bias classification + clustering.
 
-Calls your TWO existing services running as sidecars in the same ECS task:
-  - scraper        → localhost:8015  (your scraper Flask app)
-  - political-bias → localhost:9000  (your BERT bias classifier)
+Sidecars in the same ECS task (all on localhost):
+  - scraper        → localhost:8015
+  - political-bias → localhost:9000
+  - analyzer       → localhost:8017
 
 Flow:
-  1. Wait for both sidecars to be ready
+  1. Wait for all 3 sidecars to be ready
   2. Trigger scraper via POST /scraper/scrape-all-sources (async)
-  3. Poll until scrape job completes (scraper uploads CSV to S3 when done)
+  3. Poll until scrape job completes
   4. Download CSV from S3
-  5. Classify any articles missing political_bias label via political-bias API
+  5. Classify articles missing political_bias label
   6. Remove articles older than 7 days
-  7. Re-upload final CSV to S3
-  8. Container exits → ECS task stops automatically
+  7. Upload cleaned CSV to S3
+  8. POST localhost:8017/dashboard/cluster
+     → analyzer downloads fresh CSV from S3, clusters articles,
+       writes cluster_id to every row, re-uploads enriched CSV to S3
+  9. bias-classifier exits → ECS stops all sidecars automatically
 """
 
 import boto3
@@ -32,22 +36,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
-BUCKET              = os.environ["S3_BUCKET"]
-CSV_KEY             = "scraped_articles/scraped_articles.csv"
-AWS_REGION          = os.environ.get("AWS_REGION", "ap-southeast-1")
-SCRAPER_URL         = "http://localhost:8015"
-BIAS_URL            = "http://localhost:9000"
-MAX_AGE_DAYS        = 7
-
+BUCKET       = os.environ["S3_BUCKET"]
+CSV_KEY      = "scraped_articles/scraped_articles.csv"
+AWS_REGION   = os.environ.get("AWS_REGION", "ap-southeast-1")
+SCRAPER_URL  = "http://localhost:8015"
+BIAS_URL     = "http://localhost:9000"
+ANALYZER_URL = "http://localhost:8017"
+MAX_AGE_DAYS = 7
 
 CSV_HEADERS = [
     "title", "source", "url", "published_at",
-    "summary", "image_url", "country", "topic", "political_bias"
+    "summary", "image_url", "country", "topic", "political_bias",
 ]
 VALID_BIAS = {"left", "leaning-left", "center", "leaning-right", "right"}
 
 
-# ── Step 1: Wait for both services ───────────────────────────────────────────
+# ── Step 1: Wait for all sidecars ─────────────────────────────────────────────
 def wait_for_service(name: str, url: str, max_retries: int = 40) -> None:
     logger.info(f"Waiting for {name} at {url} ...")
     for i in range(max_retries):
@@ -63,14 +67,14 @@ def wait_for_service(name: str, url: str, max_retries: int = 40) -> None:
     raise RuntimeError(f"{name} never became ready after {max_retries * 10}s.")
 
 
-def wait_for_all_services():
-    # political-bias takes longer (downloads BERT model from S3)
-    # scraper starts faster
-    wait_for_service("scraper",        f"{SCRAPER_URL}/scraper/",          max_retries=20)
-    wait_for_service("political-bias", f"{BIAS_URL}/biasengine/hello",     max_retries=60)
+def wait_for_all_services() -> None:
+    wait_for_service("scraper",        f"{SCRAPER_URL}/scraper/",      max_retries=20)
+    wait_for_service("political-bias", f"{BIAS_URL}/biasengine/hello", max_retries=60)
+    # Analyzer takes longer — loads sentence-transformers model on startup
+    wait_for_service("analyzer",       f"{ANALYZER_URL}/health",       max_retries=40)
 
 
-# ── Step 2 & 3: Trigger scraper and poll until done ──────────────────────────
+# ── Step 2 & 3: Trigger scraper, poll until done ──────────────────────────────
 def run_scrape_job() -> None:
     """
     POST /scraper/scrape-all-sources with async_mode=true.
@@ -88,14 +92,12 @@ def run_scrape_job() -> None:
     job_id = r.json()["job_id"]
     logger.info(f"Scrape job started: {job_id}")
 
-    # Poll until done — max 35 minutes (70 × 30s)
-    for i in range(70):
+    for i in range(70):  # max 35 min
         time.sleep(30)
         try:
-            status_r = requests.get(
+            s = requests.get(
                 f"{SCRAPER_URL}/scraper/job-status/{job_id}", timeout=10
-            )
-            s = status_r.json()
+            ).json()
         except Exception as e:
             logger.warning(f"Status poll error: {e}")
             continue
@@ -103,8 +105,9 @@ def run_scrape_job() -> None:
         status   = s.get("status")
         progress = s.get("progress", 0)
         articles = s.get("saved_articles", 0)
-        elapsed  = (i + 1) * 30
-        logger.info(f"[{elapsed}s] {progress}% | {articles} articles | status={status}")
+        logger.info(
+            f"[{(i+1)*30}s] {progress}% | {articles} articles | status={status}"
+        )
 
         if status == "completed":
             logger.info(f"Scrape job done. {articles} articles saved to CSV.")
@@ -116,17 +119,16 @@ def run_scrape_job() -> None:
     raise RuntimeError("Scrape job timed out after 35 minutes.")
 
 
-# ── Step 4: Download CSV from S3 ─────────────────────────────────────────────
+# ── Step 4: Download CSV from S3 ──────────────────────────────────────────────
 def download_csv(s3) -> list[dict]:
     logger.info(f"Downloading CSV from s3://{BUCKET}/{CSV_KEY}")
     obj = s3.get_object(Bucket=BUCKET, Key=CSV_KEY)
-    content = obj["Body"].read().decode("utf-8")
-    articles = list(csv.DictReader(StringIO(content)))
+    articles = list(csv.DictReader(StringIO(obj["Body"].read().decode("utf-8"))))
     logger.info(f"Downloaded {len(articles)} articles.")
     return articles
 
 
-# ── Step 5: Classify articles missing political_bias ─────────────────────────
+# ── Step 5: Classify missing political_bias ───────────────────────────────────
 def classify_article(article: dict) -> str:
     """Call political-bias sidecar. Returns valid label or empty string."""
     try:
@@ -151,8 +153,9 @@ def classify_article(article: dict) -> str:
 def classify_all(articles: list[dict]) -> list[dict]:
     need_label = [a for a in articles if not a.get("political_bias")]
     already    = len(articles) - len(need_label)
-    logger.info(f"Classifying {len(need_label)} articles ({already} already labeled).")
-
+    logger.info(
+        f"Classifying {len(need_label)} articles ({already} already labeled)."
+    )
     labeled = 0
     for i, a in enumerate(need_label, 1):
         label = classify_article(a)
@@ -160,8 +163,9 @@ def classify_all(articles: list[dict]) -> list[dict]:
         if label:
             labeled += 1
         if i % 20 == 0:
-            logger.info(f"  {i}/{len(need_label)} classified ({labeled} labeled so far)")
-
+            logger.info(
+                f"  {i}/{len(need_label)} classified ({labeled} labeled so far)"
+            )
     logger.info(f"Classification done: {labeled}/{len(need_label)} got labels.")
     return articles
 
@@ -178,14 +182,12 @@ def remove_old_articles(articles: list[dict]) -> list[dict]:
         try:
             # Try multiple date formats
             pub_date = None
-            pub_clean = pub.strip()
             for fmt in ["%d/%m/%Y", "%Y-%m-%d", "%d/%m/%y"]:
                 try:
-                    pub_date = datetime.strptime(pub_clean, fmt).date()
+                    pub_date = datetime.strptime(pub.strip(), fmt).date()
                     break
                 except ValueError:
                     continue
-            
             if pub_date is None:
                 # Unable to parse date, keep article
                 kept.append(a)
@@ -196,12 +198,12 @@ def remove_old_articles(articles: list[dict]) -> list[dict]:
                 removed += 1
         except Exception as e:
             kept.append(a)
-            logger.warning(f"Error processing article date '{pub}': {e}")
+            logger.warning(f"Error processing date '{pub}': {e}")
     logger.info(f"Cleanup: removed {removed} old articles, kept {len(kept)}.")
     return kept
 
 
-# ── Step 7: Upload final CSV to S3 ───────────────────────────────────────────
+# ── Step 7: Upload cleaned CSV to S3 ─────────────────────────────────────────
 def upload_csv(s3, articles: list[dict]) -> None:
     out = StringIO()
     writer = csv.DictWriter(out, fieldnames=CSV_HEADERS, extrasaction="ignore")
@@ -216,34 +218,53 @@ def upload_csv(s3, articles: list[dict]) -> None:
     logger.info(f"Uploaded {len(articles)} articles → s3://{BUCKET}/{CSV_KEY}")
 
 
+# ── Step 8: Tell analyzer sidecar to cluster and re-upload CSV ───────────────
+def trigger_clustering() -> None:
+    logger.info("Triggering clustering on analyzer sidecar...")
+    r = requests.post(
+        f"{ANALYZER_URL}/dashboard/cluster",
+        timeout=600,  # clustering large CSVs can take a few minutes
+    )
+    r.raise_for_status()
+    result = r.json()
+    logger.info(
+        f"Clustering done: {result.get('clusters')} clusters "
+        f"from {result.get('articles')} articles."
+    )
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     logger.info("=" * 60)
-    logger.info("ECS DAILY SCRAPE + CLASSIFY TASK")
-    logger.info(f"  Scraper:   {SCRAPER_URL}")
-    logger.info(f"  Bias API:  {BIAS_URL}")
-    logger.info(f"  S3 bucket: {BUCKET}")
+    logger.info("ECS TASK: SCRAPE + CLASSIFY + CLUSTER")
+    logger.info(f"  Scraper:      {SCRAPER_URL}")
+    logger.info(f"  Bias API:     {BIAS_URL}")
+    logger.info(f"  Analyzer:     {ANALYZER_URL}")
+    logger.info(f"  S3 bucket:    {BUCKET}")
     logger.info("=" * 60)
 
-    # 1. Wait for both sidecars to be ready
+    # 1. Wait for all 3 sidecars to be ready
     wait_for_all_services()
 
     s3 = boto3.client("s3", region_name=AWS_REGION)
 
-    # 2 & 3. Trigger scraper job, wait until scraper uploads CSV to S3
+    # 2 & 3. Scrape
     run_scrape_job()
 
-    # 4. Download the freshly scraped CSV from S3
+    # 4. Download fresh CSV
     articles = download_csv(s3)
 
-    # 5. Classify articles missing political_bias
+    # 5. Classify political bias
     articles = classify_all(articles)
 
-    # 6. Remove articles older than 7 days
+    # 6. Remove old articles
     articles = remove_old_articles(articles)
 
-    # 7. Upload final classified + cleaned CSV back to S3
+    # 7. Upload cleaned CSV to S3
     upload_csv(s3, articles)
+
+    # 8. Analyzer clusters + re-uploads CSV with cluster_id
+    trigger_clustering()
 
     logger.info("=" * 60)
     logger.info("Task complete. Container will now exit.")
