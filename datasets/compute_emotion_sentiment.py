@@ -12,7 +12,7 @@ OUTPUT_CSV = "news_with_model_scores.csv"
 
 def call_sentiment_api(text: str) -> dict:
     payload = {"text": text}
-    resp = requests.post(SENTIMENT_URL, json=payload, timeout=30)
+    resp = requests.post(SENTIMENT_URL, json=payload, timeout=120)
     resp.raise_for_status()
     data = resp.json()
     return data.get("sentiment_result", {})

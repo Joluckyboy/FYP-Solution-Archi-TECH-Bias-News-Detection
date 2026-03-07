@@ -168,7 +168,8 @@ def scrape_straits_times(url):
         
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # full text for analysis
+            "summary": smart_truncate(body, 300),   # short version for CSV
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -230,12 +231,10 @@ def scrape_cna(url):
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
-        # FIXED: Use smart_truncate with 300 char limit for proper summary length
-        summary = smart_truncate(body, 300)
-        
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # full text for analysis
+            "summary": smart_truncate(body, 300),   # short version for CSV
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -315,7 +314,8 @@ def scrape_fox_news(url):
         
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # full text for analysis
+            "summary": smart_truncate(body, 300),   # short version for CSV
             "topic": topic
         }
         

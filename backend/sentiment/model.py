@@ -44,3 +44,39 @@ class sentiment_model:
             scores = output[0][0].detach().numpy()
             scores = softmax(scores)
             return scores
+    
+    def predict_sentiment_batch(self, chunks):
+        """Process multiple chunks in a single batch for faster inference"""
+        if not chunks:
+            return []
+        
+        # Pad all chunks to same length for batching
+        max_len = max(chunk['input_ids'].shape[1] for chunk in chunks)
+        
+        batch_input_ids = []
+        batch_attention_mask = []
+        
+        for chunk in chunks:
+            input_ids = chunk['input_ids'][0]
+            attention_mask = chunk['attention_mask'][0]
+            
+            # Pad to max_len
+            padding_len = max_len - len(input_ids)
+            if padding_len > 0:
+                input_ids = torch.cat([input_ids, torch.zeros(padding_len, dtype=torch.long)])
+                attention_mask = torch.cat([attention_mask, torch.zeros(padding_len, dtype=torch.long)])
+            
+            batch_input_ids.append(input_ids)
+            batch_attention_mask.append(attention_mask)
+        
+        # Stack into batch tensors
+        batch_input_ids = torch.stack(batch_input_ids)
+        batch_attention_mask = torch.stack(batch_attention_mask)
+        
+        # Run model on entire batch
+        with torch.no_grad():
+            output = self.model(input_ids=batch_input_ids, attention_mask=batch_attention_mask)
+            scores = output[0].detach().numpy()
+            scores = softmax(scores, axis=1)
+        
+        return scores

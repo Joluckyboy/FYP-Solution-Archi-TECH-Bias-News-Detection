@@ -75,30 +75,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     results = response.json()
-    # pprint.pprint(results)
-    news_id = results.get('id', 'No ID available') if results.get(
-        'id') else 'No ID available'
-    title = results.get('title', 'No title available') if results.get(
-        'title') else 'No title available'
-    sentiment_result = results.get(
-        'sentiment_result', {}) if results.get('sentiment_result') else {}
+    news_id = results.get('id', 'No ID available') if results.get('id') else 'No ID available'
+    title = results.get('title', 'No title available') if results.get('title') else 'No title available'
+
+    # Extract only the 3 numeric sentiment scores — ignore everything else
+    raw_sentiment = results.get('sentiment_result', {}) if results.get('sentiment_result') else {}
+    sentiment_result = {
+        k: v for k, v in raw_sentiment.items()
+        if k in ('positive', 'negative', 'neutral') and isinstance(v, (int, float))
+    }
+
     emotion_result = results.get('emotion_result', {}).get(
         'weighted_avg', {}) if results.get('emotion_result') else {}
     propaganda_result = results.get('propaganda_result', {}).get(
         'propaganda_probability', 0) if results.get('propaganda_result') else 0
-    factcheck_result = results.get(
-        'factcheck_result') if results.get('factcheck_result') else []
-    summarise_result = results.get("summarise_result") if results.get(
-        "summarise_result") else "No summary available"
+    factcheck_result = results.get('factcheck_result') if results.get('factcheck_result') else []
+    summarise_result = results.get("summarise_result") if results.get("summarise_result") else "No summary available"
 
-    # get the sentiment result with the highest score + keep the score
+    # Sort sentiment by score descending
     sentiment_result = dict(
         sorted(sentiment_result.items(), key=lambda item: item[1], reverse=True))
 
     # get the top 5 emotions
     # [('joy', 0.6033682227134705), ('sadness', 0.6033682227134705), ('fear', 0.6033682227134705), ('anger', 0.6033682227134705), ('surprise', 0.6033682227134705)]
-    emotion_result = sorted(emotion_result.items(),
-                            key=lambda x: x[1], reverse=True)[:5]
+    emotion_result = sorted(emotion_result.items(), key=lambda x: x[1], reverse=True)[:5]
 
     # get the fact-check result
     compiled_factcheck_result = {"total": 0}
@@ -129,9 +129,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         + "\n"
         + "\n"
         f"\U0001F44D\U0001F3FB Sentiment Analysis:\n"
-        # + f"{sentiment_result[0]} ({sentiment_result[1]*100:.2f}%)\n"
-        + "\n".join([f"• {sentiment}: {score*100:.2f}%" for sentiment,
-                    score in sentiment_result.items()])
+        + "\n".join([f"• {sentiment}: {score*100:.2f}%" for sentiment, score in sentiment_result.items()])
         + "\n"
         + "\n"
         "\U0001F914 Emotion Analysis (Top 5 Emotions):\n"
