@@ -72,8 +72,8 @@ function _cleanPhrase(raw) {
     .replace(/,\s+(the\s+)?(official|he|she|they|trump|officials?|sources?|spokesman?)\s+said.*$/i, "")
     .replace(/\s+(the|a|an|and|or|but|of|in|on|at|to|for|with|by|from|as|that|this|also)\s*$/i, "")
     .replace(/\s+([.,;:!?])/g, "$1")
-    .replace(/^[\s""''"`.,;:!?()\[\]{}—–]+/, "")
-    .replace(/[\s""''"`.,;:!?()\[\]{}—–]+$/, "")
+    .replace(/^[\s""''"`.,;:!?(){}—–]+/, "")
+    .replace(/[\s""''"`.,;:!?(){}—–]+$/, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }

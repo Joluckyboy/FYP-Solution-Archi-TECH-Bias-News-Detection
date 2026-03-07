@@ -41,16 +41,6 @@ const showCites = (fact) => {
   return !["no sources","no source","sources do not","do not mention","does not mention"].some(p => e.includes(p));
 };
 
-const isAnalysisFailed = (r) => {
-  // Check if result is null, undefined, empty object, or has error status
-  if (!r) return true;
-  if (typeof r !== "object") return true;
-  if (Object.keys(r).length === 0) return true;
-  // Check if result contains error status (set by backend when service fails)
-  if (r?.error && r?.status === "failed") return true;
-  return false;
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────

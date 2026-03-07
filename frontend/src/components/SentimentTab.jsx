@@ -1,6 +1,5 @@
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Gauge } from "lucide-react";
 import { HashLoader } from "react-spinners";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,7 +46,7 @@ function isQuotedSpeech(sentence) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const SentimentTab = ({ sentimentResult, sentimentSummaryText }) => {
+const SentimentTab = ({ sentimentResult }) => {
   const hasSentimentResult = !!(sentimentResult && Object.keys(sentimentResult).length);
 
   // DEBUG: Log the structure to see what we're getting

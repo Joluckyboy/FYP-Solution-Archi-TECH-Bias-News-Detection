@@ -8,11 +8,8 @@ client = TestClient(app)
 @pytest.fixture
 def mock_model():
     with patch("app.model") as mock:
-        mock.chunk_text.return_value = [
-            {"input_ids": [[1, 2, 3]], "attention_mask": [[1, 1, 1]]},
-        ]
-        mock.predict_sentiment.side_effect = [
-            [0.2, 0.7, 0.1],  # Mocked sentiment scores for first chunk
+        mock.predict_sentiment_batch_sentences.return_value = [
+            [0.2, 0.7, 0.1],  # [negative, neutral, positive] for one sentence
         ]
         yield mock
 
@@ -37,9 +34,8 @@ def test_analyze_sentiment(mock_model):
     assert "negative" in result
     assert "neutral" in result
 
-    # Ensure the model methods were called
-    mock_model.chunk_text.assert_called_once_with(payload["text"])
-    assert mock_model.predict_sentiment.call_count == 1
+    # Ensure the new batched model method was called
+    mock_model.predict_sentiment_batch_sentences.assert_called_once_with([payload["text"]])
 
     # Check the values of the sentiment results
     total_weight = 3
