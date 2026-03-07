@@ -29,11 +29,17 @@ def test_analyze_emotion(mock_hybrid_aggregation, mock_predict, mock_classifier,
     mock_hybrid_aggregation.return_value = ({"happy": 0.9, "sad": 0.1}, [["happy", 1]])
 
     response = client.post("/emotion/analyze_emotion", json={"text": "I am happy today!"})
-    
+
     assert response.status_code == 200
-    assert response.json() == {
-        "emotion_result": {
-            "weighted_avg": {"happy": 0.9, "sad": 0.1},
-            "majority_vote": [["happy", 1]]
-        }
-    }
+    payload = response.json()
+    assert "emotion_result" in payload
+
+    result = payload["emotion_result"]
+    assert result["weighted_avg"] == {"happy": 0.9, "sad": 0.1}
+    assert result["majority_vote"] == [["happy", 1]]
+
+    # New enriched fields should be present
+    assert "dominant_emotion" in result
+    assert "dominant_score" in result
+    assert "section_emotions" in result
+    assert "sentence_emotions" in result
