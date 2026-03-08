@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ANALYZER_URL } from '@/config/config';
+import { get_analyzer } from '@/config/config';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,6 +27,7 @@ const FullCoveragePage = () => {
             try {
                 // 1. Fetch base topic details (fast)
                 setLoading(true);
+                const ANALYZER_URL = await get_analyzer();
                 const baseResponse = await axios.get(`${ANALYZER_URL}/dashboard/topic_details/${topicId}`);
                 setTopic(baseResponse.data);
                 setArticles(baseResponse.data.articles || []);

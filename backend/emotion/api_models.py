@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 
 class TextInput(BaseModel):
     text: str = Field(
@@ -8,19 +9,12 @@ class TextInput(BaseModel):
     
 
 class EmotionResult(BaseModel):
-    weighted_avg: dict = Field(
-        ...,
-        example={
-            "neutral": 0.7604480385780334,
-            "realization": 0.06248142197728157,
-            "approval": 0.05592983588576317,
-            "disappointment": 0.039574529975652695
-        }
-    )
-    majority_vote: list = Field(
-        ...,
-        example=[["neutral", 1]]
-    )
+    weighted_avg: dict
+    majority_vote: list
+    dominant_emotion: Optional[str] = None  
+    dominant_score: Optional[float] = None    
+    section_emotions: Optional[list] = []     
+    sentence_emotions: Optional[list] = []    
 
 class EmotionResponse(BaseModel):
     emotion_result: EmotionResult

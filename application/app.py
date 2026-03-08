@@ -21,6 +21,7 @@ import methods as methods
 import dashboard_methods as dashboard_methods
 import visualisations as visualisations
 import explanations as explanations
+import redis_cache
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +29,31 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Prevent duplicate background jobs for the same article URL.
+_analysis_guard_lock = threading.Lock()
+_active_retry_urls = set()
+_active_full_urls = set()
+
+
+def _start_unique_background(url: str, job_type: str, target) -> bool:
+    """Start background job only if same URL/job_type is not already running."""
+    active_set = _active_retry_urls if job_type == "retry" else _active_full_urls
+
+    with _analysis_guard_lock:
+        if url in active_set:
+            return False
+        active_set.add(url)
+
+    def wrapped_target():
+        try:
+            target()
+        finally:
+            with _analysis_guard_lock:
+                active_set.discard(url)
+
+    threading.Thread(target=wrapped_target, daemon=True).start()
+    return True
 
 # ------------------------ KEYWORDS SECTION ----------------------- #
 
@@ -294,11 +320,23 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
     """
     try:
         logger.info(f"Processing URL: {url}")
+
+        # --- Redis cache check (fast path) ---
+        if not force_reanalyze:
+            cached = redis_cache.get_cached_result(url)
+            if cached and redis_cache.is_analysis_complete(cached):
+                logger.info(f"Returning Redis-cached result for {url}")
+                if return_news:
+                    return cached
+                return
+        else:
+            redis_cache.delete_cached_result(url)
+
         exists = methods.check_exists(url)
 
         if exists["exists"]:
             existing = methods.get_news(url)
-            
+
             # Identify which analyses are missing
             missing_analyses = []
             if not existing.get("sentiment_result"):
@@ -311,12 +349,16 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 missing_analyses.append("factcheck")
             if not existing.get("summarise_result"):
                 missing_analyses.append("summarise")
-            if not existing.get("data_summary"):
+            # Check for empty dict or None/null data_summary
+            data_summary = existing.get("data_summary")
+            if not data_summary or (isinstance(data_summary, dict) and len(data_summary) == 0):
                 missing_analyses.append("data_summary")
-            
+
             # All analyses complete and no force re-analyze
             if not missing_analyses and not force_reanalyze:
                 logger.info(f"Article exists with complete results for {url} - returning cached data")
+                # Cache in Redis for future fast lookups
+                redis_cache.cache_result(url, existing)
                 if return_news:
                     return existing
                 return
@@ -340,6 +382,22 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 
                 def selective_retry():
                     """Only re-run the failed/missing analyses in parallel"""
+                    def refresh_data_summary(stage_label: str):
+                        """Refresh data summary progressively as individual analyses complete."""
+                        try:
+                            fresh_data = methods.get_news(url) or {}
+                            methods.get_data_summary(
+                                text, url, title, 
+                                trigger=stage_label,
+                                sentiment=fresh_data.get("sentiment_result"),
+                                emotion=fresh_data.get("emotion_result"),
+                                propaganda=fresh_data.get("propaganda_result"),
+                                summarise=fresh_data.get("summarise_result")
+                            )
+                            logger.info(f"↻ Refreshed data summary after {stage_label} for {url}")
+                        except Exception as e:
+                            logger.error(f"✗ Data summary refresh after {stage_label} failed: {e}")
+
                     retry_tasks = []
                     
                     if "sentiment" in missing_analyses:
@@ -353,7 +411,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     if "factcheck" in missing_analyses:
                         retry_tasks.append((methods.get_fact_check, "fact check"))
                     
-                    # Run retry tasks in parallel (except data_summary which depends on others)
+                    # Run retry tasks in parallel and refresh summary after each completion.
                     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                         futures = {}
                         for task_method, label in retry_tasks:
@@ -365,23 +423,38 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                             try:
                                 future.result()
                                 logger.info(f"✓ Successfully retried {label} for {url}")
+                                refresh_data_summary(label)
                             except Exception as e:
                                 logger.error(f"✗ {label.capitalize()} retry failed: {e}")
                     
-                    # Data summary depends on other analyses, run last
-                    if "data_summary" in missing_analyses:
-                        try:
-                            logger.info(f"Retrying data summary for {url}")
-                            methods.get_data_summary(text, url, title)
-                            logger.info(f"✓ Successfully retried data summary for {url}")
-                        except Exception as e:
-                            logger.error(f"✗ Data summary retry failed: {e}")
+                    # ALWAYS regenerate data summary after ANY service retry completes
+                    try:
+                        logger.info(f"Regenerating data summary after retries for {url}")
+                        fresh_data = methods.get_news(url) or {}
+                        methods.get_data_summary(
+                            text, url, title, 
+                            trigger="retry-final",
+                            sentiment=fresh_data.get("sentiment_result"),
+                            emotion=fresh_data.get("emotion_result"),
+                            propaganda=fresh_data.get("propaganda_result"),
+                            summarise=fresh_data.get("summarise_result")
+                        )
+                        logger.info(f"✓ Successfully regenerated data summary for {url}")
+                    except Exception as e:
+                        logger.error(f"✗ Data summary regeneration failed: {e}")
                     
                     logger.info(f"Selective retry complete for {url}")
-                
+                    # Cache the completed result in Redis
+                    completed = methods.get_news(url) or {}
+                    if redis_cache.is_analysis_complete(completed):
+                        redis_cache.cache_result(url, completed)
+
                 if background:
-                    threading.Thread(target=selective_retry, daemon=True).start()
-                    logger.info(f"Background selective retry started for {url}")
+                    started = _start_unique_background(url, "retry", selective_retry)
+                    if started:
+                        logger.info(f"Background selective retry started for {url}")
+                    else:
+                        logger.info(f"Background selective retry already running for {url}; skipping duplicate trigger")
                     if return_news:
                         return existing
                     return
@@ -414,6 +487,25 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
         # FULL ANALYSIS: Run all services IN PARALLEL (for new articles or force re-analyze)
         def full_analysis():
             """Run all analysis services in parallel for maximum speed"""
+            # Track results as they complete
+            completed_results = {}
+            
+            def refresh_data_summary(stage_label: str):
+                """Refresh data summary progressively as individual analyses complete."""
+                try:
+                    # Fetch fresh data from database after each analysis completes
+                    fresh_data = methods.get_news(url) or {}
+                    methods.get_data_summary(
+                        text, url, title, 
+                        trigger=stage_label,
+                        sentiment=fresh_data.get("sentiment_result"),
+                        emotion=fresh_data.get("emotion_result"),
+                        propaganda=fresh_data.get("propaganda_result"),
+                        summarise=fresh_data.get("summarise_result")
+                    )
+                    logger.info(f"↻ Refreshed data summary after {stage_label} for {url}")
+                except Exception as e:
+                    logger.error(f"✗ Data summary refresh after {stage_label} failed: {e}")
             
             # Group 1: Independent analyses that can run simultaneously
             independent_tasks = [
@@ -432,7 +524,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     future = executor.submit(analysis_method, text, url, title)
                     futures[future] = label
                 
-                # Wait for all to complete and log results
+                # Wait for all to complete, log results, and refresh summary progressively.
                 for future in concurrent.futures.as_completed(futures):
                     label = futures[future]
                     try:
@@ -441,24 +533,45 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                             logger.warning(f"⚠️ No result returned for {label}")
                         else:
                             logger.info(f"✓ Completed {label} analysis for {url}")
+                            completed_results[label] = result
+                        refresh_data_summary(label)
                     except Exception as e:
                         logger.error(f"✗ Error during {label} analysis for {url}: {e}")
             
             # Group 2: Data summary depends on other analyses, run last
             try:
-                logger.info(f"Running data summary analysis for {url}")
-                result = methods.get_data_summary(text, url, title)
+                logger.info(f"Running final data summary analysis for {url}")
+                # Get fresh data from database now that all analyses are complete
+                fresh_data = methods.get_news(url) or {}
+                result = methods.get_data_summary(
+                    text, url, title, 
+                    trigger="final",
+                    sentiment=fresh_data.get("sentiment_result"),
+                    emotion=fresh_data.get("emotion_result"),
+                    propaganda=fresh_data.get("propaganda_result"),
+                    summarise=fresh_data.get("summarise_result")
+                )
                 if result:
-                    logger.info(f"✓ Completed data summary for {url}")
+                    logger.info(f"✓ Completed data summary for {url}: {list(result.keys())}")
+                else:
+                    logger.warning(f"⚠️ Data summary returned empty for {url}")
             except Exception as e:
                 logger.error(f"✗ Error during data summary analysis for {url}: {e}")
+
+            # Cache the completed result in Redis
+            completed = methods.get_news(url) or {}
+            if redis_cache.is_analysis_complete(completed):
+                redis_cache.cache_result(url, completed)
 
             logger.info(f"✓ Full analysis complete for {url}")
 
         if background:
             # Run analysis in background thread
-            threading.Thread(target=full_analysis, daemon=True).start()
-            logger.info(f"Background full analysis started for {url}")
+            started = _start_unique_background(url, "full", full_analysis)
+            if started:
+                logger.info(f"Background full analysis started for {url}")
+            else:
+                logger.info(f"Background full analysis already running for {url}; skipping duplicate trigger")
             if return_news:
                 return initial_save
             return

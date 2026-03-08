@@ -13,3 +13,5 @@ database_url = os.getenv("DATABASE_URL") or "http://localhost:8011"
 prescrape_num = os.getenv("SCRAPE_NUM") or 10
 prescrape_feature_toggle = os.getenv("PRESCRAPE") == "1"
 prescrape_interval = 30 # in minutes
+
+redis_url = os.getenv("REDIS_URL") or "redis://localhost:6379"
