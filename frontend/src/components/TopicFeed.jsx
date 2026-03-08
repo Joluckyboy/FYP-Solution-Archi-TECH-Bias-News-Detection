@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import TopicCard from './TopicCard';
 import axios from 'axios';
-import { ANALYZER_URL } from '@/config/config';
+import { get_analyzer } from '@/config/config';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -30,6 +30,7 @@ const TopicFeed = ({
         if (isManaged) return; // parent controls data
         const fetchTopics = async () => {
             try {
+                const ANALYZER_URL = await get_analyzer();
                 const response = await axios.get(`${ANALYZER_URL}/dashboard/topics`);
                 setTopicsInternal(response.data.topics);
                 setLoadingInternal(false);

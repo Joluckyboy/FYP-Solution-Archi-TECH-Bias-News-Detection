@@ -21,6 +21,7 @@ import methods as methods
 import dashboard_methods as dashboard_methods
 import visualisations as visualisations
 import explanations as explanations
+import redis_cache
 
 logging.basicConfig(
     level=logging.INFO,
@@ -319,11 +320,23 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
     """
     try:
         logger.info(f"Processing URL: {url}")
+
+        # --- Redis cache check (fast path) ---
+        if not force_reanalyze:
+            cached = redis_cache.get_cached_result(url)
+            if cached and redis_cache.is_analysis_complete(cached):
+                logger.info(f"Returning Redis-cached result for {url}")
+                if return_news:
+                    return cached
+                return
+        else:
+            redis_cache.delete_cached_result(url)
+
         exists = methods.check_exists(url)
 
         if exists["exists"]:
             existing = methods.get_news(url)
-            
+
             # Identify which analyses are missing
             missing_analyses = []
             if not existing.get("sentiment_result"):
@@ -340,10 +353,12 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             data_summary = existing.get("data_summary")
             if not data_summary or (isinstance(data_summary, dict) and len(data_summary) == 0):
                 missing_analyses.append("data_summary")
-            
+
             # All analyses complete and no force re-analyze
             if not missing_analyses and not force_reanalyze:
                 logger.info(f"Article exists with complete results for {url} - returning cached data")
+                # Cache in Redis for future fast lookups
+                redis_cache.cache_result(url, existing)
                 if return_news:
                     return existing
                 return
@@ -429,7 +444,11 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                         logger.error(f"✗ Data summary regeneration failed: {e}")
                     
                     logger.info(f"Selective retry complete for {url}")
-                
+                    # Cache the completed result in Redis
+                    completed = methods.get_news(url) or {}
+                    if redis_cache.is_analysis_complete(completed):
+                        redis_cache.cache_result(url, completed)
+
                 if background:
                     started = _start_unique_background(url, "retry", selective_retry)
                     if started:
@@ -538,6 +557,11 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     logger.warning(f"⚠️ Data summary returned empty for {url}")
             except Exception as e:
                 logger.error(f"✗ Error during data summary analysis for {url}: {e}")
+
+            # Cache the completed result in Redis
+            completed = methods.get_news(url) or {}
+            if redis_cache.is_analysis_complete(completed):
+                redis_cache.cache_result(url, completed)
 
             logger.info(f"✓ Full analysis complete for {url}")
 

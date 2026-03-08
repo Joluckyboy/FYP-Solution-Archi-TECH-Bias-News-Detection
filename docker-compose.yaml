@@ -84,6 +84,14 @@ services:
       - ./backend/.env
     restart: always
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
   application:
     build:
       context: ./application
@@ -102,6 +110,7 @@ services:
       - FACTCHECK_URL=http://factcheck:8016
       - ANALYZER_URL=http://analyzer:8017
       - BIAS_URL=http://bias_engine:9000
+      - REDIS_URL=redis://redis:6379
     depends_on:
       - database
       - sentiment
@@ -111,6 +120,7 @@ services:
       - factcheck
       - analyzer
       - bias_engine
+      - redis
     restart: always
 
   webapp:
@@ -137,5 +147,6 @@ services:
     restart: always
 
 volumes:
-  bias_model_cache: 
+  bias_model_cache:
+  redis_data:
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
-import get_api, { ANALYZER_URL } from "@/config/config";
+import get_api, { get_analyzer } from "@/config/config";
 import TrendingKeywords from "../components/TrendingKeywords";
 import TopicOutletBias from "@/components/TopicOutletBias";
 import TopicFeed from "@/components/TopicFeed";
@@ -36,17 +36,19 @@ const LandingPage = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
 
   useEffect(() => {
-    axios
-      .get(`${ANALYZER_URL}/dashboard/topics`)
-      .then((res) => {
-        setTopics(res.data.topics || []);
-        setTopicsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch topics:", err);
-        setTopicsError("Failed to load topics.");
-        setTopicsLoading(false);
-      });
+    get_analyzer().then((analyzerUrl) => {
+      axios
+        .get(`${analyzerUrl}/dashboard/topics`)
+        .then((res) => {
+          setTopics(res.data.topics || []);
+          setTopicsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch topics:", err);
+          setTopicsError("Failed to load topics.");
+          setTopicsLoading(false);
+        });
+    });
   }, []);
 
   useEffect(() => {
