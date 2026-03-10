@@ -37,14 +37,106 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if update.message and user:
         await update.message.reply_html(
-            rf"Hi {user.mention_html()}! Send me a news article URL and I will analyze it for you!",
+            rf"Hi {user.mention_html()}! Welcome to <b>Checkmate</b> - your news bias detector."
+            "\n\nHere's what I can do:"
+            "\n\n<b>Analyze an article</b> - Just send me any news URL"
+            "\n<b>/source</b> &lt;domain&gt; - Check a news source's credibility (e.g. /source cna)"
+            "\n<b>/help</b> - See all available commands"
+            "\n\nTry it out! Paste a news article link to get started.",
         )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     if update.message:
-        await update.message.reply_text("Help!")
+        await update.message.reply_text(
+            "Available commands:\n"
+            "/start - Start the bot\n"
+            "/help - Show this help message\n"
+            "/source <domain> - Check credibility of a news source (e.g. /source cna.com)\n\n"
+            "Or just send me a news article URL to analyze!"
+        )
+
+
+async def source_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Check credibility of a news source via /source <domain>."""
+    if not update.message:
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "Please provide a domain. Example: /source cna.com"
+        )
+        return
+
+    domain = context.args[0].strip().lower()
+
+    await update.message.reply_text(f"Looking up credibility data for {domain}...")
+
+    try:
+        response = requests.get(
+            vars.application_url + "/application/source_credibility",
+            params={"domain": domain},
+            timeout=15
+        )
+        data = response.json()
+    except Exception as e:
+        await update.message.reply_text(f"Error fetching source data: {e}")
+        return
+
+    if data.get("status") == "no_data":
+        msg = data.get("message", "No data available for this source yet. "
+                       "Submit an article from this source to start building its profile.")
+        suggestions = data.get("suggestions", [])
+        if suggestions:
+            msg += "\n\nDid you mean:\n"
+            msg += "\n".join([f"  \u2022 /source {s}" for s in suggestions])
+        await update.message.reply_text(msg)
+        return
+
+    # Build the reply
+    label = data.get("label", "Unknown")
+    score = data.get("credibility_score")
+    total = data.get("articles_analyzed", 0)
+    avg_prop = data.get("avg_propaganda_probability", 0)
+    accuracy = data.get("factual_accuracy_rate", 0)
+    sentiment = data.get("avg_sentiment", {})
+    leaning = data.get("sentiment_leaning", "Unknown")
+    techniques = data.get("top_propaganda_techniques", [])
+
+    score_line = f"{score}/100" if score is not None else "N/A"
+
+    reply = (
+        f"\U0001F50D Source Credibility Report: {domain}\n"
+        "=====================================\n"
+        f"\n"
+        f"\U0001F3AF Credibility Score: {score_line}\n"
+        f"\U0001F3F7\ufe0f Label: {label}\n"
+        f"\U0001F4CA Articles Analyzed: {total}\n"
+        f"\n"
+        f"\u2696\ufe0f Avg Propaganda Probability: {avg_prop*100:.1f}%\n"
+        f"\u2705 Factual Accuracy Rate: {accuracy*100:.1f}%\n"
+        f"\n"
+        f"\U0001F44D\U0001F3FB Avg Sentiment Distribution:\n"
+    )
+
+    if sentiment:
+        for key in ("positive", "negative", "neutral"):
+            val = sentiment.get(key, 0)
+            reply += f"  \u2022 {key.capitalize()}: {val*100:.1f}%\n"
+    else:
+        reply += "  No sentiment data available\n"
+
+    reply += f"\n\U0001F9ED Sentiment Leaning: {leaning}\n"
+
+    if techniques:
+        reply += "\n\U0001F6A9 Most Common Propaganda Techniques:\n"
+        for t in techniques:
+            reply += f"  \u2022 {t['technique']} ({t['count']}x)\n"
+
+    reply += "====================================="
+
+    await update.message.reply_text(reply)
 
 
 async def non_url_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

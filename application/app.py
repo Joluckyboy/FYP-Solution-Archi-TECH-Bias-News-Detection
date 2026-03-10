@@ -16,6 +16,7 @@ import pandas as pd
 from pathlib import Path
 import s3_sync
 
+import requests  # type: ignore
 from api_models import NewsItem, URLwithBG
 import methods as methods
 import dashboard_methods as dashboard_methods
@@ -238,6 +239,297 @@ def get_scraper_stats():
     except Exception as e:
         logger.exception("Failed to load scraper stats")
         raise HTTPException(status_code=500, detail="Failed to load scraper stats")
+
+# Alias map for common shorthand domain names -> actual URL domains
+DOMAIN_ALIASES = {
+    # --- Singapore ---
+    "cna": "channelnewsasia.com",
+    "cna.com": "channelnewsasia.com",
+    "channelnewsasia": "channelnewsasia.com",
+    "channel newsasia": "channelnewsasia.com",
+    "straits": "straitstimes.com",
+    "straitstimes": "straitstimes.com",
+    "straits times": "straitstimes.com",
+    "st": "straitstimes.com",
+    "st.com": "straitstimes.com",
+    "todayonline": "todayonline.com",
+    "today": "todayonline.com",
+    "today online": "todayonline.com",
+    "mothership": "mothership.sg",
+    "businesstimes": "businesstimes.com.sg",
+    "business times": "businesstimes.com.sg",
+    "bt": "businesstimes.com.sg",
+    "yahoo": "yahoo.com",
+    "yahoo sg": "sg.news.yahoo.com",
+    "yahoo singapore": "sg.news.yahoo.com",
+    # --- United States / International ---
+    "cnn": "cnn.com",
+    "foxnews": "foxnews.com",
+    "fox": "foxnews.com",
+    "fox news": "foxnews.com",
+    "nbcnews": "nbcnews.com",
+    "nbc": "nbcnews.com",
+    "nbc news": "nbcnews.com",
+    "usatoday": "usatoday.com",
+    "usa today": "usatoday.com",
+    "npr": "npr.org",
+    "nytimes": "nytimes.com",
+    "nyt": "nytimes.com",
+    "new york times": "nytimes.com",
+    "washingtonpost": "washingtonpost.com",
+    "wapo": "washingtonpost.com",
+    "washington post": "washingtonpost.com",
+    "wsj": "wsj.com",
+    "wall street journal": "wsj.com",
+    "ap": "apnews.com",
+    "ap news": "apnews.com",
+    "apnews": "apnews.com",
+    "associated press": "apnews.com",
+    "reuters": "reuters.com",
+    "bbc": "bbc.com",
+    "bbc news": "bbc.com",
+    "abcnews": "abcnews.go.com",
+    "abc news": "abcnews.go.com",
+    "abc": "abcnews.go.com",
+    "cbsnews": "cbsnews.com",
+    "cbs": "cbsnews.com",
+    "cbs news": "cbsnews.com",
+    "msnbc": "msnbc.com",
+    "politico": "politico.com",
+    "breitbart": "breitbart.com",
+    "huffpost": "huffpost.com",
+    "huffington post": "huffpost.com",
+    "thehill": "thehill.com",
+    "the hill": "thehill.com",
+    "vox": "vox.com",
+    "axios": "axios.com",
+}
+
+
+def _find_similar_aliases(query: str, max_results: int = 5) -> list:
+    """Find alias keys that are similar to the query using substring and word overlap matching."""
+    query_lower = query.lower().strip()
+    query_words = set(query_lower.split())
+    scored = []
+
+    for alias_key in DOMAIN_ALIASES:
+        alias_words = set(alias_key.split())
+        # Check if query is a substring of alias or vice versa
+        if query_lower in alias_key or alias_key in query_lower:
+            scored.append((alias_key, 0.8))
+            continue
+        # Check word overlap
+        overlap = query_words & alias_words
+        if overlap:
+            score = len(overlap) / max(len(query_words), len(alias_words))
+            scored.append((alias_key, score))
+            continue
+        # Check if any query word is a substring of any alias word or vice versa
+        for qw in query_words:
+            for aw in alias_words:
+                if len(qw) >= 3 and (qw in aw or aw in qw):
+                    scored.append((alias_key, 0.4))
+                    break
+            else:
+                continue
+            break
+
+    # Sort by score descending, deduplicate by resolved domain
+    scored.sort(key=lambda x: x[1], reverse=True)
+    seen_domains = set()
+    results = []
+    for alias_key, score in scored:
+        resolved = DOMAIN_ALIASES[alias_key]
+        if resolved not in seen_domains and score >= 0.3:
+            seen_domains.add(resolved)
+            results.append(alias_key)
+            if len(results) >= max_results:
+                break
+    return results
+
+
+@app.get("/application/source_credibility")
+def get_source_credibility(domain: str = Query(..., description="Domain to check credibility for")):
+    """
+    Calculate credibility score for a news source based on historical analysis data.
+    Queries all analyzed articles from the given domain and aggregates metrics.
+    """
+    from urllib.parse import urlparse
+
+    # Keep original input for fuzzy matching before normalization
+    original_input = domain.strip().lower()
+
+    # Normalize domain: strip protocol, www, trailing slashes
+    domain = original_input
+    if "://" in domain:
+        domain = urlparse(domain).netloc or domain
+    domain = domain.removeprefix("www.")
+    domain = domain.rstrip("/")
+
+    if not domain:
+        raise HTTPException(status_code=400, detail="Domain is required")
+
+    # Resolve aliases (e.g. "cna" -> "channelnewsasia.com")
+    resolved = DOMAIN_ALIASES.get(domain, None)
+    if not resolved:
+        # No exact alias match - find suggestions
+        suggestions = _find_similar_aliases(domain)
+        if suggestions:
+            domain_to_query = domain  # Still try the raw domain against DB
+        else:
+            domain_to_query = domain
+    else:
+        suggestions = []
+        domain_to_query = resolved
+
+    domain = domain_to_query
+
+    try:
+        response = requests.get(f"{vars.database_url}/database/getByDomain/{domain}")
+        articles = response.json().get("articles", [])
+    except Exception as e:
+        logger.error(f"Failed to fetch articles for domain {domain}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch source data")
+
+    if not articles:
+        result = {
+            "domain": domain,
+            "status": "no_data",
+            "message": "No data available for this source yet. Submit an article from this source to start building its profile.",
+        }
+        if suggestions:
+            result["suggestions"] = suggestions
+        return result
+
+    # Filter to articles that have at least some analysis data
+    analyzed = [a for a in articles if a.get("sentiment_result") or a.get("propaganda_result") or a.get("factcheck_result")]
+    total_articles = len(analyzed)
+
+    if total_articles == 0:
+        result = {
+            "domain": domain,
+            "status": "no_data",
+            "message": "No data available for this source yet. Submit an article from this source to start building its profile.",
+        }
+        if suggestions:
+            result["suggestions"] = suggestions
+        return result
+
+    if total_articles < 3:
+        label = "Insufficient Data"
+    else:
+        label = None  # Will be calculated
+
+    # Calculate averages
+    propaganda_probs = []
+    factual_counts = {"total": 0, "factual": 0}
+    sentiment_totals = {"positive": 0.0, "negative": 0.0, "neutral": 0.0}
+    sentiment_count = 0
+    technique_counts = {}
+
+    for article in analyzed:
+        # Propaganda
+        prop = article.get("propaganda_result")
+        if prop and isinstance(prop, dict):
+            prob = prop.get("propaganda_probability")
+            if prob is not None:
+                propaganda_probs.append(float(prob))
+            # Count techniques
+            techniques = prop.get("formatted_result") or []
+            for item in techniques:
+                if isinstance(item, list) and len(item) >= 1:
+                    tech_name = item[0]
+                    technique_counts[tech_name] = technique_counts.get(tech_name, 0) + 1
+
+        # Fact-check
+        facts = article.get("factcheck_result")
+        if facts and isinstance(facts, list):
+            for fact in facts:
+                if isinstance(fact, dict) and "correctness" in fact:
+                    factual_counts["total"] += 1
+                    correctness = fact["correctness"].lower()
+                    if correctness in ("factual", "mostly factual"):
+                        factual_counts["factual"] += 1
+
+        # Sentiment
+        sent = article.get("sentiment_result")
+        if sent and isinstance(sent, dict):
+            for key in ("positive", "negative", "neutral"):
+                val = sent.get(key)
+                if isinstance(val, (int, float)):
+                    sentiment_totals[key] += val
+            sentiment_count += 1
+
+    avg_propaganda = sum(propaganda_probs) / len(propaganda_probs) if propaganda_probs else 0.0
+    factual_accuracy = (factual_counts["factual"] / factual_counts["total"]) if factual_counts["total"] > 0 else 0.0
+
+    avg_sentiment = {}
+    if sentiment_count > 0:
+        avg_sentiment = {k: round(v / sentiment_count, 4) for k, v in sentiment_totals.items()}
+
+    # Sentiment skew: how far from perfectly neutral (0.33/0.33/0.33)
+    # Skew = 0 means perfectly balanced, 1 means extremely skewed
+    if avg_sentiment:
+        ideal = 1.0 / 3.0
+        skew = sum(abs(avg_sentiment.get(k, ideal) - ideal) for k in ("positive", "negative", "neutral")) / 2.0
+    else:
+        skew = 0.0
+
+    # Credibility score (0-100):
+    # - Low propaganda = good (weight 40%)
+    # - High factual accuracy = good (weight 40%)
+    # - Low sentiment skew = good (weight 20%)
+    if label is None:
+        propaganda_score = (1.0 - avg_propaganda) * 40
+        accuracy_score = factual_accuracy * 40
+        skew_score = (1.0 - min(skew, 1.0)) * 20
+        credibility_score = round(propaganda_score + accuracy_score + skew_score, 1)
+
+        if credibility_score >= 80:
+            label = "Highly Credible"
+        elif credibility_score >= 60:
+            label = "Moderately Credible"
+        elif credibility_score >= 40:
+            label = "Questionable"
+        else:
+            label = "Low Credibility"
+    else:
+        credibility_score = None
+
+    # Determine political leaning from sentiment distribution
+    if avg_sentiment:
+        pos = avg_sentiment.get("positive", 0)
+        neg = avg_sentiment.get("negative", 0)
+        diff = pos - neg
+        if abs(diff) < 0.05:
+            leaning = "Neutral"
+        elif diff > 0.15:
+            leaning = "Leans Positive (Right-leaning tendency)"
+        elif diff > 0.05:
+            leaning = "Slightly Positive-leaning"
+        elif diff < -0.15:
+            leaning = "Leans Negative (Left-leaning tendency)"
+        else:
+            leaning = "Slightly Negative-leaning"
+    else:
+        leaning = "Unknown"
+
+    # Top techniques
+    top_techniques = sorted(technique_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "domain": domain,
+        "status": "ok",
+        "label": label,
+        "credibility_score": credibility_score,
+        "articles_analyzed": total_articles,
+        "avg_propaganda_probability": round(avg_propaganda, 4),
+        "factual_accuracy_rate": round(factual_accuracy, 4),
+        "avg_sentiment": avg_sentiment,
+        "sentiment_leaning": leaning,
+        "top_propaganda_techniques": [{"technique": t, "count": c} for t, c in top_techniques],
+    }
+
 
 @app.post("/application/new_query", response_model=NewsItem, responses={
     200: {

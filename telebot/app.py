@@ -29,6 +29,7 @@ def run_bot() -> None:
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", handlers.start))
     application.add_handler(CommandHandler("help", handlers.help_command))
+    application.add_handler(CommandHandler("source", handlers.source_command))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.Entity("url") & ~filters.COMMAND, handlers.handle_message))
