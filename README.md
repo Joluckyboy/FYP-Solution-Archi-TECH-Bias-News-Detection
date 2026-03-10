@@ -7,15 +7,21 @@ A comprehensive AI-powered news bias detection system built with microservices a
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-- [Chrome Extension Setup](#-chrome-extension-setup)
-- [Configuration](#-configuration)
-- [Services Overview](#-services-overview)
-- [Telegram Bot Setup](#telegram-bot-port-8020)
-- [API Documentation](#-api-documentation)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Chrome Extension Setup](#chrome-extension-setup)
+- [Configuration](#configuration)
+- [Services Overview](#services-overview)
+- [Telegram Bot Setup](#telegram-bot-setup)
+- [API Documentation](#api-documentation)
+- [Quiz Generation](#quiz-generation)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+- [Team](#team)
 
 ## ✨ Features
 
@@ -23,13 +29,17 @@ A comprehensive AI-powered news bias detection system built with microservices a
   - Sentiment Analysis
   - Emotion Detection
   - Propaganda Identification
+  - Political Bias Detection
   - Fact-Checking
-- 🗄️ **Supabase Integration** for scalable data storage
-- 🌐 **RESTful API** with FastAPI
-- 🎨 **Modern Frontend** with React & Vite
-- 🤖 **Telegram Bot** interface
-- 📊 **Web Scraping** capabilities
-- 🐳 **Dockerized Microservices** for easy deployment
+- **Supabase Integration** for scalable data storage
+- **RESTful APIs** with FastAPI
+- **Modern Frontend** with React and Vite
+- **Chrome Extension** for browser-based article analysis
+- **Telegram Bot** interface
+- **Web Scraping** capabilities
+- **Quiz Generation** for media literacy engagement
+- **Redis Caching** for performance optimization
+- **Dockerized Microservices** for deployment and orchestration
 
 ## 🏗️ Architecture
 
@@ -39,9 +49,9 @@ A comprehensive AI-powered news bias detection system built with microservices a
 │  Port: 5173 │
 └──────┬──────┘
        │
-┌──────▼──────────────────────────────────────┐
-│         Application Gateway (Port: 8010)     │
-└──────┬──────────────────────────────────────┘
+┌──────▼────────────────────────────────────────────┐
+│         Application Gateway (Port: 8010)         │
+└──────┬────────────────────────────────────────────┘
        │
        ├─► Database Service (Port: 8011)
        ├─► Sentiment Analysis (Port: 8012)
@@ -49,8 +59,33 @@ A comprehensive AI-powered news bias detection system built with microservices a
        ├─► Propaganda Detection (Port: 8014)
        ├─► Web Scraper (Port: 8015)
        ├─► Fact-Check Service (Port: 8016)
+       ├─► Analyzer Service (Port: 8017)
+       ├─► Bias Engine (Port: 9000)
+       ├─► Redis Cache (Port: 6379)
        └─► Telegram Bot (Port: 8020)
 ```
+
+## Project Structure
+FYP-Solution-Archi-TECH-Bias-News-Detection
+│
+├── application/                # Gateway service
+├── backend/
+│   ├── analyzer/               # Analysis orchestration service
+│   ├── database/               # Supabase database service
+│   ├── emotion/                # Emotion detection service
+│   ├── fact-check/             # LLM fact-checking service
+│   ├── political_bias/         # Political bias model / bias engine
+│   ├── propaganda/             # Propaganda detection service
+│   ├── scraper/                # Web scraping service
+│   └── sentiment/              # Sentiment analysis service
+│
+├── frontend/                   # React web application / Chrome extension
+├── telebot/                    # Telegram bot
+├── test_cases/                 # Comprehensive test suite
+│
+├── docker-compose.yaml
+├── README.md
+└── .github/workflows
 
 ## 🔧 Prerequisites
 
@@ -59,6 +94,7 @@ Before you begin, ensure you have:
 - [Docker](https://www.docker.com/get-started) installed and running
 - [Docker Compose](https://docs.docker.com/compose/install/) (usually comes with Docker Desktop)
 - [Node.js](https://nodejs.org/) (v16 or higher) for frontend development
+- [Python 3.10](https://www.python.org/downloads/) or higher
 - A [Supabase](https://supabase.com/) account and project
 
 ## 🚀 Quick Start
@@ -405,6 +441,17 @@ python backend/database/generate_quiz.py
 
 ```
 
+## Testing
+
+The project includes an enhanced `test_cases` suite focused on validating key project logic while avoiding hard dependencies on live FastAPI services, Redis, Supabase, external model services, and network scraping.
+
+### Run
+
+From the project root:
+
+```bash
+pytest test_cases -q
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -423,4 +470,4 @@ This project is part of a Final Year Project (FYP) for academic purposes.
 
 ---
 
-Built with ❤️ using FastAPI, React, and Docker
+Built with ❤️ using FastAPI, React, Docker, Redis, and Supabase
