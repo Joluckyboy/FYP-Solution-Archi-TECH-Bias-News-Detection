@@ -267,15 +267,14 @@ def get_fact_check(article_content: str, url: str, title: str ):
         
         # Check if response contains the expected data
         if "response" not in response_json:
-            # Return empty list if API keys are not configured
             print(f"[app] Fact-check service error: {response_json}")
-            return []
-            
-        data = response_json["response"]
-        sanitized_data = sanitize_factcheck_data(data)
+            sanitized_data = []
+        else:
+            data = response_json["response"]
+            sanitized_data = sanitize_factcheck_data(data)
     except Exception as e:
         print(f"[app] Error calling fact-check service: {e}")
-        return []
+        sanitized_data = []
 
     # print ("[app] Fact check response: ", sanitized_data)
 
@@ -321,7 +320,17 @@ def get_summarise(article_content: str, url: str, title: str) -> Dict:
     
     return data
 
-def get_data_summary(text, url, title: str, trigger: str = "manual", sentiment=None, emotion=None, propaganda=None, summarise=None):
+def get_data_summary(
+    text,
+    url,
+    title: str,
+    trigger: str = "manual",
+    sentiment=None,
+    emotion=None,
+    propaganda=None,
+    summarise=None,
+    allow_partial_local: bool = False,
+):
     """
     Generate and save data summaries for all analysis types.
     
@@ -337,6 +346,17 @@ def get_data_summary(text, url, title: str, trigger: str = "manual", sentiment=N
         summarise = summarise or news_data.get("summarise_result") or ""
     else:
         summarise = summarise or ""
+
+    has_sentiment = bool(sentiment)
+    has_emotion = bool(emotion)
+    has_propaganda = bool(propaganda)
+    # Required for model-data summary generation:
+    # sentiment + emotion + propaganda (fact-check is intentionally excluded).
+    has_required_inputs = all([has_sentiment, has_emotion, has_propaganda])
+
+    if not has_required_inputs:
+        print(f"[app] Skipping data summary ({trigger}) due to incomplete required analyses")
+        return {}
 
     query_url = vars.factcheck_url + "/factcheck/summarise/model-data"
     payload = {
@@ -362,13 +382,8 @@ def get_data_summary(text, url, title: str, trigger: str = "manual", sentiment=N
         print(f"[app] Error calling data summary service ({trigger}): {e}")
         return {}
 
-    news_data = get_news(url) or {}
-    existing_summary = news_data.get("data_summary")
-    if not isinstance(existing_summary, dict):
-        existing_summary = {}
-
-    # Merge progressively so missing keys from one refresh do not wipe prior summaries.
-    merged_summary = {**existing_summary, **new_summary}
+    summary_fields = {"sentiment_summary", "emotion_summary", "propaganda_summary"}
+    merged_summary = {key: value for key, value in new_summary.items() if key in summary_fields}
 
     db_url = vars.database_url + "/database/ModelDataSummary/"
     db_payload = {"url": url, "data_summary": merged_summary}
