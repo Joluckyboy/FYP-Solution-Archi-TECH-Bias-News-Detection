@@ -71,25 +71,25 @@ export default function TrendingKeywords() {
             {topKeywords.slice(0, 4).map((keyword, index) => (
               <Button
                 key={index}
-                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate h-auto"  // KEEP ALL STYLES
+                className="p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex flex-col items-center justify-center h-[72px] w-full text-base font-semibold text-gray-900 leading-[1.1] text-center whitespace-normal word-break-keep-all overflow-wrap-anywhere"
                 variant="ghost"  
                 onClick={() => handleKeywordClick(keyword)}
               >
-                {titleCase(keyword)}
+                <span className="w-full line-clamp-2">{titleCase(keyword)}</span>
               </Button>
             ))}
           </div>
-          
+
           {/* Row 2: Keywords 5-8 */}
           <div className="grid grid-cols-4 gap-4">
             {topKeywords.slice(4, 8).map((keyword, index) => (
               <Button
                 key={index + 4}
-                className="p-3 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex items-center justify-center min-h-[60px] text-lg font-semibold text-gray-900 leading-tight truncate h-auto"  // SAME STYLES
+                className="p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 transition-all duration-200 rounded-lg shadow-sm border border-blue-100 flex flex-col items-center justify-center h-[72px] w-full text-base font-semibold text-gray-900 leading-[1.1] text-center whitespace-normal word-break-keep-all overflow-wrap-anywhere"
                 variant="ghost"
                 onClick={() => handleKeywordClick(keyword)}  
               >
-                {titleCase(keyword)}
+                <span className="w-full line-clamp-2">{titleCase(keyword)}</span>
               </Button>
             ))}
           </div>
