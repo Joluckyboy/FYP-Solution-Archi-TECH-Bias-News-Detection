@@ -309,8 +309,8 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
             "bias_distribution":   _bias_distribution(group),
             "latest_date":         latest_date,
             "contextual_insight":  contextual_insight,
-            # Analysis fields populated lazily via /dashboard/topic_enrichment
-            "silent_outlets":      {},
+            # Analysis fields
+            "silent_outlets":      _compute_silent_outlets(group),
             "lead_articles":       {},
             "framing_differences": get_topic_service()._compute_framing_differences(group) if get_topic_service() else {},
             "linguistic_framing":  get_topic_service()._analyze_linguistic_framing(group) if get_topic_service() else {},
@@ -344,6 +344,31 @@ def _bias_distribution(group: pd.DataFrame) -> dict:
         else:               counts["center"]        += 1
     total = max(sum(counts.values()), 1)
     return {k: round(v / total * 100, 1) for k, v in counts.items()}
+
+
+def _compute_silent_outlets(group: pd.DataFrame) -> dict:
+    """Flag bias categories with zero articles when others have significant coverage."""
+    counts: dict[str, int] = {"left": 0, "leaning_left": 0, "center": 0, "leaning_right": 0, "right": 0}
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    for b in col:
+        if   b == "left":   counts["left"]          += 1
+        elif b == "right":  counts["right"]         += 1
+        elif b == "center": counts["center"]        += 1
+        elif "left"  in b:  counts["leaning_left"]  += 1
+        elif "right" in b:  counts["leaning_right"] += 1
+        else:               counts["center"]        += 1
+
+    total = max(sum(counts.values()), 1)
+    threshold = max(1, total // 4)  # at least 25% covered by another group
+    left_vol   = counts["left"] + counts["leaning_left"]
+    right_vol  = counts["right"] + counts["leaning_right"]
+    center_vol = counts["center"]
+
+    return {
+        "left_silent":   left_vol == 0 and (right_vol >= threshold or center_vol >= threshold),
+        "right_silent":  right_vol == 0 and (left_vol >= threshold or center_vol >= threshold),
+        "center_silent": center_vol == 0 and (left_vol >= threshold or right_vol >= threshold),
+    }
 
 # ---------------------------------------------------------------------------
 # Keyword extraction
