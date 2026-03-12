@@ -11,6 +11,7 @@ import DailyBriefingCard from "@/components/full-coverage/DailyBriefingCard";
 import MediaBiasChart from "@/components/full-coverage/MediaBiasChart";
 import FeaturedCoverageGrid from "@/components/full-coverage/FeaturedCoverageGrid";
 import ArticleListSection from "@/components/full-coverage/ArticleListSection";
+import CoverageTimeline from "@/components/full-coverage/CoverageTimeline";
 
 const FullCoveragePage = () => {
     const { topicId } = useParams();
@@ -155,6 +156,10 @@ const FullCoveragePage = () => {
                     featuredCenter={featuredCenter}
                     featuredRight={featuredRight}
                 />
+
+                <div className="grid grid-cols-1 gap-8 mb-12">
+                    <CoverageTimeline articles={articles} />
+                </div>
 
                 <ArticleListSection
                     articles={articles}

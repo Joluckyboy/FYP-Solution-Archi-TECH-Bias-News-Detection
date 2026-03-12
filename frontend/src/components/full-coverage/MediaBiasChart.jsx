@@ -19,25 +19,48 @@ const MediaBiasChart = ({ articles, metrics }) => {
         <div className="bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100 h-full">
             <h3 className="font-semibold text-slate-700 mb-6">Media Bias Chart</h3>
 
-            <div className="w-full flex justify-between h-32 gap-2 px-2">
-                {[
-                    { key: "left", label: "Left", pct: metrics.left, count: metrics.raw.left, hasData: metrics.raw.left > 0, barColor: "bg-blue-400" },
-                    { key: "leaningLeft", label: "Leaning Left", pct: metrics.leaningLeft, count: metrics.raw.leaningLeft, hasData: metrics.raw.leaningLeft > 0, barColor: "bg-blue-200" },
-                    { key: "center", label: "Center", pct: metrics.center, count: metrics.raw.center, hasData: metrics.raw.center > 0, barColor: "bg-purple-400" },
-                    { key: "leaningRight", label: "Leaning Right", pct: metrics.leaningRight, count: metrics.raw.leaningRight, hasData: metrics.raw.leaningRight > 0, barColor: "bg-red-200" },
-                    { key: "right", label: "Right", pct: metrics.right, count: metrics.raw.right, hasData: metrics.raw.right > 0, barColor: "bg-red-400" },
-                ].map(({ key, label, pct, count, hasData, barColor }) => (
-                    <div key={key} className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                        <span className="text-xs font-medium text-slate-500">{count}</span>
-                        <div className={`w-full rounded-t-sm transition-all duration-500 ${hasData ? barColor : "bg-gray-200"} flex-shrink-0`}
-                            style={{ height: `${Math.max(4, pct)}%` }}
-                            title={`${label}: ${count} article${count === 1 ? '' : 's'}`} />
-                        <div className="h-6 flex items-start justify-center">
-                            <span className="text-[10px] uppercase font-bold text-slate-400 text-center leading-tight break-words">{label}</span>
+            {(() => {
+                const bars = [
+                    { key: "left",      label: "Left",        pct: metrics.left,        count: metrics.raw.left,         barColor: "bg-blue-500" },
+                    { key: "leanLeft",  label: "Leaning Left",pct: metrics.leaningLeft, count: metrics.raw.leaningLeft,  barColor: "bg-blue-300" },
+                    { key: "center",    label: "Center",      pct: metrics.center,      count: metrics.raw.center,       barColor: "bg-purple-400" },
+                    { key: "leanRight", label: "Leaning Right",pct: metrics.leaningRight,count: metrics.raw.leaningRight,barColor: "bg-red-300" },
+                    { key: "right",     label: "Right",       pct: metrics.right,       count: metrics.raw.right,        barColor: "bg-red-500" },
+                ];
+                return (
+                    <div className="w-full px-2">
+                        {/* Row 1: count labels — all same height so they don't affect bar alignment */}
+                        <div className="flex justify-between gap-2 mb-1">
+                            {bars.map(({ key, count }) => (
+                                <div key={key} className="flex-1 flex justify-center">
+                                    <span className="text-xs font-semibold text-slate-500">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Row 2: fixed-height bar area — all bars grow from the same baseline */}
+                        <div className="flex justify-between gap-2 h-28 items-end">
+                            {bars.map(({ key, label, pct, count, barColor }) => (
+                                <div
+                                    key={key}
+                                    className={`flex-1 rounded-t-md transition-all duration-500 ${count > 0 ? barColor : "bg-gray-100"}`}
+                                    style={{ height: `${Math.max(count > 0 ? 6 : 0, pct)}%` }}
+                                    title={`${label}: ${count} article${count === 1 ? '' : 's'}`}
+                                />
+                            ))}
+                        </div>
+                        {/* Row 3: baseline rule */}
+                        <div className="w-full border-t-2 border-slate-200" />
+                        {/* Row 4: axis labels — all same height */}
+                        <div className="flex justify-between gap-2 mt-1.5">
+                            {bars.map(({ key, label }) => (
+                                <div key={key} className="flex-1 flex justify-center">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 text-center leading-tight">{label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                ))}
-            </div>
+                );
+            })()}
 
             <div className="mt-8 pt-6 border-t border-slate-100 w-full">
                 <h4 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">Polarization Analysis</h4>
