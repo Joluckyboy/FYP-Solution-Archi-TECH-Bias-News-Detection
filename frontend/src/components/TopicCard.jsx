@@ -51,6 +51,7 @@ const TopicCard = ({ topic }) => {
             <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
                 {hasImage ? (
                     <img
+                        referrerPolicy="no-referrer"
                         src={triedProxy ? `https://wsrv.nl/?url=${encodeURIComponent(currentImage)}` : currentImage}
                         alt={title}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
