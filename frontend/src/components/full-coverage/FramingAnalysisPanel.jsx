@@ -30,7 +30,7 @@ const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {
                             <div className="px-4 pt-4 pb-2 flex flex-wrap gap-2 min-h-[60px]">
                                 {(framingDiff[key] || []).length > 0
                                     ? framingDiff[key].map((word, i) => (
-                                        <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}`}>{word}</span>
+                                        <span key={i} className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold leading-none ${badgeClass}`}>{word}</span>
                                     ))
                                     : <span className="text-xs text-slate-400 italic">Not enough data</span>
                                 }
@@ -49,7 +49,7 @@ const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {
                                         <div className="mt-2 flex flex-wrap gap-1 items-center">
                                             <span className="text-xs text-slate-400">Agents:</span>
                                             {topAgents.map((a, i) => (
-                                                <span key={i} className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{a}</span>
+                                                <span key={i} className="inline-flex items-center justify-center px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600 leading-none">{a}</span>
                                             ))}
                                         </div>
                                     )}
