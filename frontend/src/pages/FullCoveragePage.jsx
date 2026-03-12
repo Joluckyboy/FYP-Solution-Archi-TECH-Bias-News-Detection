@@ -58,23 +58,31 @@ const FullCoveragePage = () => {
 
     // ─── Derived metrics ────────────────────────────────────────────────────────
     const getBiasMetrics = () => {
-        if (!topic || !topic.bias_distribution) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
-        const dist = topic.bias_distribution;
-        const leftRaw = dist.left || 0;
-        const leaningLeftRaw = dist.leaning_left || 0;
-        const centerRaw = dist.center || 0;
-        const leaningRightRaw = dist.leaning_right || 0;
-        const rightRaw = dist.right || 0;
-        const total = leftRaw + leaningLeftRaw + centerRaw + leaningRightRaw + rightRaw;
-        if (total === 0) return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
+        if (!articles || articles.length === 0) {
+            return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
+        }
+
+        const counts = { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
+        articles.forEach(a => {
+            const b = (a.political_bias || a.bias || "").toLowerCase();
+            if (b === "left") counts.left++;
+            else if (b === "right") counts.right++;
+            else if (b === "center") counts.center++;
+            else if (b.includes("left")) counts.leaningLeft++;
+            else if (b.includes("right")) counts.leaningRight++;
+            else counts.center++; // Fallback to center if unclassified
+        });
+
+        const total = articles.length;
+
         return {
-            left: Math.round((leftRaw / total) * 100),
-            leaningLeft: Math.round((leaningLeftRaw / total) * 100),
-            center: Math.round((centerRaw / total) * 100),
-            leaningRight: Math.round((leaningRightRaw / total) * 100),
-            right: Math.round((rightRaw / total) * 100),
+            left: Math.round((counts.left / total) * 100),
+            leaningLeft: Math.round((counts.leaningLeft / total) * 100),
+            center: Math.round((counts.center / total) * 100),
+            leaningRight: Math.round((counts.leaningRight / total) * 100),
+            right: Math.round((counts.right / total) * 100),
             total,
-            raw: { left: leftRaw, leaningLeft: leaningLeftRaw, center: centerRaw, leaningRight: leaningRightRaw, right: rightRaw }
+            raw: counts
         };
     };
 

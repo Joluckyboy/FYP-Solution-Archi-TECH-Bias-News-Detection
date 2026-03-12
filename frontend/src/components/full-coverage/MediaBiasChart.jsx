@@ -21,18 +21,20 @@ const MediaBiasChart = ({ articles, metrics }) => {
 
             <div className="w-full flex justify-between h-32 gap-2 px-2">
                 {[
-                    { key: "left", label: "Left", pct: metrics.left, hasData: metrics.raw.left > 0, barColor: "bg-blue-400" },
-                    { key: "leaningLeft", label: "L. Left", pct: metrics.leaningLeft, hasData: metrics.raw.leaningLeft > 0, barColor: "bg-blue-200" },
-                    { key: "center", label: "Center", pct: metrics.center, hasData: metrics.raw.center > 0, barColor: "bg-purple-400" },
-                    { key: "leaningRight", label: "L. Right", pct: metrics.leaningRight, hasData: metrics.raw.leaningRight > 0, barColor: "bg-red-200" },
-                    { key: "right", label: "Right", pct: metrics.right, hasData: metrics.raw.right > 0, barColor: "bg-red-400" },
-                ].map(({ key, label, pct, hasData, barColor }) => (
+                    { key: "left", label: "Left", pct: metrics.left, count: metrics.raw.left, hasData: metrics.raw.left > 0, barColor: "bg-blue-400" },
+                    { key: "leaningLeft", label: "Leaning Left", pct: metrics.leaningLeft, count: metrics.raw.leaningLeft, hasData: metrics.raw.leaningLeft > 0, barColor: "bg-blue-200" },
+                    { key: "center", label: "Center", pct: metrics.center, count: metrics.raw.center, hasData: metrics.raw.center > 0, barColor: "bg-purple-400" },
+                    { key: "leaningRight", label: "Leaning Right", pct: metrics.leaningRight, count: metrics.raw.leaningRight, hasData: metrics.raw.leaningRight > 0, barColor: "bg-red-200" },
+                    { key: "right", label: "Right", pct: metrics.right, count: metrics.raw.right, hasData: metrics.raw.right > 0, barColor: "bg-red-400" },
+                ].map(({ key, label, pct, count, hasData, barColor }) => (
                     <div key={key} className="flex flex-col items-center justify-end flex-1 gap-2 h-full group">
-                        <span className="text-xs font-medium text-slate-500">{pct}%</span>
-                        <div className={`w-full rounded-t-sm transition-all duration-500 ${hasData ? barColor : "bg-gray-200"}`}
+                        <span className="text-xs font-medium text-slate-500">{count}</span>
+                        <div className={`w-full rounded-t-sm transition-all duration-500 ${hasData ? barColor : "bg-gray-200"} flex-shrink-0`}
                             style={{ height: `${Math.max(4, pct)}%` }}
-                            title={`${label}: ${pct}%`} />
-                        <span className="text-[10px] uppercase font-bold text-slate-400">{label}</span>
+                            title={`${label}: ${count} article${count === 1 ? '' : 's'}`} />
+                        <div className="h-6 flex items-start justify-center">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 text-center leading-tight break-words">{label}</span>
+                        </div>
                     </div>
                 ))}
             </div>
