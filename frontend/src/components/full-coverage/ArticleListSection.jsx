@@ -9,6 +9,7 @@ import FramingAnalysisPanel from './FramingAnalysisPanel';
 const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
     const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [showCount, setShowCount] = useState(5);
 
     const filteredArticles = articles.filter(a => {
         const b = (a.political_bias || a.bias || "").toLowerCase();
@@ -62,9 +63,6 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
                         <Input placeholder="Search articles..." className="pl-9 bg-white"
                             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
-                    <Button variant="outline" size="icon">
-                        <Filter className="h-4 w-4" />
-                    </Button>
                 </div>
             </div>
 
@@ -125,7 +123,7 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
 
             {/* Article list */}
             <div className="space-y-4">
-                {filteredArticles.map((article, idx) => (
+                {filteredArticles.slice(0, showCount).map((article, idx) => (
                     <ArticleCard
                         key={idx}
                         article={article}
@@ -138,6 +136,18 @@ const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, han
                 {filteredArticles.length === 0 && (
                     <div className="text-center py-12 text-slate-500">
                         No articles found matching your criteria.
+                    </div>
+                )}
+
+                {filteredArticles.length > showCount && (
+                    <div className="pt-4 flex justify-center">
+                        <Button
+                            variant="outline"
+                            className="bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 w-full md:w-auto px-8 py-2 rounded-full font-medium transition-colors shadow-sm"
+                            onClick={() => setShowCount(prev => prev + 10)}
+                        >
+                            Show More Articles ({filteredArticles.length - showCount} remaining)
+                        </Button>
                     </div>
                 )}
             </div>
