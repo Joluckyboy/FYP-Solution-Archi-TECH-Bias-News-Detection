@@ -674,22 +674,6 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 
                 def selective_retry():
                     """Only re-run the failed/missing analyses in parallel"""
-                    def refresh_data_summary(stage_label: str):
-                        """Refresh data summary progressively as individual analyses complete."""
-                        try:
-                            fresh_data = methods.get_news(url) or {}
-                            methods.get_data_summary(
-                                text, url, title, 
-                                trigger=stage_label,
-                                sentiment=fresh_data.get("sentiment_result"),
-                                emotion=fresh_data.get("emotion_result"),
-                                propaganda=fresh_data.get("propaganda_result"),
-                                summarise=fresh_data.get("summarise_result")
-                            )
-                            logger.info(f"↻ Refreshed data summary after {stage_label} for {url}")
-                        except Exception as e:
-                            logger.error(f"✗ Data summary refresh after {stage_label} failed: {e}")
-
                     retry_tasks = []
                     
                     if "sentiment" in missing_analyses:
@@ -703,7 +687,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     if "factcheck" in missing_analyses:
                         retry_tasks.append((methods.get_fact_check, "fact check"))
                     
-                    # Run retry tasks in parallel and refresh summary after each completion.
+                    # Run retry tasks in parallel.
                     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                         futures = {}
                         for task_method, label in retry_tasks:
@@ -715,23 +699,26 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                             try:
                                 future.result()
                                 logger.info(f"✓ Successfully retried {label} for {url}")
-                                refresh_data_summary(label)
                             except Exception as e:
                                 logger.error(f"✗ {label.capitalize()} retry failed: {e}")
                     
-                    # ALWAYS regenerate data summary after ANY service retry completes
+                    # Generate data summary once.
+                    # Hybrid mode: if some analyses are missing, save a partial local summary.
                     try:
-                        logger.info(f"Regenerating data summary after retries for {url}")
                         fresh_data = methods.get_news(url) or {}
+                        logger.info(f"Generating final data summary after retries for {url}")
                         methods.get_data_summary(
-                            text, url, title, 
+                            text,
+                            url,
+                            title,
                             trigger="retry-final",
                             sentiment=fresh_data.get("sentiment_result"),
                             emotion=fresh_data.get("emotion_result"),
                             propaganda=fresh_data.get("propaganda_result"),
-                            summarise=fresh_data.get("summarise_result")
+                            summarise=fresh_data.get("summarise_result"),
+                            allow_partial_local=True,
                         )
-                        logger.info(f"✓ Successfully regenerated data summary for {url}")
+                        logger.info(f"✓ Completed final/partial data summary after retries for {url}")
                     except Exception as e:
                         logger.error(f"✗ Data summary regeneration failed: {e}")
                     
@@ -782,23 +769,6 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             # Track results as they complete
             completed_results = {}
             
-            def refresh_data_summary(stage_label: str):
-                """Refresh data summary progressively as individual analyses complete."""
-                try:
-                    # Fetch fresh data from database after each analysis completes
-                    fresh_data = methods.get_news(url) or {}
-                    methods.get_data_summary(
-                        text, url, title, 
-                        trigger=stage_label,
-                        sentiment=fresh_data.get("sentiment_result"),
-                        emotion=fresh_data.get("emotion_result"),
-                        propaganda=fresh_data.get("propaganda_result"),
-                        summarise=fresh_data.get("summarise_result")
-                    )
-                    logger.info(f"↻ Refreshed data summary after {stage_label} for {url}")
-                except Exception as e:
-                    logger.error(f"✗ Data summary refresh after {stage_label} failed: {e}")
-            
             # Group 1: Independent analyses that can run simultaneously
             independent_tasks = [
                 (methods.get_sentiment, "sentiment"),
@@ -816,7 +786,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     future = executor.submit(analysis_method, text, url, title)
                     futures[future] = label
                 
-                # Wait for all to complete, log results, and refresh summary progressively.
+                # Wait for all to complete and log results.
                 for future in concurrent.futures.as_completed(futures):
                     label = futures[future]
                     try:
@@ -826,22 +796,24 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                         else:
                             logger.info(f"✓ Completed {label} analysis for {url}")
                             completed_results[label] = result
-                        refresh_data_summary(label)
                     except Exception as e:
                         logger.error(f"✗ Error during {label} analysis for {url}: {e}")
             
             # Group 2: Data summary depends on other analyses, run last
             try:
-                logger.info(f"Running final data summary analysis for {url}")
                 # Get fresh data from database now that all analyses are complete
                 fresh_data = methods.get_news(url) or {}
+                logger.info(f"Running final data summary analysis for {url}")
                 result = methods.get_data_summary(
-                    text, url, title, 
+                    text,
+                    url,
+                    title,
                     trigger="final",
                     sentiment=fresh_data.get("sentiment_result"),
                     emotion=fresh_data.get("emotion_result"),
                     propaganda=fresh_data.get("propaganda_result"),
-                    summarise=fresh_data.get("summarise_result")
+                    summarise=fresh_data.get("summarise_result"),
+                    allow_partial_local=True,
                 )
                 if result:
                     logger.info(f"✓ Completed data summary for {url}: {list(result.keys())}")
