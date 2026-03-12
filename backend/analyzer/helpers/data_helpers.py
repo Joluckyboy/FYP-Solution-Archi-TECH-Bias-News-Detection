@@ -151,6 +151,8 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "bias_distribution": dict(DEFAULT_BIAS_DISTRIBUTION),
                 "latest_date": latest_date,
                 "contextual_insight": contextual_insight,
+                "framing_differences": get_topic_service()._compute_framing_differences(g) if get_topic_service() else {},
+                "linguistic_framing": get_topic_service()._analyze_linguistic_framing(g) if get_topic_service() else {},
                 "articles": articles,
             }
         )
@@ -310,8 +312,8 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
             # Analysis fields populated lazily via /dashboard/topic_enrichment
             "silent_outlets":      {},
             "lead_articles":       {},
-            "framing_differences": {},
-            "linguistic_framing":  {},
+            "framing_differences": get_topic_service()._compute_framing_differences(group) if get_topic_service() else {},
+            "linguistic_framing":  get_topic_service()._analyze_linguistic_framing(group) if get_topic_service() else {},
             "articles":            group[keep_cols].to_dict(orient="records"),
         })
 
