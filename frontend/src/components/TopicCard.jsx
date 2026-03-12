@@ -6,9 +6,15 @@ import get_api from "@/config/config";
 import axios from "axios";
 
 const TopicCard = ({ topic }) => {
-    const { id, title, image, sourceCount, biasDistribution, frontUrl } = topic;
+    const { id, title, image, allImages, sourceCount, biasDistribution, frontUrl } = topic;
     const navigate = useNavigate();
-    const hasImage = image && image.startsWith("http");
+    
+    const imagesList = allImages?.length > 0 ? allImages : (image ? [image] : []);
+    const [imageIndex, setImageIndex] = useState(0);
+    const [triedProxy, setTriedProxy] = useState(false);
+    
+    const currentImage = imagesList[imageIndex] || null;
+    const hasImage = !!currentImage && currentImage.startsWith("http");
 
     const [analyzing, setAnalyzing] = useState(false);
     const [analyzeError, setAnalyzeError] = useState(null);
@@ -45,10 +51,22 @@ const TopicCard = ({ topic }) => {
             <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
                 {hasImage ? (
                     <img
-                        src={image}
+                        src={triedProxy ? `https://wsrv.nl/?url=${encodeURIComponent(currentImage)}` : currentImage}
                         alt={title}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                        onError={(e) => { e.target.style.display = "none"; e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900"); }}
+                        onError={(e) => { 
+                            if (!triedProxy) {
+                                setTriedProxy(true);
+                            } else {
+                                if (imageIndex < imagesList.length - 1) {
+                                    setTriedProxy(false);
+                                    setImageIndex(prev => prev + 1);
+                                } else {
+                                    e.target.style.display = "none"; 
+                                    e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900"); 
+                                }
+                            }
+                        }}
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900" />

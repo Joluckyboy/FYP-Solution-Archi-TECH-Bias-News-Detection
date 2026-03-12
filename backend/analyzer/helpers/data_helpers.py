@@ -104,11 +104,10 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
         latest_row = g.iloc[0]
 
         non_empty_imgs = g[g["image_url"].astype(str).str.strip() != ""]
-        image_url = (
-            non_empty_imgs.iloc[0]["image_url"]
-            if len(non_empty_imgs) > 0
-            else "https://placehold.co/600x400?text=No+Image"
-        )
+        valid_imgs = non_empty_imgs[non_empty_imgs["image_url"].str.startswith("http")]
+        valid_imgs = valid_imgs[~valid_imgs["image_url"].str.contains("usatoday.com", case=False, na=False)]
+        all_images = valid_imgs["image_url"].tolist()[:5] if not valid_imgs.empty else []
+        image_url = all_images[0] if all_images else "https://placehold.co/600x400?text=No+Image"
 
         source_count = int(g["source"].nunique())
 
@@ -147,6 +146,7 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "topic_name": str(topic_name),
                 "title": str(latest_row["title"]),
                 "image": str(image_url),
+                "all_images": all_images,
                 "source_count": source_count,
                 "bias_distribution": dict(DEFAULT_BIAS_DISTRIBUTION),
                 "latest_date": latest_date,
@@ -256,11 +256,14 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
 
         # Representative image — first article with a real http URL
         image_url = "https://placehold.co/600x400?text=No+Image"
+        all_images = []
         if "image_url" in group.columns:
             valid = group["image_url"].astype(str).str.strip()
             valid = valid[valid.str.startswith("http")]
+            valid = valid[~valid.str.contains("usatoday.com", case=False, na=False)]
             if not valid.empty:
                 image_url = valid.iloc[0]
+                all_images = valid.tolist()[:5]
 
         # Latest date as ISO string
         latest_date = ""
@@ -299,6 +302,7 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
             "topic_name":          topic_name,
             "title":               str(latest_row["title"]),
             "image":               image_url,
+            "all_images":          all_images,
             "source_count":        int(len(group)),
             "bias_distribution":   _bias_distribution(group),
             "latest_date":         latest_date,
