@@ -181,6 +181,11 @@ def scrape_straits_times(url):
         if date_elem and date_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(date_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future Straits Times article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
@@ -286,6 +291,11 @@ def scrape_cna(url):
         if time_elem and time_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future CNA article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
@@ -332,6 +342,11 @@ def scrape_fox_news(url):
         if time_elem and time_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future Fox News article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)

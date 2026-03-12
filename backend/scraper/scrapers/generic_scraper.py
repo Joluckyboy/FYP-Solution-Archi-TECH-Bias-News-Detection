@@ -81,6 +81,11 @@ def scrape_generic_source(source_url: str, source_name: str, country: str,
                 # NEW: DATE FILTERING - Skip old articles
                 if result.publish_date:
                     try:
+                        now_ref = datetime.now(result.publish_date.tzinfo) if result.publish_date.tzinfo else datetime.now()
+                        if result.publish_date.date() > now_ref.date():
+                            logger.debug(f"Skipping future-dated article: {result.title[:50]}")
+                            continue
+
                         article_age = datetime.now() - result.publish_date
                         if article_age.days > MAX_ARTICLE_AGE_DAYS:
                             old_articles_skipped += 1
@@ -182,6 +187,11 @@ def scrape_generic_article(url):
         # NEW: DATE FILTERING
         if article.publish_date:
             try:
+                now_ref = datetime.now(article.publish_date.tzinfo) if article.publish_date.tzinfo else datetime.now()
+                if article.publish_date.date() > now_ref.date():
+                    logger.warning(f"Future-dated article skipped: {url}")
+                    return None
+
                 article_age = datetime.now() - article.publish_date
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.warning(f"Article too old ({article_age.days} days): {url}")
