@@ -1,6 +1,7 @@
 """
 Custom scrapers for specific news sources (CNA, Straits Times, Fox News) with DATE FILTERING
 """
+import re
 import requests
 import logging
 from bs4 import BeautifulSoup as bs
@@ -28,7 +29,6 @@ def retrieve_straits_urls(specified_length: int | None):
         
         article_urls = []
         
-        # Method 1: Article cards
         article_cards = soup.find_all("div", class_="card")
         for card in article_cards:
             if specified_length is not None and len(article_urls) >= specified_length:
@@ -39,7 +39,6 @@ def retrieve_straits_urls(specified_length: int | None):
                 if href and href.startswith("/"):
                     article_urls.append(f"{base_url}{href}")
         
-        # Method 2: All /singapore/ links
         if specified_length is None or len(article_urls) < specified_length:
             all_links = soup.find_all("a", href=True)
             for a_tag in all_links:
@@ -85,8 +84,43 @@ def retrieve_cna_urls(specified_length: int | None):
         return []
 
 
+def _unwrap_inline_tags(soup_fragment) -> None:
+    """
+    Remove ALL child tags inside <p> elements, keeping only their text.
+    This prevents BeautifulSoup from inserting spaces mid-word when any
+    inline element splits a word across tag boundaries.
+
+    e.g. <p>Fears of <a href="...">at</a>tacks</p>
+         → <p>Fears of attacks</p>
+
+    Must be called BEFORE get_text() or _join_paragraphs().
+    """
+    # Unwrap every tag inside paragraphs — CNA uses many different inline tags
+    for p in soup_fragment.find_all('p'):
+        for tag in p.find_all(True):  # True = match any tag
+            tag.unwrap()
+
+
+def _join_paragraphs(paragraphs: list) -> str:
+    """
+    Join paragraph elements with double newline to preserve paragraph structure.
+    Uses separator=' ' so BeautifulSoup inserts a space between inline tags
+    instead of concatenating them — this prevents mid-word merges like
+    'notedtheuptick' or 'tofight' caused by CNA hyperlinks mid-word.
+    """
+    result = []
+    for p in paragraphs:
+        # separator=' ' inserts space between any child tags
+        text = p.get_text(separator=' ', strip=True)
+        # Collapse multiple spaces created by adjacent tags
+        text = re.sub(r' {2,}', ' ', text).strip()
+        if text:
+            result.append(text)
+    return "\n\n".join(result)
+
+
 def scrape_straits_times(url):
-    """Scrape Straits Times article with DATE FILTERING and FIXED TRUNCATION"""
+    """Scrape Straits Times article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         res = requests.get(url, headers=headers, timeout=10)
@@ -97,24 +131,28 @@ def scrape_straits_times(url):
                         soup.find("div", {"data-testid": "article-title"}))
         headline = headline_elem.text.strip() if headline_elem else "Headline not found"
         
-        # Extract body
+        # Unwrap inline tags to prevent mid-word spaces in extracted text
+        # e.g. <a href="...">at</a>tacks → attacks
+        _unwrap_inline_tags(soup)
+
+        # Extract body — preserve paragraph breaks with \n\n
         body = ""
         article_body = soup.find("div", class_="article-body")
         if article_body:
             body_paras = article_body.find_all("p")
-            body = " ".join([p.get_text(strip=True) for p in body_paras])
+            body = _join_paragraphs(body_paras)
         
         if not body or len(body) < 100:
             body_paras = soup.find_all("p", class_="paragraph-base")
             if body_paras:
-                body = " ".join([p.get_text(strip=True) for p in body_paras])
+                body = _join_paragraphs(body_paras)
         
         if not body or len(body) < 100:
             all_paras = soup.find_all("p")
             content_paras = [p for p in all_paras 
                            if not p.find_parent(["nav", "header", "footer"]) 
                            and len(p.get_text(strip=True)) > 20]
-            body = " ".join([p.get_text(strip=True) for p in content_paras])
+            body = _join_paragraphs(content_paras)
         
         body = clean_boilerplate(body)
         
@@ -143,19 +181,21 @@ def scrape_straits_times(url):
         if date_elem and date_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(date_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future Straits Times article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Straits Times article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for Straits Times: {date_error}")
-                pass
         else:
             logger.debug(f"No date found for Straits Times article: {headline[:50]} (using today's date)")
-            pass
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
@@ -163,12 +203,10 @@ def scrape_straits_times(url):
             logger.warning(f"Insufficient content from {url}")
             return None
         
-        # FIXED: Use smart_truncate with 300 char limit for proper summary length
-        summary = smart_truncate(body, 300)
-        
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # paragraphs separated by \n\n
+            "summary": smart_truncate(body.replace("\n", " "), 300),  # flat for CSV
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -180,7 +218,7 @@ def scrape_straits_times(url):
 
 
 def scrape_cna(url):
-    """Scrape CNA article with DATE FILTERING and FIXED TRUNCATION"""
+    """Scrape CNA article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         res = requests.get(url, headers=headers, timeout=10)
@@ -190,12 +228,51 @@ def scrape_cna(url):
         headline_elem = (soup.find("h1", class_="h1--page-title") or soup.find("h1") or
                         soup.find("div", class_="article__title"))
         headline = headline_elem.text.strip() if headline_elem else "Headline not found"
-        
-        # Extract body
-        body_paras = soup.find_all("div", class_="text-long") or soup.find_all("p")
-        body = " ".join([para.get_text(strip=True) for para in body_paras])
-        
-        # Clean boilerplate FIRST
+
+        # Unwrap inline tags to prevent mid-word spaces in extracted text
+        _unwrap_inline_tags(soup)
+
+        # CNA newsletter/boilerplate phrases to filter out at paragraph level
+        CNA_BOILERPLATE = [
+            "subscribe to cna",
+            "morning brief",
+            "automated curation",
+            "top stories to start your day",
+            "not intended for persons residing in the e.u",
+            "by clicking subscribe",
+            "promotional material from mediacorp",
+            "loading",
+        ]
+
+        def _is_cna_boilerplate(text: str) -> bool:
+            t = text.lower().strip()
+            return any(phrase in t for phrase in CNA_BOILERPLATE)
+
+        # Extract body — collect <p> tags from div.text-long divs that have content.
+        # CNA's DOM contains many empty div.text-long elements (menus, blocks etc).
+        # We only want divs that actually contain <p> tags with article text.
+        # Deduplication: track seen paragraph texts to avoid mobile/desktop copies.
+        text_long_divs = soup.find_all("div", class_="text-long")
+        if text_long_divs:
+            seen_texts = set()
+            all_paras = []
+            for div in text_long_divs:
+                paras = div.find_all("p")
+                if not paras:
+                    continue
+                # Check if this div's content is a duplicate of already-seen divs
+                div_text = div.get_text(strip=True)[:100]
+                if div_text in seen_texts:
+                    break  # hit the duplicate (desktop copy) — stop here
+                seen_texts.add(div_text)
+                all_paras.extend(paras)
+        else:
+            all_paras = soup.find_all("p")
+
+        # Filter boilerplate paragraphs before joining
+        clean_paras = [p for p in all_paras if not _is_cna_boilerplate(p.get_text())]
+        body = _join_paragraphs(clean_paras)
+
         body = clean_boilerplate(body)
         
         # Extract image
@@ -214,28 +291,28 @@ def scrape_cna(url):
         if time_elem and time_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future CNA article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
-                    logger.debug(f"⏭️  Skipping old CNA article ({article_age.days} days): {headline[:50]}")
+                    logger.debug(f"Skipping old CNA article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for CNA: {date_error}")
-                pass
         else:
             logger.debug(f"No date found for CNA article: {headline[:50]} (using today's date)")
-            pass
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
-        # FIXED: Use smart_truncate with 300 char limit for proper summary length
-        summary = smart_truncate(body, 300)
-        
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # paragraphs separated by \n\n
+            "summary": smart_truncate(body.replace("\n", " "), 300),  # flat for CSV
             "publish_date": publish_date,
             "image_url": image_url,
             "topic": topic
@@ -247,39 +324,41 @@ def scrape_cna(url):
 
 
 def scrape_fox_news(url):
-    """Scrape Fox News article with DATE FILTERING"""
+    """Scrape Fox News article with DATE FILTERING and paragraph preservation"""
     try:
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
         soup = bs(res.content, "html.parser")
         
-        # Check for paywall
         paywall = bool(soup.find("div", class_="paywall"))
-        
-        # Extract headline
+
+        # Unwrap inline tags to prevent mid-word spaces in extracted text
+        _unwrap_inline_tags(soup)
+
         headline_elem = soup.find("h1", class_="headline") or soup.find("h1")
         headline = headline_elem.text.strip() if headline_elem else "Headline not found"
         
-        # Extract date (BEFORE body to skip old articles early)
         publish_date = datetime.now().strftime("%Y-%m-%d")
         time_elem = soup.find("time")
         if time_elem and time_elem.get("datetime"):
             try:
                 date_obj = datetime.fromisoformat(time_elem["datetime"].replace('Z', '+00:00'))
+                now_ref = datetime.now(date_obj.tzinfo) if date_obj.tzinfo else datetime.now()
+                if date_obj.date() > now_ref.date():
+                    logger.debug(f"Skipping future Fox News article: {headline[:50]}")
+                    return None
+
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
-                # DATE FILTERING
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
                 if article_age.days > MAX_ARTICLE_AGE_DAYS:
-                    logger.debug(f"⏭️  Skipping old Fox News article ({article_age.days} days): {headline[:50]}")
+                    logger.debug(f"Skipping old Fox News article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error for Fox News: {date_error}")
-                pass
         else:
             logger.debug(f"No date found for Fox News article: {headline[:50]} (using today's date)")
-            pass
         
-        # Extract body
+        # Extract body — preserve paragraph breaks with \n\n
         body = ""
         article = soup.find("div", class_="paywall") if paywall else (
             soup.find("div", class_="article-body") or 
@@ -290,13 +369,19 @@ def scrape_fox_news(url):
         if article:
             paragraphs = article.find_all("p")
             boilerplate_phrases = ["You can now listen to Fox News articles", "EW You can now",
-                                  "Listen to this article", "Sign up", "Subscribe"]
+                                  "Listen to this article", "Sign up", "Subscribe",
+                                  "CLICK HERE TO DOWNLOAD", "contributed to this report",
+                                  "is an associate editor", "is a senior editor", "is a staff reporter"]
             
+            clean_paras = []
             for p in paragraphs:
                 text = p.get_text(strip=True)
                 if text and len(text) > 20:
                     if not any(phrase in text for phrase in boilerplate_phrases):
-                        body += text + " "
+                        clean_paras.append(p)
+            
+            # Join with \n\n to preserve paragraph structure
+            body = "\n\n".join([p.get_text(strip=True) for p in clean_paras])
         
         body = clean_boilerplate(body.strip())
         
@@ -310,12 +395,10 @@ def scrape_fox_news(url):
         
         topic = derive_topic_from_metadata(url, soup=soup, text=f"{headline} {body}")
         
-        # FIXED: Use smart_truncate with 300 char limit for proper summary length
-        summary = smart_truncate(body, 300)
-        
         return {
             "headline": headline.replace("\n", " "),
-            "body": summary,  # Now properly truncated with ellipsis
+            "body": body,                           # paragraphs separated by \n\n
+            "summary": smart_truncate(body.replace("\n", " "), 300),  # flat for CSV
             "topic": topic
         }
         

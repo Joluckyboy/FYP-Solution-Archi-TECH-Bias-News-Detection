@@ -1,31 +1,19 @@
-from pydantic import BaseModel, Field 
+from pydantic import BaseModel, Field
+from typing import Optional
 
 class TextInput(BaseModel):
     text: str = Field(
         ...,
         json_schema_extra={"example": "This is a test sentence."}
     )
-    
+
 class PropagandaResult(BaseModel):
-    non_propaganda_probability: float = Field(
-        ...,
-        json_schema_extra={"example": 0.85}
-    )
-    propaganda_probability: float = Field(
-        ...,
-        json_schema_extra={"example": 0.15}
-    )
-    formatted_result: list = Field(
-        ...,
-        json_schema_extra={"example": [
-            ['Loaded_Language', 'stunning'],
-            ['Name_Calling,Labeling', 'war - battered'],
-            ['Exaggeration,Minimisation', 'unbelievable "'],
-            ['Loaded_Language', 'war - battered'],
-            ['Exaggeration,Minimisation', 'could so magnificent "'],
-            ['Loaded_Language', 'shock revelation']
-        ]}
-    )
+    non_propaganda_probability: float
+    propaganda_probability: float
+    formatted_result: list
+    techniques:   Optional[list]  = []
+    coverage_pct: Optional[float] = None
+    severity:     Optional[str]   = None
 
 class PropagandaResponse(BaseModel):
     propaganda_result: PropagandaResult

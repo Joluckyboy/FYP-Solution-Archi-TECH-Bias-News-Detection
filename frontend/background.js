@@ -1,6 +1,41 @@
 // API configuration
-const API_URL = "http://localhost:8010";
-const FACTCHECK_API_URL = "http://localhost:8016";
+// Smart backend detection: tries cloud first, falls back to localhost
+const PROD_HOST = "47.131.119.153";
+const CLOUD_API_URL = `http://${PROD_HOST}:8010`;
+const CLOUD_FACTCHECK_URL = `http://${PROD_HOST}:8016`;
+const LOCAL_API_URL = "http://localhost:8010";
+const LOCAL_FACTCHECK_URL = "http://localhost:8016";
+
+let API_URL = LOCAL_API_URL;
+let FACTCHECK_API_URL = LOCAL_FACTCHECK_URL;
+async function detectBackend() {
+    // Try cloud backend first
+    try {
+        const res = await fetch(`${CLOUD_API_URL}/`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+            API_URL = CLOUD_API_URL;
+            FACTCHECK_API_URL = CLOUD_FACTCHECK_URL;
+            console.log("[Checkmate] Using cloud backend:", API_URL);
+            return;
+        }
+    } catch { /* cloud unavailable */ }
+
+    // Fall back to localhost
+    try {
+        const res = await fetch(`${LOCAL_API_URL}/`, { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+            API_URL = LOCAL_API_URL;
+            FACTCHECK_API_URL = LOCAL_FACTCHECK_URL;
+            console.log("[Checkmate] Using local backend:", API_URL);
+            return;
+        }
+    } catch { /* local unavailable */ }
+
+    console.error("[Checkmate] No backend available (cloud and localhost both failed)");
+}
+
+// Detect on startup
+detectBackend();
 
 // Open the side panel
 chrome.sidePanel.setOptions({
@@ -21,10 +56,7 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 
     // Initialize default settings
-    chrome.storage.sync.get(['pageOverlayEnabled', 'contextMenuEnabled'], (result) => {
-        if (result.pageOverlayEnabled === undefined) {
-            chrome.storage.sync.set({ pageOverlayEnabled: false });
-        }
+    chrome.storage.sync.get(['contextMenuEnabled'], (result) => {
         if (result.contextMenuEnabled === undefined) {
             chrome.storage.sync.set({ contextMenuEnabled: true });
         }

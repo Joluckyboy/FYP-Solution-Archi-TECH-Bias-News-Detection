@@ -319,6 +319,40 @@ def check_which_site(url):
     else:
         return scrape_generic_article(url)
 
+@ns.route('/upload-to-s3')
+class UploadToS3(Resource):
+    @api.doc(description="Manually upload CSV to S3")
+    def post(self):
+        """Upload current scraped articles CSV to S3"""
+        try:
+            from utils.s3_uploader import S3Uploader
+            
+            s3_uploader = S3Uploader()
+            
+            if not s3_uploader.enabled:
+                return jsonify({
+                    'success': False,
+                    'message': 'S3 upload not enabled. Set S3_UPLOAD_ENABLED=true and S3_BUCKET in environment'
+                }), 400
+            
+            result = s3_uploader.upload_csv(CSVHandler.CSV_FILE, create_backup=True)
+            
+            if result.get('success'):
+                return jsonify({
+                    'success': True,
+                    'message': 'Upload successful',
+                    'main_url': result.get('main_url'),
+                    'backup_url': result.get('backup_url')
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message')
+                }), 500
+                
+        except Exception as e:
+            logger.error(f"S3 upload endpoint failed: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
 
 @ns.route("/get-transcript")
 class TranscriptScraper(Resource):

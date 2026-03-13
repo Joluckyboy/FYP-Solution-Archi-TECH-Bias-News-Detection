@@ -1,16 +1,17 @@
 youtube-transcript-api==0.6.3
-Flask==3.1.1
+Flask==3.1.3
 Flask_Cors==6.0.0
 pytesseract==0.3.13
-# pillow==11.1.0
 beautifulsoup4==4.12.3
-lxml-html-clean==0.4.1
+lxml-html-clean==0.4.4
 newspaper3k==0.2.8
-nltk==3.9.1
+nltk==3.9.3
 flask_swagger_ui==4.11.1
 flask-restx==1.3.0
-Werkzeug==3.1.5
+Werkzeug==3.1.6
 selenium
 gunicorn
 requests
 APScheduler==3.10.4
+boto3
+langdetect==1.0.9

@@ -6,10 +6,12 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
+import s3_sync
+
 # =========================================================
 # Paths
 # =========================================================
-SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/backend/scraper/data")
+SCRAPER_DATA_DIR = os.getenv("SCRAPER_DATA_DIR", "/app/data")
 SCRAPED_ARTICLES_PATH = Path(SCRAPER_DATA_DIR) / "scraped_articles.csv"
 
 # =========================================================
@@ -69,6 +71,8 @@ def _slugify(s: str) -> str:
 
 
 def _read_scraped_articles() -> pd.DataFrame:
+    s3_sync.ensure_scraped_csv()
+
     if not SCRAPED_ARTICLES_PATH.exists():
         return pd.DataFrame()
 
@@ -171,12 +175,19 @@ def _extract_trending_keywords(df: pd.DataFrame, top_n: int = 8) -> List[str]:
     scored = scored_event_first + scored_other
 
     chosen: List[str] = []
-    chosen_norm: List[str] = []
+    chosen_tokens: List[set] = []
 
-    def _norm(s: str) -> str:
-        s = s.lower().strip()
-        s = re.sub(r"\s+", " ", s)
-        return s
+    def _get_tokens(phrase: str) -> set:
+        """Get set of tokens from phrase"""
+        return set(phrase.lower().strip().split())
+    
+    def _has_significant_overlap(tokens1: set, tokens2: set) -> bool:
+        """Check if two token sets have significant overlap (>=50% of smaller set)"""
+        if not tokens1 or not tokens2:
+            return False
+        overlap = len(tokens1 & tokens2)
+        min_size = min(len(tokens1), len(tokens2))
+        return overlap >= max(2, min_size * 0.5)  # At least 2 tokens OR 50% overlap
 
     for term, _score in scored:
         term = (term or "").strip()
@@ -187,27 +198,23 @@ def _extract_trending_keywords(df: pd.DataFrame, top_n: int = 8) -> List[str]:
         if any(p in _STOPWORDS for p in parts):
             continue
 
-        n = _norm(term)
-
-        if n in chosen_norm:
-            continue
-
-        # subset of existing longer phrase → skip
-        if any(n in cn for cn in chosen_norm):
-            continue
-
-        # contains existing shorter phrase → replace with longer phrase
-        replaced = False
-        for i, cn in enumerate(list(chosen_norm)):
-            if cn in n:
-                chosen[i] = term
-                chosen_norm[i] = n
-                replaced = True
+        current_tokens = _get_tokens(term)
+        
+        # Check for overlap with existing chosen phrases
+        has_overlap = False
+        for i, existing_tokens in enumerate(chosen_tokens):
+            if _has_significant_overlap(current_tokens, existing_tokens):
+                # Keep the longer phrase (more tokens)
+                if len(current_tokens) > len(existing_tokens):
+                    # Replace shorter with longer
+                    chosen[i] = term
+                    chosen_tokens[i] = current_tokens
+                has_overlap = True
                 break
-
-        if not replaced:
+        
+        if not has_overlap:
             chosen.append(term)
-            chosen_norm.append(n)
+            chosen_tokens.append(current_tokens)
 
         if len(chosen) >= top_n:
             break
@@ -276,43 +283,77 @@ def load_visualisations_data() -> Dict[str, Any]:
 
     # -----------------------------------------------------
     # Topic coverage: topic_slug -> { outlet -> count }
-    # Frontend default value is "general-news".
+    # Alphabetical order, Business as frontend default
     # -----------------------------------------------------
     topic_outlet: Dict[str, Dict[str, int]] = {}
     if "topic" in df.columns and "source" in df.columns:
         grouped = df.groupby(["topic", "source"]).size().reset_index(name="count")
         for _, row in grouped.iterrows():
-            topic_raw = str(row.get("topic", "")).strip() or "General News"
+            topic_raw = str(row.get("topic", "")).strip()
             outlet = str(row.get("source", "")).strip() or "Unknown"
             count = int(row.get("count", 0))
-
+            
+            if not topic_raw:  # Skip empty topics
+                continue
+                
             topic_slug = _slugify(topic_raw)
-            if topic_slug in {"general", "generalnews", "general-news", "general-news-"}:
-                topic_slug = "general-news"
-
             topic_outlet.setdefault(topic_slug, {})
             topic_outlet[topic_slug][outlet] = count
 
-    # ensure default exists so UI loads with data instead of “No data”
-    topic_outlet.setdefault("general-news", topic_outlet.get("general-news", {}))
-
-    # put general-news first
-    if "general-news" in topic_outlet:
-        ordered = {"general-news": topic_outlet["general-news"]}
-        for k, v in topic_outlet.items():
-            if k != "general-news":
-                ordered[k] = v
-        topic_outlet = ordered
+    # Alphabetical order 
+    topic_outlet = dict(sorted(topic_outlet.items()))
 
     # -----------------------------------------------------
-    # Outlet bias groups: group_key -> [outlet names]
+    # Topic coverage: topic_slug -> { outlet -> count }
     # -----------------------------------------------------
+    
+    topic_outlet_bias_groups: Dict[str, Dict[str, List[Dict[str, int]]]] = {}
+    bias_col = _detect_bias_column(df)
+
+    if "topic" in df.columns and "source" in df.columns and bias_col:
+        grouped = df.groupby(["topic", "source", bias_col]).size().reset_index(name="count")
+        for _, row in grouped.iterrows():
+            topic_raw = str(row.get("topic", "")).strip() or "General News"
+            topic_slug = _slugify(topic_raw)
+            outlet = str(row.get("source", "")).strip() or "Unknown"
+            bias_raw = str(row.get(bias_col, ""))
+            bias_group = _normalize_bias_to_group(bias_raw)
+            count = int(row.get("count", 0))
+
+            if topic_slug not in topic_outlet_bias_groups:
+                topic_outlet_bias_groups[topic_slug] = {
+                    "left": [],
+                    "leaning-left": [],
+                    "center": [],
+                    "leaning-right": [],
+                    "right": [],
+                }
+
+            if bias_group and bias_group in topic_outlet_bias_groups[topic_slug]:
+                topic_outlet_bias_groups[topic_slug][bias_group].append(
+                    {"outlet": outlet, "count": count}
+                )
+
+        # Sort each bias group by count
+        for topic_slug, bias_map in topic_outlet_bias_groups.items():
+            for bias_group, outlets in bias_map.items():
+                outlets.sort(key=lambda x: x["count"], reverse=True)
+
+    # Ensure default exists
+    topic_outlet_bias_groups.setdefault(
+    "general-news",
+    {"left": [], "leaning-left": [], "center": [], "leaning-right": [], "right": []},
+    )
+
+    # --------------------------------------------------------------
+    # Outlet bias groups: group_key -> [outlet names] {FIRST DRAFT}
+    # --------------------------------------------------------------
     bias_groups: Dict[str, List[str]] = {
-        "left": [],
-        "leaning-left": [],
-        "center": [],
-        "leaning-right": [],
-        "right": [],
+    "left": [],
+    "leaning-left": [],
+    "center": [],
+    "leaning-right": [],
+    "right": [],
     }
 
     bias_col = _detect_bias_column(df)
@@ -338,4 +379,5 @@ def load_visualisations_data() -> Dict[str, Any]:
         "trendingKeywords": trending,
         "topicOutletDistribution": topic_outlet,
         "outletBiasGroups": bias_groups,
+        "topicOutletBiasGroups": topic_outlet_bias_groups
     }
