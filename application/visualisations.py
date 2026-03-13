@@ -175,12 +175,19 @@ def _extract_trending_keywords(df: pd.DataFrame, top_n: int = 8) -> List[str]:
     scored = scored_event_first + scored_other
 
     chosen: List[str] = []
-    chosen_norm: List[str] = []
+    chosen_tokens: List[set] = []
 
-    def _norm(s: str) -> str:
-        s = s.lower().strip()
-        s = re.sub(r"\s+", " ", s)
-        return s
+    def _get_tokens(phrase: str) -> set:
+        """Get set of tokens from phrase"""
+        return set(phrase.lower().strip().split())
+    
+    def _has_significant_overlap(tokens1: set, tokens2: set) -> bool:
+        """Check if two token sets have significant overlap (>=50% of smaller set)"""
+        if not tokens1 or not tokens2:
+            return False
+        overlap = len(tokens1 & tokens2)
+        min_size = min(len(tokens1), len(tokens2))
+        return overlap >= max(2, min_size * 0.5)  # At least 2 tokens OR 50% overlap
 
     for term, _score in scored:
         term = (term or "").strip()
@@ -191,27 +198,23 @@ def _extract_trending_keywords(df: pd.DataFrame, top_n: int = 8) -> List[str]:
         if any(p in _STOPWORDS for p in parts):
             continue
 
-        n = _norm(term)
-
-        if n in chosen_norm:
-            continue
-
-        # subset of existing longer phrase → skip
-        if any(n in cn for cn in chosen_norm):
-            continue
-
-        # contains existing shorter phrase → replace with longer phrase
-        replaced = False
-        for i, cn in enumerate(list(chosen_norm)):
-            if cn in n:
-                chosen[i] = term
-                chosen_norm[i] = n
-                replaced = True
+        current_tokens = _get_tokens(term)
+        
+        # Check for overlap with existing chosen phrases
+        has_overlap = False
+        for i, existing_tokens in enumerate(chosen_tokens):
+            if _has_significant_overlap(current_tokens, existing_tokens):
+                # Keep the longer phrase (more tokens)
+                if len(current_tokens) > len(existing_tokens):
+                    # Replace shorter with longer
+                    chosen[i] = term
+                    chosen_tokens[i] = current_tokens
+                has_overlap = True
                 break
-
-        if not replaced:
+        
+        if not has_overlap:
             chosen.append(term)
-            chosen_norm.append(n)
+            chosen_tokens.append(current_tokens)
 
         if len(chosen) >= top_n:
             break

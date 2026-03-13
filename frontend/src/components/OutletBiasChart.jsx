@@ -14,7 +14,7 @@ const bucketLabels = {
 const bucketColors = { 
   left: "bg-blue-200", 
   "leaning-left": "bg-blue-100", 
-  center: "bg-gray-100", 
+  center: "bg-purple-100", 
   "leaning-right": "bg-red-100", 
   right: "bg-red-200" 
 };

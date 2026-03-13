@@ -64,9 +64,9 @@ def _run_scrape_job(job_id, num_articles, sg_only):
     try:
         job = active_jobs[job_id]
 
-        # restore CSV from S3 before scraping
+        # Restore CSV from S3 before scraping
         _restore_csv_from_s3()
-        
+
         sources = SINGAPORE_SOURCES if sg_only else {**SINGAPORE_SOURCES, **US_SOURCES}
 
         job['total_sources'] = len(sources)
@@ -88,7 +88,9 @@ def _run_scrape_job(job_id, num_articles, sg_only):
                                     'source': source['name'],
                                     'url': url,
                                     'published_at': result.get('publish_date', ''),
-                                    'summary': result.get('body', '')[:300],
+                                    # FIX: use pre-built summary field (flat 300-char string)
+                                    # instead of raw body[:300] which truncates mid-paragraph
+                                    'summary': result.get('summary', ''),
                                     'image_url': result.get('image_url', ''),
                                     'country': source['country'],
                                     'topic': result.get('topic', 'General'),
@@ -104,7 +106,8 @@ def _run_scrape_job(job_id, num_articles, sg_only):
                                     'source': source['name'],
                                     'url': url,
                                     'published_at': result.get('publish_date', ''),
-                                    'summary': result.get('body', '')[:300],
+                                    # FIX: use pre-built summary field (flat 300-char string)
+                                    'summary': result.get('summary', ''),
                                     'image_url': result.get('image_url', ''),
                                     'country': source['country'],
                                     'topic': result.get('topic', 'General'),
@@ -166,6 +169,7 @@ def _run_scrape_job(job_id, num_articles, sg_only):
         job['status'] = 'failed'
         job['error'] = str(e)
         job['completed_at'] = datetime.now().isoformat()
+
 
 def _restore_csv_from_s3():
     """Download existing CSV from S3 into local file before scraping."""

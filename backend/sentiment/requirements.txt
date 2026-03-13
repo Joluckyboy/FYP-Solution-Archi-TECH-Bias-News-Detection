@@ -8,3 +8,4 @@ torch
 fastapi 
 uvicorn
 scipy
+wordninja
