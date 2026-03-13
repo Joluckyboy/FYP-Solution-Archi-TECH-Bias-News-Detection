@@ -20,15 +20,6 @@ services:
       - ENV=production
     restart: always
 
-  bias_engine:
-    build:
-      context: ./backend/political_bias
-    ports:
-      - "9000:9000"
-    environment:
-      - ENV=production
-    restart: always
-
   emotion:
     build:
       context: ./backend/emotion
@@ -121,7 +112,7 @@ services:
       - scraper
       - factcheck
       - analyzer
-      - bias_engine
+      - political_bias
     restart: always
 
 

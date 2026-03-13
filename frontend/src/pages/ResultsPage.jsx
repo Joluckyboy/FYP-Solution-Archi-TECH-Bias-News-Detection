@@ -659,26 +659,8 @@ const ResultsPage = () => {
                     Analyze the political bias of the article.
                     <br />
                     <br />
-                    <div className="flex items-center text-start">
-                      <Accordion type="single" collapsible>
-                        <AccordionItem value="item-1">
-                          <AccordionTrigger className="bg-fuchsia-200 p-1 font-semibold">
-                            <div className="flex items-start">
-                              Summary of this analysis
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <br />
-                            {data?.data_summary?.political_bias_summary ??
-                              "No political bias summary available"}
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
                   </CardDescription>
                 </CardHeader>
-
-                <Separator />
                 <CardContent>
                   <PoliticalBias url={data.url} title={data.title} content={data.content} />
                 </CardContent>
