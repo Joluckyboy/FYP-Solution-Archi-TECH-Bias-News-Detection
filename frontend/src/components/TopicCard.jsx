@@ -34,7 +34,7 @@ const TopicCard = ({ topic }) => {
     const [imageIndex, setImageIndex] = useState(0);
 
     const currentImage = imagesList[imageIndex] || null;
-    const hasImage = !!currentImage && currentImage.startsWith("http");
+    const hasImage = !!currentImage && currentImage.startsWith("http") && !currentImage.includes("placehold.co");
 
     const [analyzing, setAnalyzing] = useState(false);
     const [analyzeError, setAnalyzeError] = useState(null);
