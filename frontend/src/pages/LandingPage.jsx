@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
-import get_api from "@/config/config";
-import TrendingKeywords from "../components/TrendingKeywords";
-import OutletBiasChart from "../components/OutletBiasChart";
-import TopicOutletDistribution from "../components/TopicOutletDistribution";
+import get_api, { get_analyzer } from "@/config/config";
+import BiasLabelGuide from "@/components/BiasLabelGuide";
+import TrendingKeywords from "@/components/TrendingKeywords";
+import TopicOutletBias from "@/components/TopicOutletBias";
 import TopicFeed from "@/components/TopicFeed";
 
 import { CustomInput } from "@/components/ui/custom-input";
@@ -17,7 +17,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BadgeCheck, Scale, AlertCircle, Gauge, SmilePlus } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 
 import axios from "axios";
 
@@ -29,6 +29,28 @@ const LandingPage = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState(false);
   const [forceReanalyze] = useState(false);
+
+  // ── Topics state (lifted here so filter pills can share it) ──────────────
+  const [topics, setTopics] = useState([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
+  const [topicsError, setTopicsError] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+
+  useEffect(() => {
+    get_analyzer().then((analyzerUrl) => {
+      axios
+        .get(`${analyzerUrl}/dashboard/topics`)
+        .then((res) => {
+          setTopics(res.data.topics || []);
+          setTopicsLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch topics:", err);
+          setTopicsError("Failed to load topics.");
+          setTopicsLoading(false);
+        });
+    });
+  }, []);
 
   useEffect(() => {
     get_api().then((url) => {
@@ -232,68 +254,101 @@ const LandingPage = () => {
 
       <div className="ml-12 mr-12">
 
-        {/* Topics Divider */}
-        <div className="w-full h-px bg-black border-0 mb-12"></div>
-
         {/* Latest Topics Card */}
         <div className="mb-12">
           <Card className="w-full h-[600px] flex flex-col">
             <CardHeader>
-              <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
+              <div className="flex flex-col gap-3">
+                <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
+                {/* Filter pills */}
+                {(() => {
+                  const cats = [...new Set(topics.map(t => t.topicName).filter(Boolean))].sort();
+                  if (cats.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedTopic(null)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedTopic === null
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                      >
+                        All
+                      </button>
+                      {cats.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedTopic(selectedTopic === cat ? null : cat)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedTopic === cat
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
             </CardHeader>
             <CardContent className="p-6 flex-1 overflow-y-auto">
-              <TopicFeed compact={true} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Trending Keywords Card */}
-        <div className="mb-12">
-          <Card className="w-full h-[400px]">
-            <CardHeader>
-              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <TrendingKeywords />
+              <TopicFeed
+                compact={true}
+                topics={topics}
+                loading={topicsLoading}
+                error={topicsError}
+                selectedTopic={selectedTopic}
+              />
             </CardContent>
           </Card>
         </div>
 
         {/* Visualisations */}
-        <div className="grid grid-cols-2 gap-8 mb-12">
-          {/* Articles per Outlet, filterable by topic */}
-          <Card className="h-[500px]">
-            <CardHeader>
-              <CardTitle className="text-left checkmate-gradient">Topic Coverage</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <TopicOutletDistribution />
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 gap-8 mb-12">
+          {/* Guide to Political Bias Labels */}
+          <BiasLabelGuide />
           {/* Outlet Bias */}
-          <Card className="h-[500px]">
-            <CardHeader>
+          <Card className="h-[650px] flex flex-col">
+            <CardHeader className="flex-none">
               <CardTitle className="checkmate-gradient">
-                Outlet Bias Distribution
+                Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <OutletBiasChart />
-              <p className="text-sm">Ratings do not reflect accuracy or credibility, they reflect perspective only.</p>
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">  
+              <TopicOutletBias />
+            </CardContent>
+            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none"> 
+              <p className="text-base text-gray-600 italic m-0">
+                Ratings reflect outlet perspective only, not accuracy or credibility.
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
+
+        {/* Trending Keywords */}
+        <div className="mb-12">
+          <Card className="w-full min-h-[300px]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 h-[240px] overflow-hidden">
+              <TrendingKeywords />
             </CardContent>
           </Card>
         </div>
 
-        {/* Final Divider */}
-        <div className="w-full h-px bg-black border-0 mb-8"></div>
-
         {/* Link to Explanations */}
         <div className="text-center">
-          <p className="text-xl checkmate-gradient">More About:</p>
           <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
             How This Works!
           </Link>
+        </div>
+
+        <div className="text-center m-6">
+          <p className="text-slate-600">
+            There is no news that is completely unbiased. We provide a range of perspectives on today's news to help you decide! ☻
+          </p>
         </div>
 
       </div>

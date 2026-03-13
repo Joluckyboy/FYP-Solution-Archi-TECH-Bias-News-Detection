@@ -1,25 +1,58 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Loader2, Zap } from "lucide-react";
+import get_api from "@/config/config";
+import axios from "axios";
 
 const TopicCard = ({ topic }) => {
-    const { id, title, image, sourceCount, biasDistribution } = topic;
+    const { id, title, image, sourceCount, biasDistribution, frontUrl } = topic;
     const navigate = useNavigate();
+    const hasImage = image && image.startsWith("http");
 
-    // Calculate total for percentages if not provided, though we expect pre-calculated percentages or counts
+    const [analyzing, setAnalyzing] = useState(false);
+    const [analyzeError, setAnalyzeError] = useState(null);
+
+    // Calculate total for percentages
     const total = biasDistribution.left + biasDistribution.leaning_left + biasDistribution.center + biasDistribution.leaning_right + biasDistribution.right;
     const leftPct = total > 0 ? ((biasDistribution.left + biasDistribution.leaning_left) / total) * 100 : 0;
     const centerPct = total > 0 ? (biasDistribution.center / total) * 100 : 0;
     const rightPct = total > 0 ? ((biasDistribution.right + biasDistribution.leaning_right) / total) * 100 : 0;
 
+    const handleAnalyze = async () => {
+        if (!frontUrl) return;
+        setAnalyzing(true);
+        setAnalyzeError(null);
+        try {
+            const API_URL = await get_api();
+            const res = await axios.post(`${API_URL}/application/new_query`, {
+                url: frontUrl,
+                force: false,
+            });
+            navigate(`/results/${res.data.id}?redirect=false`, {
+                state: { articleUrl: frontUrl },
+            });
+        } catch (err) {
+            console.error("Analyze failed:", err);
+            setAnalyzeError("Failed to analyse. Please try again.");
+            setAnalyzing(false);
+        }
+    };
+
     return (
         <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full border-none shadow-md">
             {/* Image Section */}
             <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
-                <img
-                    src={image}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                />
+                {hasImage ? (
+                    <img
+                        src={image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                        onError={(e) => { e.target.style.display = "none"; e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900"); }}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900" />
+                )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                     <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-md">
                         {title}
@@ -32,55 +65,68 @@ const TopicCard = ({ topic }) => {
                     <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                         {sourceCount} Sources
                     </span>
-                    {/* Placeholder for time or other metadata if needed */}
                 </div>
 
                 {/* Bias Bar Chart */}
                 <div className="mt-2">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1 font-semibold">
-                        <span className="text-red-600">Left {Math.round(leftPct)}%</span>
-                        <span className="text-gray-500">Center {Math.round(centerPct)}%</span>
-                        <span className="text-blue-600">Right {Math.round(rightPct)}%</span>
+                        <span className="text-blue-500">Left {Math.round(leftPct)}%</span>
+                        <span className="text-purple-500">Center {Math.round(centerPct)}%</span>
+                        <span className="text-red-500">Right {Math.round(rightPct)}%</span>
                     </div>
 
                     <div className="h-3 w-full flex rounded-full overflow-hidden bg-gray-100">
-                        {/* Left Segment */}
-                        <div
-                            className="h-full bg-red-500 first:rounded-l-full relative group"
-                            style={{ width: `${leftPct}%` }}
-                        >
-                        </div>
-
-                        {/* Center Segment */}
-                        <div
-                            className="h-full bg-gray-300 relative group"
-                            style={{ width: `${centerPct}%` }}
-                        >
-                        </div>
-
-                        {/* Right Segment */}
-                        <div
-                            className="h-full bg-blue-500 last:rounded-r-full relative group"
-                            style={{ width: `${rightPct}%` }}
-                        >
-                        </div>
+                        <div className="h-full bg-blue-400 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
+                        <div className="h-full bg-purple-500 relative group" style={{ width: `${centerPct}%` }} />
+                        <div className="h-full bg-red-400 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
                     </div>
-
-                    {/* <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-1">
-                        <span>Democratic</span>
-                        <span>Independent</span>
-                        <span>Republican</span>
-                    </div> */}
                 </div>
             </CardContent>
 
-            <CardFooter className="p-4 pt-0">
-                <button
-                    className="w-full py-2 bg-secondary/10 hover:bg-secondary/20 text-secondary-foreground text-sm font-medium rounded-md transition-colors"
-                    onClick={() => navigate(`/full-coverage/${id}`)}
-                >
-                    View Full Coverage
-                </button>
+            <CardFooter className="p-4 pt-0 flex flex-col gap-2">
+                <div className="flex gap-2 w-full">
+                    {/* View Full Coverage */}
+                    <button
+                        className="flex-1 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-md transition-colors"
+                        onClick={() => navigate(`/full-coverage/${id}`)}
+                    >
+                        View Full Coverage
+                    </button>
+
+                    {/* Analyse Top Article */}
+                    {frontUrl ? (
+                        <button
+                            className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition-colors"
+                            onClick={handleAnalyze}
+                            disabled={analyzing}
+                        >
+                            {analyzing ? (
+                                <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    Analysing…
+                                </>
+                            ) : (
+                                <>
+                                    <Zap className="h-3.5 w-3.5" />
+                                    Analyse Top Article
+                                </>
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-blue-200 text-blue-400 text-sm font-medium rounded-md cursor-not-allowed"
+                            disabled
+                            title="No article URL available"
+                        >
+                            <Zap className="h-3.5 w-3.5" />
+                            Analyse
+                        </button>
+                    )}
+                </div>
+
+                {analyzeError && (
+                    <p className="text-xs text-red-500 text-center">{analyzeError}</p>
+                )}
             </CardFooter>
         </Card>
     );

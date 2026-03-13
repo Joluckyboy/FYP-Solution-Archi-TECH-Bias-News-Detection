@@ -17,7 +17,6 @@ const PopupPage = () => {
   const [articleId, setArticleId] = useState(null);
 
   // Toggle states
-  const [pageOverlayEnabled, setPageOverlayEnabled] = useState(false);
   const [contextMenuEnabled, setContextMenuEnabled] = useState(true);
 
   const [API_URL, setAPI_URL] = useState(null);
@@ -413,9 +412,8 @@ const PopupPage = () => {
   useEffect(() => {
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.get(
-        ["pageOverlayEnabled", "contextMenuEnabled"],
+        ["contextMenuEnabled"],
         (result) => {
-          setPageOverlayEnabled(result.pageOverlayEnabled ?? false);
           setContextMenuEnabled(result.contextMenuEnabled ?? true);
         },
       );
@@ -537,13 +535,6 @@ const PopupPage = () => {
   }, []);
 
   // Handle toggle changes
-  const handlePageOverlayToggle = (checked) => {
-    setPageOverlayEnabled(checked);
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.sync.set({ pageOverlayEnabled: checked });
-    }
-  };
-
   const handleContextMenuToggle = (checked) => {
     setContextMenuEnabled(checked);
     if (typeof chrome !== "undefined" && chrome.storage) {
@@ -829,18 +820,6 @@ const PopupPage = () => {
       {/* Toggle Switches */}
       <Card className="mb-4">
         <CardContent className="p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Page Overlay</p>
-              <p className="text-xs text-gray-400">Highlight claims on page</p>
-            </div>
-            <Switch
-              checked={pageOverlayEnabled}
-              onCheckedChange={handlePageOverlayToggle}
-              disabled={!isNewsPage}
-            />
-          </div>
-
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Context Menu</p>

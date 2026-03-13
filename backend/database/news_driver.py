@@ -229,6 +229,37 @@ def update_model_data_summary_by_url(url, update_data):
     except Exception as e:
         print(f"Error updating model data summary by URL: {e}")
 
+def read_documents_by_domain(domain):
+    """Read all news documents whose URL matches the given domain.
+
+    Matches ://domain/ and ://www.domain/ to avoid false positives
+    from substring matches (e.g. 'news' matching every news site).
+    """
+    try:
+        cols = "url,title,sentiment_result,propaganda_result,factcheck_result"
+        # Match exact domain: ://domain/ (with or without www.)
+        result_exact = supabase.table("news_data").select(
+            cols
+        ).ilike("url", f"%://{domain}/%").execute()
+
+        result_www = supabase.table("news_data").select(
+            cols
+        ).ilike("url", f"%://www.{domain}/%").execute()
+
+        # Deduplicate by URL
+        seen = set()
+        combined = []
+        for article in (result_exact.data or []) + (result_www.data or []):
+            if article["url"] not in seen:
+                seen.add(article["url"])
+                combined.append(article)
+
+        return combined
+    except Exception as e:
+        print(f"Error reading documents by domain: {e}")
+        return []
+
+
 # Delete
 def delete_documents(filter_data):
     """Delete news documents matching filters."""

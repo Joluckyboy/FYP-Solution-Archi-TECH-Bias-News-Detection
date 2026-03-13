@@ -1,0 +1,186 @@
+name: AWS Deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: 788577008510.dkr.ecr.ap-southeast-1.amazonaws.com
+  EC2_HOST: 47.131.119.153
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      database: ${{ steps.filter.outputs.database }}
+      sentiment: ${{ steps.filter.outputs.sentiment }}
+      emotion: ${{ steps.filter.outputs.emotion }}
+      propaganda: ${{ steps.filter.outputs.propaganda }}
+      political_bias: ${{ steps.filter.outputs.political_bias }}
+      factcheck: ${{ steps.filter.outputs.factcheck }}
+      analyzer: ${{ steps.filter.outputs.analyzer }}
+      scraper: ${{ steps.filter.outputs.scraper }}
+      application: ${{ steps.filter.outputs.application }}
+      webapp: ${{ steps.filter.outputs.webapp }}
+      telebot: ${{ steps.filter.outputs.telebot }}
+      bias_classifier_task: ${{ steps.filter.outputs.bias_classifier_task }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            database:
+              - 'backend/database/**'
+            sentiment:
+              - 'backend/sentiment/**'
+            emotion:
+              - 'backend/emotion/**'
+            propaganda:
+              - 'backend/propaganda/**'
+            political_bias:
+              - 'backend/political_bias/**'
+            factcheck:
+              - 'backend/fact-check/**'
+            analyzer:
+              - 'backend/analyzer/**'
+            scraper:
+              - 'backend/scraper/**'
+            bias_classifier_task:
+              - 'backend/bias_classifier_task/**'
+            application:
+              - 'application/**'
+            webapp:
+              - 'frontend/**'
+            telebot:
+              - 'telebot/**'
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: database
+            context: ./backend/database
+            ecr_repo: checkmate/database
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.database }}
+          - name: sentiment
+            context: ./backend/sentiment
+            ecr_repo: checkmate/sentiment
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.sentiment }}
+          - name: emotion
+            context: ./backend/emotion
+            ecr_repo: checkmate/emotion
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.emotion }}
+          - name: propaganda
+            context: ./backend/propaganda
+            ecr_repo: checkmate/propaganda
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.propaganda }}
+          - name: political-bias
+            context: ./backend/political_bias
+            ecr_repo: checkmate/political-bias
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.political_bias }}
+          - name: factcheck
+            context: ./backend/fact-check
+            ecr_repo: checkmate/factcheck
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.factcheck }}
+          - name: analyzer
+            context: ./backend/analyzer
+            ecr_repo: checkmate/analyzer
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.analyzer }}
+          - name: scraper
+            context: ./backend/scraper
+            ecr_repo: checkmate/scraper
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.scraper }}
+          - name: bias-classifier
+            context: ./backend/bias_classifier_task
+            ecr_repo: checkmate/bias-classifier
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.bias_classifier_task }}
+          - name: application
+            context: ./application
+            ecr_repo: checkmate/application
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.application }}
+          - name: webapp
+            context: ./frontend
+            ecr_repo: checkmate/webapp
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.webapp }}
+          - name: telebot
+            context: ./telebot
+            ecr_repo: checkmate/telebot
+            dockerfile: dockerfile
+            changed: ${{ needs.changes.outputs.telebot }}
+
+    steps:
+      - name: Skip if no changes
+        if: matrix.service.changed != 'true'
+        run: echo "No changes in ${{ matrix.service.name }}, skipping."
+
+      - name: Checkout Code
+        if: matrix.service.changed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        if: matrix.service.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: matrix.service.changed == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        if: matrix.service.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service.name }}
+        if: matrix.service.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ format('{0}/{1}', matrix.service.context, matrix.service.dockerfile) }}
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:latest
+            ${{ env.ECR_REGISTRY }}/${{ matrix.service.ecr_repo }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Login to ECR
+            aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 788577008510.dkr.ecr.ap-southeast-1.amazonaws.com
+
+            # Pull latest images and restart
+            docker-compose -f ~/docker-compose.prod.yaml pull
+            docker-compose -f ~/docker-compose.prod.yaml up -d
+
+            # Clean up old images
+            docker image prune -f

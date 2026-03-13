@@ -333,6 +333,16 @@ def update_news_propaganda(news_id: str, data: NewsItem):
     return JSONResponse(status_code=200, content={"message": "Propaganda result updated successfully"})
 
 
+@app.get("/database/getByDomain/{domain}", responses={
+    200: {
+        "description": "Articles for domain retrieved successfully",
+    }
+})
+def get_news_by_domain(domain: str):
+    articles = news_methods.read_documents_by_domain(domain)
+    return JSONResponse(status_code=200, content={"articles": articles})
+
+
 @app.delete("/database/", responses={
     200: {
         "description": "News deleted successfully",

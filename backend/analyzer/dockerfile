@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install dependencies first to leverage caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the sentence-transformers model so it's available offline at runtime
+# (docker-compose sets TRANSFORMERS_OFFLINE=1, so the model must be baked in here)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# Copy source code as the 'analyzer' package
+COPY . ./analyzer/
+
+# Expose port
+EXPOSE 8017
+
+# Run as a module so relative imports work correctly
+CMD ["python", "-m", "analyzer.app"]

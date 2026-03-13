@@ -10,6 +10,12 @@ Text cleaning and validation utilities for news scraping
 import re
 import logging
 
+try:
+    from langdetect import detect, LangDetectException
+    HAS_LANGDETECT = True
+except ImportError:
+    HAS_LANGDETECT = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -263,10 +269,26 @@ def clean_text_comprehensive(text: str) -> str:
 
 
 def is_english_text(text: str, min_ascii_ratio: float = 0.7) -> bool:
-    """Check if text is primarily English"""
+    """
+    Check if text is primarily English using langdetect library for accuracy
+    Falls back to ASCII ratio check if langdetect is not available
+    """
     if not text or len(text) < 20:
         return False
     
+    # Try using langdetect if available (much more accurate)
+    if HAS_LANGDETECT:
+        try:
+            lang = detect(text)
+            is_english = lang == 'en'
+            if not is_english:
+                logger.debug(f"Non-English text detected: language={lang}")
+            return is_english
+        except LangDetectException:
+            # If langdetect fails, fall back to ASCII ratio
+            logger.debug("langdetect failed, using ASCII ratio fallback")
+    
+    # Fallback: Check ASCII ratio (less accurate but works without dependencies)
     ascii_chars = sum(1 for c in text if ord(c) < 128)
     ascii_ratio = ascii_chars / len(text)
     
