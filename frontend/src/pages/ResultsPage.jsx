@@ -5,8 +5,7 @@ import get_api from "@/config/config";
 
 import EmotionTab from "@/components/EmotionTab";
 import PropagandaTab from "@/components/PropagandaTab";
-import SentimentTab from "@/components/SentimentTab";
-import FactsSummaryBanner from "@/components/FactsSummaryBanner";
+import PoliticalBias from "@/components/PoliticalBias";
 
 import { HashLoader } from "react-spinners";
 import {
@@ -194,11 +193,12 @@ const ResultsPage = () => {
 
           {/* ── Tabs ─────────────────────────────────────────────────────────── */}
           <Tabs defaultValue="facts" className="w-full slide-in-right">
-            <TabsList className="grid w-full grid-cols-4 gap-2 shadow">
+            <TabsList className="grid w-full grid-cols-5 gap-2 shadow">
               <TabsTrigger value="facts">Facts</TabsTrigger>
               <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
               <TabsTrigger value="emotion">Emotion</TabsTrigger>
               <TabsTrigger value="propaganda">Propaganda</TabsTrigger>
+              <TabsTrigger value="politicalbias">Political Bias</TabsTrigger>
             </TabsList>
 
             {/* ══ FACT-CHECK ══════════════════════════════════════════════════ */}
@@ -404,6 +404,25 @@ const ResultsPage = () => {
               </Card>
             </TabsContent>
 
+            {/* Political Bias Analysis */}
+            <TabsContent value="politicalbias">
+              <Card className="p-4">
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Scale className="h-10 w-10" />
+                    <CardTitle className="text-3xl">Political Bias Analysis</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Analyze the political bias of the article.
+                    <br />
+                    <br />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PoliticalBias url={data.url} title={data.title} content={data.content} />
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
