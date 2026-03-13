@@ -19,12 +19,72 @@ const getBiasKey = (rawBias) => {
     return 'center';
 };
 
+// --- Clustering Helpers ---
+const STOP_WORDS = new Set([
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "of", "from", 
+    "as", "is", "are", "was", "were", "be", "been", "this", "that", "these", "those", "it", "its", "has", "have"
+]);
+
+const tokenize = (text) => {
+    if (!text) return new Set();
+    const words = text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+    return new Set(words.filter(w => w.length > 2 && !STOP_WORDS.has(w)));
+};
+
+const getJaccardSimilarity = (setA, setB) => {
+    const intersection = new Set([...setA].filter(x => setB.has(x)));
+    const union = new Set([...setA, ...setB]);
+    return intersection.size / (union.size || 1);
+};
+
+const groupArticlesIntoEvents = (articles, similarityThreshold = 0.25) => {
+    const events = []; // { title: string, tokens: Set, articles: [] }
+
+    articles.forEach(article => {
+        const title = article.title || "";
+        const tokens = tokenize(title);
+        
+        if (tokens.size === 0) return;
+
+        let bestMatch = null;
+        let highestSim = 0;
+
+        for (const event of events) {
+            const sim = getJaccardSimilarity(tokens, event.tokens);
+            if (sim > highestSim) {
+                highestSim = sim;
+                bestMatch = event;
+            }
+        }
+
+        if (bestMatch && highestSim >= similarityThreshold) {
+            bestMatch.articles.push(article);
+            // Optionally, we could merge tokens, but keeping the original representation is often safer.
+        } else {
+            events.push({
+                title: title,
+                tokens: tokens,
+                articles: [article],
+            });
+        }
+    });
+
+    // Sort events by number of covering sources (descending)
+    return events.sort((a, b) => b.articles.length - a.articles.length);
+};
+
 // Custom Tooltip
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
 
-    // Find the dateMap entry for this label to get article details
-    const articlesForDate = payload[0]?.payload?.articlesByBias || {};
+    // Retrieve the pre-grouped events for this specific date
+    const dateData = payload[0]?.payload;
+    const events = dateData?.events || [];
+
+    const getBiasColor = (bias) => {
+        const config = BIAS_CONFIG.find(c => c.key === bias);
+        return config ? config.color : '#94A3B8';
+    };
 
     return (
         <div style={{
@@ -33,34 +93,42 @@ const CustomTooltip = ({ active, payload, label }) => {
             borderRadius: '10px',
             padding: '12px 16px',
             boxShadow: '0 4px 16px rgb(0 0 0 / 0.12)',
-            maxWidth: '320px',
+            maxWidth: '380px',
             fontSize: '12px',
         }}>
             <p style={{ fontWeight: 700, color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
-                📅 {label}
+                📅 {label} <span style={{ fontWeight: 400, color: '#64748B', marginLeft: '4px' }}>({dateData.totalArticles || 0} articles)</span>
             </p>
-            {BIAS_CONFIG.map(({ key, label: biasLabel, color }) => {
-                const arts = articlesForDate[key];
-                if (!arts || arts.length === 0) return null;
-                return (
-                    <div key={key} style={{ marginBottom: '8px' }}>
-                        <p style={{ color, fontWeight: 700, marginBottom: '3px' }}>
-                            {biasLabel} ({arts.length} article{arts.length > 1 ? 's' : ''})
-                        </p>
-                        {arts.slice(0, 3).map((a, i) => (
-                            <p key={i} style={{ color: '#475569', marginLeft: '8px', marginBottom: '2px', lineHeight: '1.4' }}>
-                                • <span style={{ fontWeight: 600 }}>{a.source}</span>
-                                {a.title ? `: ${a.title.length > 60 ? a.title.slice(0, 60) + '…' : a.title}` : ''}
+
+            {events.length === 0 ? (
+                <p style={{ color: '#64748B', fontStyle: 'italic' }}>No prominent events found.</p>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {events.map((evt, idx) => (
+                        <div key={idx}>
+                            <p style={{ fontWeight: 700, color: '#334155', marginBottom: '4px', lineHeight: '1.3' }}>
+                                📌 {evt.title}
                             </p>
-                        ))}
-                        {arts.length > 3 && (
-                            <p style={{ color: '#94A3B8', marginLeft: '8px', fontStyle: 'italic' }}>
-                                +{arts.length - 3} more
-                            </p>
-                        )}
-                    </div>
-                );
-            })}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {evt.articles.map((a, i) => (
+                                    <span key={i} style={{
+                                        display: 'inline-block',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        background: `${getBiasColor(a.bias)}15`,
+                                        border: `1px solid ${getBiasColor(a.bias)}30`,
+                                        color: getBiasColor(a.bias),
+                                        fontWeight: 600,
+                                        fontSize: '10px'
+                                    }}>
+                                        {a.source}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -91,17 +159,31 @@ const CoverageTimeline = ({ articles }) => {
                     center: 0,
                     leaning_right: 0,
                     right: 0,
-                    articlesByBias: { left: [], leaning_left: [], center: [], leaning_right: [], right: [] },
+                    totalArticles: 0,
+                    rawArticles: [],
                 };
             }
 
             const biasKey = getBiasKey(a.political_bias || a.bias);
             dateMap[dateKey][biasKey] += 1;
-            dateMap[dateKey].articlesByBias[biasKey].push({
+            dateMap[dateKey].totalArticles += 1;
+            dateMap[dateKey].rawArticles.push({
                 title: a.title || '',
                 source: a.source || 'Unknown',
+                bias: biasKey,
+                rawBias: a.political_bias || a.bias || '',
             });
         });
+
+        // Convert the date map to an array and group raw articles into events
+        return Object.values(dateMap).map(day => {
+            const events = groupArticlesIntoEvents(day.rawArticles);
+            // Optionally clear rawArticles to save memory if needed
+            return {
+                ...day,
+                events,
+            };
+        }).sort((a, b) => a.timestamp - b.timestamp);
 
         return Object.values(dateMap).sort((a, b) => a.timestamp - b.timestamp);
     }, [articles]);
