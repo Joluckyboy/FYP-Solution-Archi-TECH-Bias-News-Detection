@@ -41,6 +41,18 @@ const KeywordArticlesPage = () => {
     if (keyword) fetchArticles();
   }, [keyword]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'smooth'
+      });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
   const filteredArticles = articles.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.summary.toLowerCase().includes(searchQuery.toLowerCase())
