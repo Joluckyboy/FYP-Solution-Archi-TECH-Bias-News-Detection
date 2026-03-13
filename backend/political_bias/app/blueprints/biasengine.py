@@ -7,6 +7,11 @@ import json
 
 biasengine = Blueprint('biasengine', __name__, url_prefix='/biasengine')
 
+@biasengine.get("/")
+def health_check():
+    # return 200
+    return {"status": "ok"}
+
 @biasengine.route('/hello')
 def hello():
     return "Hello"
