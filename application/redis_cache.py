@@ -65,7 +65,7 @@ def delete_cached_result(url: str):
 def is_analysis_complete(data: dict) -> bool:
     """Check if all analysis fields are present in the cached data."""
     required = ["sentiment_result", "emotion_result", "propaganda_result",
-                 "factcheck_result", "summarise_result"]
+                 "factcheck_result", "summarise_result", "political_bias_result"]
     for field in required:
         if not data.get(field):
             return False
