@@ -1,9 +1,5 @@
-pandas
 pydantic
-spacy 
-spacy_streamlit
-streamlit
 transformers
 torch
-fastapi 
+fastapi
 uvicorn

@@ -1,4 +1,3 @@
 python-telegram-bot[job-queue]
-pyshorteners
-dotenv
+python-dotenv
 requests

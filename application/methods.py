@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import re
 
 import requests  # type: ignore
-from flask import abort
+from fastapi import HTTPException
 
 import pprint
 import logging
@@ -119,7 +119,7 @@ def extract_news(url):
     response = requests.get(query_url, params=params)
 
     if response.status_code == 400:
-        abort(400, description="Invalid URL format")
+        raise HTTPException(status_code=400, detail="Invalid URL format")
 
     text = response.json()
     return text
