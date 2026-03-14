@@ -18,7 +18,11 @@ jobs:
       database: ${{ steps.filter.outputs.database }}
       factcheck: ${{ steps.filter.outputs.factcheck }}
       scraper: ${{ steps.filter.outputs.scraper }}
+      analyzer: ${{ steps.filter.outputs.analyzer }}
+      political_bias: ${{ steps.filter.outputs.political_bias }}
+      bias_classifier_task: ${{ steps.filter.outputs.bias_classifier_task }}
       application: ${{ steps.filter.outputs.application }}
+      telebot: ${{ steps.filter.outputs.telebot }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -41,8 +45,16 @@ jobs:
               - 'backend/fact-check/**'
             scraper:
               - 'backend/scraper/**'
+            analyzer:
+              - 'backend/analyzer/**'
+            political_bias:
+              - 'backend/political_bias/**'
+            bias_classifier_task:
+              - 'backend/bias_classifier_task/**'
             application:
               - 'application/**'
+            telebot:
+              - 'telebot/**'
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -172,6 +184,12 @@ jobs:
             context: ./backend/fact-check
           - name: scraper
             context: ./backend/scraper
+          - name: analyzer
+            context: ./backend/analyzer
+          - name: political-bias
+            context: ./backend/political_bias
+          - name: bias-classifier
+            context: ./backend/bias_classifier_task
           - name: application
             context: ./application
           - name: telebot
