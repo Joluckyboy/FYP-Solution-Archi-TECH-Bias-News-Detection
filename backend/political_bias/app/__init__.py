@@ -1,5 +1,6 @@
 from flask import Flask
 from fastapi import FastAPI, HTTPException
+from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from .functions.get_model import get_model
@@ -9,6 +10,7 @@ from .functions.get_model import get_model
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    CORS(app)
     app.config.from_mapping(
     )
 
@@ -35,7 +37,7 @@ def create_app(test_config=None):
 
     # set perplexity api key
     load_dotenv()
-    app.pkey=os.environ.get('KEY')
+    app.pkey = os.environ.get('API_KEY') or os.environ.get('KEY')
 
     # a simple page that says hello
     @app.route('/hello')
