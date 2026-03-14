@@ -6,7 +6,7 @@ alembic==1.14.1
 aniso8601==10.0.0
 annotated-types==0.7.0
 anyio==4.8.0
-apache-airflow==2.10.5
+apache-airflow==3.2.0b1
 apache-airflow-providers-common-compat==1.5.0
 apache-airflow-providers-common-io==1.5.0
 apache-airflow-providers-common-sql==1.24.1
