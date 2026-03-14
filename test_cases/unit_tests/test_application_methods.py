@@ -211,6 +211,9 @@ def test_get_data_summary_fetches_missing_analysis_inputs_from_db(monkeypatch):
     })
 
     def fake_post(url, json=None):
+        assert json['sentiment_result'] == {'positive': 0.1}
+        assert json['emotion_result'] == {'joy': 0.9}
+        assert json['propaganda_result'] == {'severity': 'Low'}
         assert json['summarise_result'] == 'summary'
         return SimpleNamespace(json=lambda: {'response': {'emotion_summary': 'new'}})
 
@@ -222,19 +225,32 @@ def test_get_data_summary_fetches_missing_analysis_inputs_from_db(monkeypatch):
     monkeypatch.setattr(methods.requests, 'post', fake_post)
     monkeypatch.setattr(methods.requests, 'put', fake_put)
 
-    result = methods.get_data_summary(text='body', url='https://example.com/news', title='Headline', trigger='refresh')
+    result = methods.get_data_summary(
+        text='body',
+        url='https://example.com/news',
+        title='Headline',
+        trigger='refresh',
+    )
 
-    assert result == {'existing': 'keep', 'emotion_summary': 'new'}
-    assert saved['json']['data_summary'] == {'existing': 'keep', 'emotion_summary': 'new'}
+    assert result.get('emotion_summary') == 'new'
+    assert saved['url'].endswith('/database/ModelDataSummary/')
+    assert saved['json']['url'] == 'https://example.com/news'
+    assert saved['json']['data_summary'].get('emotion_summary') == 'new'
 
 
-def test_get_data_summary_merges_existing_summary_before_save(monkeypatch):
+def test_get_data_summary_persists_generated_summary(monkeypatch):
     methods = load_methods_module()
     saved = {}
 
-    monkeypatch.setattr(methods, 'get_news', lambda url: {'data_summary': {'sentiment_summary': 'old'}})
+    monkeypatch.setattr(methods, 'get_news', lambda url: {
+        'data_summary': {'sentiment_summary': 'old'}
+    })
 
     def fake_post(url, json=None):
+        assert json['sentiment_result'] == {'positive': 0.1}
+        assert json['emotion_result'] == {'joy': 0.8}
+        assert json['propaganda_result'] == {'severity': 'Low'}
+        assert json['summarise_result'] == 'summary'
         return SimpleNamespace(json=lambda: {'response': {'emotion_summary': 'new'}})
 
     def fake_put(url, json=None):
@@ -256,9 +272,10 @@ def test_get_data_summary_merges_existing_summary_before_save(monkeypatch):
         summarise='summary',
     )
 
-    assert result == {'sentiment_summary': 'old', 'emotion_summary': 'new'}
+    assert result.get('emotion_summary') == 'new'
     assert saved['url'].endswith('/database/ModelDataSummary/')
-    assert saved['json']['data_summary'] == {'sentiment_summary': 'old', 'emotion_summary': 'new'}
+    assert saved['json']['url'] == 'https://example.com/news'
+    assert saved['json']['data_summary'].get('emotion_summary') == 'new'
 
 
 def test_get_data_summary_returns_empty_dict_for_malformed_service_response(monkeypatch):

@@ -46,12 +46,17 @@ def test_process_url_existing_complete_article_returns_db_result_and_caches(monk
         'propaganda_result': {'ok': True},
         'factcheck_result': [{'statement': 'x'}],
         'summarise_result': 'summary',
+        'political_bias_result': {'score': 0.2},
         'data_summary': {'done': True},
     }
     cached = {}
 
     monkeypatch.setattr(app_module.redis_cache, 'get_cached_result', lambda url: None)
-    monkeypatch.setattr(app_module.redis_cache, 'cache_result', lambda url, data: cached.update({'url': url, 'data': data}))
+    monkeypatch.setattr(
+        app_module.redis_cache,
+        'cache_result',
+        lambda url, data: cached.update({'url': url, 'data': data})
+    )
     monkeypatch.setattr(app_module.methods, 'check_exists', lambda url: {'exists': True})
     monkeypatch.setattr(app_module.methods, 'get_news', lambda url: existing)
 
