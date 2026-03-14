@@ -35,8 +35,8 @@ const parseInsightText = (text) => {
             if (headerMatch) {
                 const [, heading, rest] = headerMatch;
                 return (
-                    <li key={idx} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
-                        <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-indigo-400" />
+                    <li key={idx} className="flex gap-3">
+                        <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-slate-700" />
                         <span className="text-sm text-slate-700 leading-relaxed">
                             <strong className="font-semibold text-slate-900 block mb-0.5">{heading}</strong>
                             {parseBold(rest.trim())}
@@ -45,7 +45,7 @@ const parseInsightText = (text) => {
                 );
             }
             return (
-                <li key={idx} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
+                <li key={idx} className="flex gap-3">
                     <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-slate-700" />
                     <span className="text-sm text-slate-700 leading-relaxed">{parseBold(content)}</span>
                 </li>
@@ -121,7 +121,7 @@ const ClusterSummary = ({ topic, enrichmentLoading }) => {
                         <Skeleton className="h-4 w-5/6" />
                     </div>
                 ) : rawInsight ? (
-                    <ul className="list-none space-y-0 divide-y divide-slate-100">
+                    <ul className="list-none space-y-2">
                         {parseInsightText(rawInsight)}
                     </ul>
                 ) : (
