@@ -54,7 +54,7 @@ def _rate_bias(use_perplexity: bool):
 
                 # Make the API call with a preset
                 completion = client.chat.completions.create(
-                    model="sonar-pro",
+                    model="sonar",
                     messages=[
                         {
                             "role": "system",
@@ -120,7 +120,7 @@ def get_topics():
 
                 # Make the API call with a preset
                 completion = client.chat.completions.create(
-                    model="sonar-pro",
+                    model="sonar",
                     messages=[
                         {
                             "role": "system",
