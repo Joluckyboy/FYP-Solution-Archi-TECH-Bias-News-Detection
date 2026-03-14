@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/resizable";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BadgeCheck, Scale, AlertCircle, Gauge, SmilePlus } from "lucide-react";
+import { BadgeCheck, Scale, AlertCircle, Gauge, SmilePlus, Landmark } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 
 import axios from "axios";
@@ -150,7 +150,7 @@ const LandingPage = () => {
   return (
     <div className="w-full">
       {/* Header Text */}
-      <div className="text-center m-12 slide-in-right">
+      <div className="text-center m-12 mt-48 slide-in-right">
         <h1
           className={`checkmate-gradient pb-4 ${isMobile ? "text-3xl" : "text-5xl"
             }`}
@@ -171,7 +171,7 @@ const LandingPage = () => {
             onChange={handleInputChange}
           />
           <br />
-          <div className="flex justify-center items-center w-full mb-16">
+          <div className="flex justify-center items-center w-full mt-4 mb-16">
             <Button onClick={handleButtonClick} className="bg-blue-700">
               Analyse Now
             </Button>
@@ -246,6 +246,18 @@ const LandingPage = () => {
               <h3 className="font-semibold pb-3">Propaganda Analysis</h3>
               <p className="text-slate-600">
                 Check if the article leans or favours a certain side.
+              </p>
+            </ResizablePanel>
+
+            {!isMobile && <ResizableHandle />}
+
+            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
+              <div className="pb-3">
+                <Landmark size={30} />
+              </div>
+              <h3 className="font-semibold pb-3">Political Bias</h3>
+              <p className="text-slate-600">
+                Analyze the political bias of the article and see what topics are covered or omitted.
               </p>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -339,17 +351,12 @@ const LandingPage = () => {
         </div>
 
         {/* Link to Explanations */}
-        <div className="text-center">
+        <div className="text-center mb-10">
           <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
             How This Works!
           </Link>
         </div>
 
-        <div className="text-center m-6">
-          <p className="text-slate-600">
-            There is no news that is completely unbiased. We provide a range of perspectives on today's news to help you decide! ☻
-          </p>
-        </div>
 
       </div>
 
