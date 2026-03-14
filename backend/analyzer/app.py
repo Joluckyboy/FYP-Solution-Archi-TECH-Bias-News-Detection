@@ -40,6 +40,7 @@ def dashboard_topics():
                 "title": t["title"],
                 "topicName": t.get("topic_name", ""),
                 "image": t.get("image") or "https://placehold.co/600x400?text=No+Image",
+                "allImages": t.get("all_images", []),
                 "sourceCount": t.get("source_count", 0),
                 "biasDistribution": t.get(
                     "bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)
