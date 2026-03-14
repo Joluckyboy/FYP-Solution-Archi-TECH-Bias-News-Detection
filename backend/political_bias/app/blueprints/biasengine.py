@@ -1,11 +1,45 @@
-from flask import current_app, Blueprint, render_template, request
+from flask import current_app, Blueprint, render_template, request, jsonify
 import torch
 import numpy as np
 from .prompts import prompts
 from perplexity import Perplexity
 import json
+import re
 
 biasengine = Blueprint('biasengine', __name__, url_prefix='/biasengine')
+
+
+def _extract_article_fields():
+    payload = request.get_json(silent=True) if request.method == "POST" else None
+    payload = payload or {}
+
+    site = payload.get("site") or request.args.get("site")
+    title = payload.get("title") or request.args.get("title")
+    page_text = payload.get("page_text") or request.args.get("page_text")
+
+    return site, title, page_text
+
+
+def _parse_json_safely(raw_text: str):
+    cleaned = re.sub(r"```json|```", "", (raw_text or "")).strip()
+
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+
+    start_candidates = [idx for idx in (cleaned.find("{"), cleaned.find("[")) if idx != -1]
+    if not start_candidates:
+        raise ValueError("Model response does not contain JSON")
+
+    start = min(start_candidates)
+    end = max(cleaned.rfind("}"), cleaned.rfind("]"))
+    candidate = cleaned[start:end + 1] if end > start else cleaned[start:]
+
+    try:
+        return json.loads(candidate)
+    except Exception:
+        return json.loads(candidate, strict=False)
 
 @biasengine.get("/")
 def health_check():
@@ -18,9 +52,10 @@ def hello():
 
 def _rate_bias(use_perplexity: bool):
     try:
-        site = request.args.get("site")
-        title = request.args.get("title")
-        page_text = request.args.get("page_text")
+        site, title, page_text = _extract_article_fields()
+
+        if not site or not title or not page_text:
+            return jsonify({"status": 400, "message": "Missing required fields: site, title, page_text"}), 400
 
         example = str(site) + str(title) + str(page_text)
 
@@ -84,30 +119,33 @@ def _rate_bias(use_perplexity: bool):
         target_list = ['left', 'leaning-left', 'center', 'leaning-right', 'right']
         label = target_list[max_index]
 
-        return json.dumps({"status": 200, "rating": label})
+        return jsonify({"status": 200, "rating": label})
 
     except Exception as e:
-        return json.dumps({"status": 500, "message": str(e)})
+        current_app.logger.exception("rate_bias failed")
+        return jsonify({"status": 500, "message": str(e)}), 500
 
 
-@biasengine.route('/rate_bias', methods=["GET"])
+@biasengine.route('/rate_bias', methods=["GET", "POST"])
 def rate_bias():
     return _rate_bias(use_perplexity=True)
 
 
-@biasengine.route('/rate_bias_no_perplexity', methods=["GET"])
+@biasengine.route('/rate_bias_no_perplexity', methods=["GET", "POST"])
 def rate_bias_no_perplexity():
     return _rate_bias(use_perplexity=False)
 
-@biasengine.route('/get_topics', methods=["GET"])
+@biasengine.route('/get_topics', methods=["GET", "POST"])
 def get_topics():
 
     try:
         output = ""
         counter = 0
-        site = request.args.get("site")
-        title = request.args.get("title")
-        page_text = request.args.get("page_text")
+        last_error = None
+        site, title, page_text = _extract_article_fields()
+
+        if not site or not title or not page_text:
+            return jsonify({"status": 400, "message": "Missing required fields: site, title, page_text"}), 400
 
         while output == "" and counter < 3:
             try:
@@ -134,22 +172,36 @@ def get_topics():
                 )
                 
                 #check output format
-                temp_output = json.loads(completion.choices[0].message.content)
+                raw_content = completion.choices[0].message.content
+                temp_output = _parse_json_safely(raw_content)
+                if not isinstance(temp_output, dict):
+                    raise ValueError("Model response is not a JSON object")
+
                 keys = list(temp_output.keys())
                 if "covered" in keys and "omitted" in keys:
                     output = temp_output
                 else:
-                    raise(Exception)
+                    raise ValueError("Missing required keys: covered, omitted")
                 
                 # increment counter
                 counter += 1
-            except:
+            except Exception as e:
+                last_error = str(e)
+                current_app.logger.warning("get_topics parse attempt %s failed: %s", counter + 1, last_error)
                 # increment counter
                 counter += 1
-                pass
+                continue
     
-        resp = json.dumps({'status': 200, 'topics': output})
-        return resp
+        if not output or not isinstance(output, dict):
+            current_app.logger.warning("get_topics fallback applied after retries. last_error=%s", last_error)
+            return jsonify({
+                'status': 200,
+                'topics': {'covered': [], 'omitted': []},
+                'warning': f"Topics analysis unavailable: {last_error or 'model output format invalid'}"
+            })
+
+        return jsonify({'status': 200, 'topics': output})
     
     except Exception as e:
-        return json.dumps({'status':500, 'message':str(e)})
+        current_app.logger.exception("get_topics failed")
+        return jsonify({'status': 500, 'message': str(e)}), 500

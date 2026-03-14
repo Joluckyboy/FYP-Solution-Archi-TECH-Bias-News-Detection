@@ -4,8 +4,10 @@ import createSSEConnection from "@/hooks/use-SSE";
 import get_api from "@/config/config";
 
 import EmotionTab from "@/components/EmotionTab";
+import FactsSummaryBanner from "@/components/FactsSummaryBanner";
 import PropagandaTab from "@/components/PropagandaTab";
 import PoliticalBias from "@/components/PoliticalBias";
+import SentimentTab from "@/components/SentimentTab";
 
 import { HashLoader } from "react-spinners";
 import {
@@ -249,7 +251,7 @@ const ResultsPage = () => {
                           <div key={idx} className="flex items-center space-x-2">
                             <Accordion type="single" collapsible className="w-full">
                               <AccordionItem value={`item-${idx}`}>
-                                <AccordionTrigger className={`p-3 rounded-md ${FACTUALITY[c] ?? FACTUALITY["cannot be determined"]}`}>
+                                <AccordionTrigger className={`p-3 rounded-md text-base leading-relaxed ${FACTUALITY[c] ?? FACTUALITY["cannot be determined"]}`}>
                                   <div className="flex items-start">
                                     <span className="mr-2 font-semibold">{idx + 1}.</span>
                                     <span className="text-left">{fact.statement}</span>
