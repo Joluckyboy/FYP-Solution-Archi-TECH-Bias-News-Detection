@@ -2,7 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /workspace
 
-# Install dependencies first to leverage caching
+# Install CPU-only PyTorch first (much smaller than default GPU build)
+RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

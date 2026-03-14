@@ -451,6 +451,7 @@ From the project root:
 
 ```bash
 pytest test_cases -q
+```
 
 ## 🤝 Contributing
 

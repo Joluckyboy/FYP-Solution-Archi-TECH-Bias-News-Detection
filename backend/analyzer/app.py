@@ -160,6 +160,14 @@ def topic_coverage():
 def health():
     return jsonify({"status": "ok", "service": "analyzer"}), 200
 
+@app.route("/", methods=["GET"])
+def root():
+    return {
+        "service": "analyzer",
+        "status": "ok",
+        "message": "Analyzer API is running"
+    }, 200
+
 # ---------------------------------------------------------------------------
 # NEW — called by bias-classifier sidecar after upload_csv()
 # ---------------------------------------------------------------------------
