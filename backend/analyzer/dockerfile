@@ -4,7 +4,8 @@ WORKDIR /workspace
 
 # Install dependencies first to leverage caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Pre-download the sentence-transformers model so it's available offline at runtime
 # (docker-compose sets TRANSFORMERS_OFFLINE=1, so the model must be baked in here)

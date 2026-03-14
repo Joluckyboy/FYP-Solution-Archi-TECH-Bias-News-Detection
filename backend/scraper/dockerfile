@@ -1,48 +1,35 @@
+# Stage 1: Build stage
 FROM python:3.11-slim AS build
 
-# Set environment variables to optimize pip
-ENV PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on
+WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+# Stage 2: Production stage
+FROM python:3.11-slim
+
+# Install runtime system dependencies (tesseract, poppler needed at runtime)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     libtesseract-dev \
     poppler-utils \
     libglib2.0-0 \
     libnss3 \
     libfontconfig1 \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Stage 2: Production stage
-FROM python:3.11-slim 
-
-# Set the working directory
 WORKDIR /app
 
-# Copy the dependencies from the build stage
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=build /usr/local/bin /usr/local/bin
 
-# Copy all files
 COPY . .
 
-# Create datasets directory and set permissions
 RUN mkdir -p /app/datasets && \
     chmod -R 777 /app/datasets
 
-# Expose the port the app runs on
 EXPOSE 8015
 
-# Command to run the application with optimized worker settings
-# --timeout 1800: 30 minute timeout for long-running scraping requests (like original app_old.py)
-# --workers 2: Reduced from default to limit memory usage
-# --worker-class sync: Sync workers (simple, stable)
-# --max-requests 50: Restart workers after 50 requests (memory cleanup)
-# --max-requests-jitter 10: Randomize restart to avoid all workers restarting at once
 CMD ["gunicorn", "--timeout", "1800", "--workers", "2", "--worker-class", "sync", "--max-requests", "50", "--max-requests-jitter", "10", "-b", "0.0.0.0:8015", "app:app"]

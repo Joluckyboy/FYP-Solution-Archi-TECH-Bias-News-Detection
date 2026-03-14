@@ -1,25 +1,32 @@
-# Use a lightweight Python 3.11 image
-FROM python:3.11-slim
+# Stage 1: Build stage
+FROM python:3.11-slim AS build
 
-# Set working directory in container
-WORKDIR /bot
-
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
     gcc \
     libffi-dev \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+WORKDIR /bot
 
-# Copy the bot script and other files
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Stage 2: Production stage
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /bot
+
+COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=build /usr/local/bin /usr/local/bin
+
 COPY . .
 
-# Run the bot
 CMD ["python", "app.py"]

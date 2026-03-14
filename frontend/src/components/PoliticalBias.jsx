@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { HashLoader } from 'react-spinners';
+import { get_bias } from '../config/config';
 
 const cache = {};
-const POLITICAL_BIAS_API = 'http://localhost:9000/biasengine';
 
 const PoliticalBias = ({ url, title, content }) => {
   const [data, setData] = useState(cache[url] || null);
@@ -31,7 +31,8 @@ const PoliticalBias = ({ url, title, content }) => {
         };
 
         // Call rate_bias
-        const rateResponse = await axios.post(`${POLITICAL_BIAS_API}/rate_bias`, payload);
+        const biasApi = await get_bias();
+        const rateResponse = await axios.post(`${biasApi}/biasengine/rate_bias`, payload);
         if (!rateResponse?.data?.rating) {
           throw new Error(rateResponse?.data?.message || 'Political bias rating is unavailable');
         }
@@ -39,7 +40,7 @@ const PoliticalBias = ({ url, title, content }) => {
 
         let topics = { covered: [], omitted: [] };
         try {
-          const topicsResponse = await axios.post(`${POLITICAL_BIAS_API}/get_topics`, payload);
+          const topicsResponse = await axios.post(`${biasApi}/biasengine/get_topics`, payload);
           const topicsData = topicsResponse?.data?.topics;
           if (topicsData && typeof topicsData === 'object') {
             topics = topicsData;
