@@ -1,7 +1,11 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from telegram.error import Forbidden
 import requests  # type: ignore
+import logging
 import vars as vars
+
+logger = logging.getLogger(__name__)
 
 
 def shorten_url(url: str) -> str:
@@ -39,8 +43,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_html(
             rf"Hi {user.mention_html()}! Welcome to <b>Checkmate</b> - your news bias detector."
             "\n\nHere's what I can do:"
-            "\n\n<b>Analyze an article</b> - Just send me any news URL"
-            "\n<b>/source</b> &lt;domain&gt; - Check a news source's credibility (e.g. /source cna)"
+            "\n\n<b>Analyze an article</b> - Just send me any news URL and I'll check it for:"
+            "\n  - Fact-checking &amp; accuracy"
+            "\n  - Sentiment &amp; emotion analysis"
+            "\n  - Propaganda detection"
+            "\n  - Political bias rating (Left / Center / Right)"
+            "\n\n<b>/source</b> &lt;domain&gt; - Check a news source's credibility (e.g. /source cna)"
+            "\n<b>/subscribe</b> - Get a daily digest of politically biased articles"
+            "\n<b>/unsubscribe</b> - Stop receiving the daily digest"
             "\n<b>/help</b> - See all available commands"
             "\n\nTry it out! Paste a news article link to get started.",
         )
@@ -53,8 +63,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "Available commands:\n"
             "/start - Start the bot\n"
             "/help - Show this help message\n"
-            "/source <domain> - Check credibility of a news source (e.g. /source cna.com)\n\n"
-            "Or just send me a news article URL to analyze!"
+            "/source <domain> - Check credibility of a news source (e.g. /source cna.com)\n"
+            "/subscribe - Get a daily digest of politically biased articles\n"
+            "/unsubscribe - Stop receiving the daily digest\n\n"
+            "Or just send me a news article URL to analyze!\n"
+            "I'll check facts, sentiment, emotion, propaganda, and political bias."
         )
 
 
@@ -183,6 +196,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         'propaganda_probability', 0) if results.get('propaganda_result') else 0
     factcheck_result = results.get('factcheck_result') if results.get('factcheck_result') else []
     summarise_result = results.get("summarise_result") if results.get("summarise_result") else "No summary available"
+    political_bias = results.get('political_bias_result', {}) if results.get('political_bias_result') else {}
+    bias_rating = political_bias.get('rating', 'N/A').replace('-', ' ').title() if political_bias else 'N/A'
 
     # Sort sentiment by score descending
     sentiment_result = dict(
@@ -230,8 +245,166 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         + "\n"
         + "\n"
         f"\u2696\ufe0f Propaganda Probability: {propaganda_result*100:.2f}%\n"
+        + "\n"
+        f"\U0001F3DB\ufe0f Political Bias: {bias_rating}\n"
         "-------------------------------------\n"
         f"See full article breakdown at {redirect_url}"
     )
 
     await update.message.reply_text(reply_text)
+
+
+# ── Digest Subscription Commands ─────────────────────────────────────────────
+
+async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Subscribe the user to the daily bias digest."""
+    if not update.message or not update.effective_user or not update.effective_chat:
+        return
+
+    telegram_user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+
+    try:
+        response = requests.post(
+            vars.application_url + "/application/digest/subscribe",
+            params={"telegram_user_id": telegram_user_id, "chat_id": chat_id},
+            timeout=10
+        )
+        if response.status_code == 200:
+            await update.message.reply_text(
+                "\u2705 You're subscribed to the daily bias digest!\n\n"
+                "Every day at 4:00 PM (SGT), you'll receive a summary of recently "
+                "analyzed articles that show notable political bias.\n\n"
+                "Use /unsubscribe to stop receiving digests."
+            )
+        else:
+            await update.message.reply_text("Something went wrong. Please try again later.")
+    except Exception as e:
+        logger.error(f"Error subscribing user {telegram_user_id}: {e}")
+        await update.message.reply_text("Something went wrong. Please try again later.")
+
+
+async def unsubscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Unsubscribe the user from the daily bias digest."""
+    if not update.message or not update.effective_user:
+        return
+
+    telegram_user_id = update.effective_user.id
+
+    try:
+        response = requests.post(
+            vars.application_url + "/application/digest/unsubscribe",
+            params={"telegram_user_id": telegram_user_id},
+            timeout=10
+        )
+        if response.status_code == 200:
+            await update.message.reply_text(
+                "\u274c You've been unsubscribed from the daily bias digest.\n\n"
+                "Use /subscribe to re-subscribe anytime."
+            )
+        else:
+            await update.message.reply_text("You don't appear to be subscribed, or something went wrong.")
+    except Exception as e:
+        logger.error(f"Error unsubscribing user {telegram_user_id}: {e}")
+        await update.message.reply_text("Something went wrong. Please try again later.")
+
+
+async def send_digest(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Scheduled job: send the daily bias digest to all subscribers."""
+    try:
+        # 1. Get active subscriptions
+        subs_response = requests.get(
+            vars.application_url + "/application/digest/subscriptions",
+            timeout=10
+        )
+        subscriptions = subs_response.json().get("subscriptions", [])
+        if not subscriptions:
+            logger.info("No active digest subscribers, skipping.")
+            return
+
+        # 2. Get recent biased articles (last 24h, non-center political bias)
+        articles_response = requests.get(
+            vars.application_url + "/application/digest/recent-biased",
+            params={"hours": 24},
+            timeout=15
+        )
+        articles = articles_response.json().get("articles", [])
+
+        if not articles:
+            logger.info("No biased articles in the last 24h, skipping digest.")
+            return
+
+        # 3. Build digest message (top 5 articles)
+        from datetime import datetime, timedelta, timezone
+        today = datetime.now(timezone.utc).strftime("%d %b %Y")
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%d %b %Y")
+
+        bias_emoji = {
+            "left": "\U0001F7E6",         # blue square
+            "leaning-left": "\U0001F539",  # small blue diamond
+            "leaning-right": "\U0001F538", # small orange diamond
+            "right": "\U0001F7E5",         # red square
+        }
+
+        top_articles = articles[:5]
+        message = (
+            "\U0001F4F0 Checkmate Daily Bias Digest\n"
+            "=====================================\n"
+            f"Period: {yesterday} \u2192 {today}\n"
+            f"Articles with notable bias: {len(articles)}\n\n"
+        )
+
+        for i, article in enumerate(top_articles, 1):
+            title = article.get("title", "Untitled")
+            rating = article.get("bias_rating", "unknown")
+            rating_display = rating.replace("-", " ").title()
+            emoji = bias_emoji.get(rating, "\U0001F3DB\ufe0f")
+            summary = article.get("summarise_result", "")
+            # Take first sentence of summary
+            first_sentence = summary.split(".")[0] + "." if summary else "No summary available."
+            if len(first_sentence) > 120:
+                first_sentence = first_sentence[:117] + "..."
+
+            news_id = article.get("id", "")
+            full_url = f"{vars.web_url}/#/results/{news_id}?redirect=true"
+            try:
+                short_url = shorten_url(full_url)
+            except Exception:
+                short_url = full_url
+
+            message += (
+                f"{i}. {title}\n"
+                f"   {emoji} Political Bias: {rating_display}\n"
+                f"   \U0001F4DD {first_sentence}\n"
+                f"   \U0001F517 {short_url}\n\n"
+            )
+
+        message += (
+            "=====================================\n"
+            "/unsubscribe to stop receiving digests."
+        )
+
+        # 4. Send to all subscribers
+        for sub in subscriptions:
+            chat_id = sub.get("chat_id")
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=message)
+            except Forbidden:
+                # User blocked the bot — auto-unsubscribe
+                tid = sub.get("telegram_user_id")
+                logger.warning(f"User {tid} blocked bot, auto-unsubscribing.")
+                try:
+                    requests.post(
+                        vars.application_url + "/application/digest/unsubscribe",
+                        params={"telegram_user_id": tid},
+                        timeout=5
+                    )
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.error(f"Failed to send digest to chat {chat_id}: {e}")
+
+        logger.info(f"Digest sent to {len(subscriptions)} subscriber(s) with {len(articles)} biased article(s).")
+
+    except Exception as e:
+        logger.error(f"Error in send_digest job: {e}")

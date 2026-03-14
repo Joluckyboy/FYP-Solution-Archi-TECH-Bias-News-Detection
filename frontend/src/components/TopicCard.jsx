@@ -5,10 +5,36 @@ import { Loader2, Zap } from "lucide-react";
 import get_api from "@/config/config";
 import axios from "axios";
 
+// Domains known to block cross-origin image loads with 406
+const BLOCKED_IMAGE_DOMAINS = [
+    "s.yimg.com", "reuters.com", "reutersmedia.net",
+    "usatoday.com", "gannett-cdn.com", "washingtonpost.com",
+    "apnews.com", "nytimes.com", "wsj.com",
+    "ftimg.net", "gettyimages.com", "npr.brightspotcdn.com",
+    "media.cnn.com", "static.foxnews.com"
+];
+
+const isBlockedImage = (url) =>
+    url && BLOCKED_IMAGE_DOMAINS.some((d) => url.toLowerCase().includes(d));
+
 const TopicCard = ({ topic }) => {
-    const { id, title, image, sourceCount, biasDistribution, frontUrl } = topic;
+    const { id, title, image, allImages, sourceCount, biasDistribution, frontUrl } = topic;
     const navigate = useNavigate();
-    const hasImage = image && image.startsWith("http");
+
+    const rawImages = allImages?.length > 0 ? allImages : (image ? [image] : []);
+    
+    // Proactively proxy known blocked domains to avoid the initial 406 error
+    const imagesList = rawImages.map((url) => {
+        if (!url) return url;
+        // Don't double-proxy
+        if (url.includes('wsrv.nl')) return url;
+        return isBlockedImage(url) ? `https://wsrv.nl/?url=${encodeURIComponent(url)}` : url;
+    });
+
+    const [imageIndex, setImageIndex] = useState(0);
+
+    const currentImage = imagesList[imageIndex] || null;
+    const hasImage = !!currentImage && currentImage.startsWith("http") && !currentImage.includes("placehold.co");
 
     const [analyzing, setAnalyzing] = useState(false);
     const [analyzeError, setAnalyzeError] = useState(null);
@@ -45,10 +71,19 @@ const TopicCard = ({ topic }) => {
             <div className="relative h-48 w-full overflow-hidden cursor-pointer" onClick={() => navigate(`/full-coverage/${id}`)}>
                 {hasImage ? (
                     <img
-                        src={image}
+                        key={currentImage}
+                        referrerPolicy="no-referrer"
+                        src={currentImage}
                         alt={title}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                        onError={(e) => { e.target.style.display = "none"; e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900"); }}
+                        onError={(e) => {
+                            if (imageIndex < imagesList.length - 1) {
+                                setImageIndex(prev => prev + 1);
+                            } else {
+                                e.target.style.display = "none";
+                                e.target.parentNode.classList.add("bg-gradient-to-br", "from-gray-700", "to-gray-900");
+                            }
+                        }}
                     />
                 ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900" />

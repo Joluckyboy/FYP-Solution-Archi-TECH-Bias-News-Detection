@@ -6,6 +6,7 @@ sentiment_url = os.getenv("SENTIMENT_URL") or "http://localhost:8012"
 emotion_url = os.getenv("EMOTION_URL") or "http://localhost:8013"
 propaganda_url = os.getenv("PROPAGANDA_URL") or "http://localhost:8014"
 factcheck_url = os.getenv("FACTCHECK_URL") or "http://localhost:8016"
+bias_url = os.getenv("BIAS_URL") or "http://localhost:9000"
 
 scraper_url = os.getenv("SCRAPER_URL") or "http://localhost:8015"
 database_url = os.getenv("DATABASE_URL") or "http://localhost:8011"

@@ -104,9 +104,20 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
         latest_row = g.iloc[0]
 
         non_empty_imgs = g[g["image_url"].astype(str).str.strip() != ""]
+        valid_imgs = non_empty_imgs[
+            non_empty_imgs["image_url"].str.startswith("http")
+        ]
+        
+        # Filter out domains that block BOTH the browser AND the wsrv proxy
+        dead_domains = ["usatoday.com", "gannett-cdn.com", "s.yimg.com", "npr.brightspotcdn.com"]
+        for domain in dead_domains:
+            valid_imgs = valid_imgs[~valid_imgs["image_url"].str.contains(domain, case=False, na=False)]
+        all_images = (
+            valid_imgs["image_url"].tolist()[:5] if not valid_imgs.empty else []
+        )
         image_url = (
-            non_empty_imgs.iloc[0]["image_url"]
-            if len(non_empty_imgs) > 0
+            all_images[0]
+            if all_images
             else "https://placehold.co/600x400?text=No+Image"
         )
 
@@ -147,10 +158,19 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
                 "topic_name": str(topic_name),
                 "title": str(latest_row["title"]),
                 "image": str(image_url),
+                "all_images": all_images,
                 "source_count": source_count,
                 "bias_distribution": dict(DEFAULT_BIAS_DISTRIBUTION),
                 "latest_date": latest_date,
                 "contextual_insight": contextual_insight,
+                "framing_differences": get_topic_service()._compute_framing_differences(
+                    g
+                )
+                if get_topic_service()
+                else {},
+                "linguistic_framing": get_topic_service()._analyze_linguistic_framing(g)
+                if get_topic_service()
+                else {},
                 "articles": articles,
             }
         )
@@ -230,13 +250,15 @@ def fetch_topics_data() -> tuple[list | None, str | None]:
         "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
     )
 
+
 # ---------------------------------------------------------------------------
 # Primary builder — groups by precomputed cluster_id  (no ML at request time)
 # ---------------------------------------------------------------------------
 
+
 def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
     required = {"title", "source", "url", "published_at", "cluster_id"}
-    missing  = required - set(df.columns)
+    missing = required - set(df.columns)
     if missing:
         raise ValueError(f"CSV missing columns: {missing}")
 
@@ -249,18 +271,33 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
     topics_out: list[dict[str, Any]] = []
 
     for cluster_id, group in df.groupby("cluster_id", dropna=False):
-        group      = group.sort_values(
+        group = group.sort_values(
             "published_at_dt", ascending=False, na_position="last"
         )
         latest_row = group.iloc[0]
 
         # Representative image — first article with a real http URL
         image_url = "https://placehold.co/600x400?text=No+Image"
+        all_images = []
         if "image_url" in group.columns:
-            valid = group["image_url"].astype(str).str.strip()
-            valid = valid[valid.str.startswith("http")]
-            if not valid.empty:
-                image_url = valid.iloc[0]
+            non_empty_imgs = group[group["image_url"].astype(str).str.strip() != ""]
+            valid_imgs = non_empty_imgs[
+                non_empty_imgs["image_url"].str.startswith("http")
+            ]
+
+            # Filter out domains that block BOTH the browser AND the wsrv proxy
+            dead_domains = ["usatoday.com", "gannett-cdn.com", "s.yimg.com", "npr.brightspotcdn.com"]
+            for domain in dead_domains:
+                valid_imgs = valid_imgs[~valid_imgs["image_url"].str.contains(domain, case=False, na=False)]
+
+            all_images = (
+                valid_imgs["image_url"].tolist()[:10] if not valid_imgs.empty else []
+            )
+            image_url = (
+                all_images[0]
+                if all_images
+                else "https://placehold.co/600x400?text=No+Image"
+            )
 
         # Latest date as ISO string
         latest_date = ""
@@ -278,38 +315,57 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
         # Contextual insight from top summaries
         top_summaries: list[str] = []
         if "summary" in group.columns:
-            top_summaries = [
-                s for s in group["summary"].astype(str).str.strip() if s
-            ][:5]
+            top_summaries = [s for s in group["summary"].astype(str).str.strip() if s][
+                :5
+            ]
         contextual_insight = (
             "Event Summary:\n" + "\n\n".join(top_summaries)
-            if top_summaries else "Summary not available yet."
+            if top_summaries
+            else "Summary not available yet."
         )
 
         keep_cols = [
-            c for c in [
-                "title", "source", "url", "published_at",
-                "summary", "image_url", "political_bias",
-            ] if c in group.columns
+            c
+            for c in [
+                "title",
+                "source",
+                "url",
+                "published_at",
+                "summary",
+                "image_url",
+                "political_bias",
+            ]
+            if c in group.columns
         ]
 
-        topics_out.append({
-            "id":                  _stable_id(str(cluster_id)),
-            "cluster_id":          str(cluster_id),
-            "topic_name":          topic_name,
-            "title":               str(latest_row["title"]),
-            "image":               image_url,
-            "source_count":        int(len(group)),
-            "bias_distribution":   _bias_distribution(group),
-            "latest_date":         latest_date,
-            "contextual_insight":  contextual_insight,
-            # Analysis fields populated lazily via /dashboard/topic_enrichment
-            "silent_outlets":      {},
-            "lead_articles":       {},
-            "framing_differences": {},
-            "linguistic_framing":  {},
-            "articles":            group[keep_cols].to_dict(orient="records"),
-        })
+        topics_out.append(
+            {
+                "id": _stable_id(str(cluster_id)),
+                "cluster_id": str(cluster_id),
+                "topic_name": topic_name,
+                "title": str(latest_row["title"]),
+                "image": image_url,
+                "all_images": all_images,
+                "source_count": int(len(group)),
+                "bias_distribution": _bias_distribution(group),
+                "latest_date": latest_date,
+                "contextual_insight": contextual_insight,
+                # Analysis fields
+                "silent_outlets": _compute_silent_outlets(group),
+                "lead_articles": {},
+                "framing_differences": get_topic_service()._compute_framing_differences(
+                    group
+                )
+                if get_topic_service()
+                else {},
+                "linguistic_framing": get_topic_service()._analyze_linguistic_framing(
+                    group
+                )
+                if get_topic_service()
+                else {},
+                "articles": group[keep_cols].to_dict(orient="records"),
+            }
+        )
 
     # Hottest first (most sources), most recent as tiebreaker
     topics_out.sort(
@@ -318,6 +374,7 @@ def _build_topics_from_cluster_id(df: pd.DataFrame) -> list[dict[str, Any]]:
     )
     return topics_out
 
+
 def _stable_id(value: str) -> int:
     """Same as _topic_id but accepts any string."""
     return int(hashlib.md5(str(value).encode("utf-8")).hexdigest()[:8], 16)
@@ -325,19 +382,69 @@ def _stable_id(value: str) -> int:
 
 def _bias_distribution(group: pd.DataFrame) -> dict:
     counts = {
-        "left": 0, "leaning_left": 0, "center": 0,
-        "leaning_right": 0, "right": 0,
+        "left": 0,
+        "leaning_left": 0,
+        "center": 0,
+        "leaning_right": 0,
+        "right": 0,
     }
     col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
     for b in col:
-        if   b == "left":   counts["left"]          += 1
-        elif b == "right":  counts["right"]         += 1
-        elif b == "center": counts["center"]        += 1
-        elif "left"  in b:  counts["leaning_left"]  += 1
-        elif "right" in b:  counts["leaning_right"] += 1
-        else:               counts["center"]        += 1
+        if b == "left":
+            counts["left"] += 1
+        elif b == "right":
+            counts["right"] += 1
+        elif b == "center":
+            counts["center"] += 1
+        elif "left" in b:
+            counts["leaning_left"] += 1
+        elif "right" in b:
+            counts["leaning_right"] += 1
+        else:
+            counts["center"] += 1
     total = max(sum(counts.values()), 1)
     return {k: round(v / total * 100, 1) for k, v in counts.items()}
+
+
+def _compute_silent_outlets(group: pd.DataFrame) -> dict:
+    """Flag bias categories with zero articles when others have significant coverage."""
+    counts: dict[str, int] = {
+        "left": 0,
+        "leaning_left": 0,
+        "center": 0,
+        "leaning_right": 0,
+        "right": 0,
+    }
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    for b in col:
+        if b == "left":
+            counts["left"] += 1
+        elif b == "right":
+            counts["right"] += 1
+        elif b == "center":
+            counts["center"] += 1
+        elif "left" in b:
+            counts["leaning_left"] += 1
+        elif "right" in b:
+            counts["leaning_right"] += 1
+        else:
+            counts["center"] += 1
+
+    total = max(sum(counts.values()), 1)
+    threshold = max(1, total // 4)  # at least 25% covered by another group
+    left_vol = counts["left"] + counts["leaning_left"]
+    right_vol = counts["right"] + counts["leaning_right"]
+    center_vol = counts["center"]
+
+    return {
+        "left_silent": left_vol == 0
+        and (right_vol >= threshold or center_vol >= threshold),
+        "right_silent": right_vol == 0
+        and (left_vol >= threshold or center_vol >= threshold),
+        "center_silent": center_vol == 0
+        and (left_vol >= threshold or right_vol >= threshold),
+    }
+
 
 # ---------------------------------------------------------------------------
 # Keyword extraction
