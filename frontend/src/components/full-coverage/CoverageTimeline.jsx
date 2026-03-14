@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
     BarChart,
@@ -12,11 +12,11 @@ import {
 } from 'recharts';
 
 const BIAS_CONFIG = [
-    { key: 'left',          label: 'Left',          color: '#2563EB' },
-    { key: 'leaning_left',  label: 'Leaning Left',  color: '#60A5FA' },
-    { key: 'center',        label: 'Center',        color: '#7C3AED' },
+    { key: 'left', label: 'Left', color: '#2563EB' },
+    { key: 'leaning_left', label: 'Leaning Left', color: '#60A5FA' },
+    { key: 'center', label: 'Center', color: '#7C3AED' },
     { key: 'leaning_right', label: 'Leaning Right', color: '#F87171' },
-    { key: 'right',         label: 'Right',         color: '#DC2626' },
+    { key: 'right', label: 'Right', color: '#DC2626' },
 ];
 
 const getBiasKey = (rawBias) => {

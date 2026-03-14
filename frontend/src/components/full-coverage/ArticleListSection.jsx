@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import ArticleCard from './ArticleCard';
 import FramingAnalysisPanel from './FramingAnalysisPanel';
 
-const ArticleListSection = ({ articles, topic, enrichmentLoading, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
+const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
     const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [showCount, setShowCount] = useState(5);

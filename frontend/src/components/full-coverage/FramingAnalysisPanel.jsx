@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, ChevronDown } from "lucide-react";
 
 const COVERAGE_DESCRIPTIONS = {
     left: "Left-leaning outlets tend to frame headlines around systemic issues, policy impacts, and community effects. High passive voice may indicate focus on victims or structures rather than individual actors.",
