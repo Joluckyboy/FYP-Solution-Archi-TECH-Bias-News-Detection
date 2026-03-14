@@ -1,82 +1,7 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { HashLoader } from 'react-spinners';
 
-const cache = {};
-const POLITICAL_BIAS_API = 'http://localhost:9000/biasengine';
-
-const PoliticalBias = ({ url, title, content }) => {
-  const [data, setData] = useState(cache[url] || null);
-  const [loading, setLoading] = useState(!cache[url]);
-  const [error, setError] = useState(null);
-  const [warning, setWarning] = useState(null);
-
-  useEffect(() => {
-    if (!url || !title || !content) return;
-    if (cache[url]) return;
-
-    const fetchPoliticalBias = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        setWarning(null);
-
-        // Extract site from URL
-        const urlObj = new URL(url);
-        const site = urlObj.hostname;
-        const payload = {
-          site,
-          title,
-          page_text: content,
-        };
-
-        // Call rate_bias
-        const rateResponse = await axios.post(`${POLITICAL_BIAS_API}/rate_bias`, payload);
-        if (!rateResponse?.data?.rating) {
-          throw new Error(rateResponse?.data?.message || 'Political bias rating is unavailable');
-        }
-        const bias = rateResponse.data.rating;
-
-        let topics = { covered: [], omitted: [] };
-        try {
-          const topicsResponse = await axios.post(`${POLITICAL_BIAS_API}/get_topics`, payload);
-          const topicsData = topicsResponse?.data?.topics;
-          if (topicsData && typeof topicsData === 'object') {
-            topics = topicsData;
-          } else {
-            setWarning(topicsResponse?.data?.message || 'Topics analysis unavailable for this article');
-          }
-
-          if (topicsResponse?.data?.warning) {
-            setWarning(topicsResponse.data.warning);
-          }
-        } catch (topicsError) {
-          console.warn('Topics analysis unavailable:', topicsError);
-          setWarning(topicsError?.response?.data?.message || 'Topics analysis unavailable for this article');
-        }
-
-        // Combine
-        const combinedData = {
-          bias: bias,
-          topics_covered: topics.covered || [],
-          topics_omitted: topics.omitted || []
-        };
-
-        cache[url] = combinedData;
-        setData(combinedData);
-      } catch (error) {
-        console.error('Error fetching political bias data:', error);
-        setError(error?.response?.data?.message || error?.message || 'Failed to fetch political bias data');
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPoliticalBias();
-  }, [url, title, content]);
-
-  if (loading) {
+const PoliticalBias = ({ politicalBiasResult }) => {
+  if (!politicalBiasResult || !Object.keys(politicalBiasResult).length) {
     return (
       <div className="text-center flex flex-col items-center">
         <br />
@@ -88,26 +13,23 @@ const PoliticalBias = ({ url, title, content }) => {
     );
   }
 
-  if (!data) {
+  const rating = politicalBiasResult.rating;
+  const topicsCovered = politicalBiasResult.topics?.covered || [];
+  const topicsOmitted = politicalBiasResult.topics?.omitted || [];
+
+  if (!rating) {
     return (
       <div className="text-center text-gray-500">
-        {error || 'No data available'}
+        Political bias rating is unavailable
       </div>
     );
   }
 
   const biasLevels = ['Left', 'Leaning left', 'Center', 'Leaning right', 'Right'];
-
-  const normalizedBias = data.bias?.toLowerCase().trim().replace(/[-_]/g, ' ');
+  const normalizedBias = rating.toLowerCase().trim().replace(/[-_]/g, ' ');
 
   return (
     <div className="space-y-4">
-      {warning && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          {warning}
-        </div>
-      )}
-
       {/* Political Bias Scale */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="font-semibold text-base mb-3 text-gray-700">Political Bias Rating</div>
@@ -135,9 +57,9 @@ const PoliticalBias = ({ url, title, content }) => {
         {/* Topics Covered */}
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 shadow-sm">
           <div className="font-semibold text-base mb-3 text-green-800">Topics Covered</div>
-          {data.topics_covered && data.topics_covered.length > 0 ? (
+          {topicsCovered.length > 0 ? (
             <ul className="space-y-2">
-              {data.topics_covered.map((topic, index) => (
+              {topicsCovered.map((topic, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-green-900">
                   <span className="mt-1 h-2 w-2 rounded-full bg-green-500 shrink-0" />
                   {topic}
@@ -152,9 +74,9 @@ const PoliticalBias = ({ url, title, content }) => {
         {/* Topics Omitted */}
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 shadow-sm">
           <div className="font-semibold text-base mb-3 text-rose-800">Topics Omitted</div>
-          {data.topics_omitted && data.topics_omitted.length > 0 ? (
+          {topicsOmitted.length > 0 ? (
             <ul className="space-y-2">
-              {data.topics_omitted.map((topic, index) => (
+              {topicsOmitted.map((topic, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-rose-900">
                   <span className="mt-1 h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                   {topic}
