@@ -421,7 +421,7 @@ const ResultsPage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PoliticalBias url={data.url} title={data.title} content={data.content} />
+                  <PoliticalBias politicalBiasResult={data.political_bias_result} />
                 </CardContent>
               </Card>
             </TabsContent>
