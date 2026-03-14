@@ -259,7 +259,7 @@ const LandingPage = () => {
           <Card className="w-full h-[600px] flex flex-col">
             <CardHeader>
               <div className="flex flex-col gap-3">
-                <CardTitle className="text-left checkmate-gradient">Latest Topics</CardTitle>
+                <CardTitle className="text-left checkmate-gradient">News Clusters  — Find all the Latest News here! </CardTitle>
                 {/* Filter pills */}
                 {(() => {
                   const cats = [...new Set(topics.map(t => t.topicName).filter(Boolean))].sort();
@@ -315,10 +315,10 @@ const LandingPage = () => {
                 Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">  
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">
               <TopicOutletBias />
             </CardContent>
-            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none"> 
+            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none">
               <p className="text-base text-gray-600 italic m-0">
                 Ratings reflect outlet perspective only, not accuracy or credibility.
               </p>
