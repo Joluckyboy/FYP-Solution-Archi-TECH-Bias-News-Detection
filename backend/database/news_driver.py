@@ -1,4 +1,5 @@
 from supabase_client import get_supabase_client
+from datetime import datetime, timedelta, timezone
 import json
 
 sample_news_data = {
@@ -229,6 +230,16 @@ def update_model_data_summary_by_url(url, update_data):
     except Exception as e:
         print(f"Error updating model data summary by URL: {e}")
 
+
+def update_political_bias_by_url(url, update_data):
+    """Update the political bias result of a document by URL."""
+    try:
+        supabase.table("news_data").update({
+            "political_bias_result": update_data
+        }).eq("url", url).execute()
+    except Exception as e:
+        print(f"Error updating political bias by URL: {e}")
+
 def read_documents_by_domain(domain):
     """Read all news documents whose URL matches the given domain.
 
@@ -285,3 +296,72 @@ def delete_document_by_id(id):
     except Exception as e:
         print(f"Error deleting document by ID: {e}")
         return 0
+
+
+# ── Digest Subscriptions ─────────────────────────────────────────────────────
+
+def create_subscription(telegram_user_id, chat_id):
+    """Create or re-activate a digest subscription."""
+    try:
+        result = supabase.table("digest_subscriptions").upsert({
+            "telegram_user_id": telegram_user_id,
+            "chat_id": chat_id,
+            "is_active": True,
+            "subscribed_at": datetime.now(timezone.utc).isoformat()
+        }, on_conflict="telegram_user_id").execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        print(f"Error creating subscription: {e}")
+        return None
+
+
+def remove_subscription(telegram_user_id):
+    """Soft-delete a subscription by setting is_active to False."""
+    try:
+        result = supabase.table("digest_subscriptions").update({
+            "is_active": False
+        }).eq("telegram_user_id", telegram_user_id).execute()
+        return len(result.data) > 0 if result.data else False
+    except Exception as e:
+        print(f"Error removing subscription: {e}")
+        return False
+
+
+def get_active_subscriptions():
+    """Get all active digest subscriptions."""
+    try:
+        result = supabase.table("digest_subscriptions").select(
+            "telegram_user_id, chat_id"
+        ).eq("is_active", True).execute()
+        return result.data or []
+    except Exception as e:
+        print(f"Error getting active subscriptions: {e}")
+        return []
+
+
+def get_recent_biased_articles(hours=24):
+    """Get recently analyzed articles that have a non-center political bias rating."""
+    try:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        result = supabase.table("news_data").select(
+            "id, url, title, political_bias_result, summarise_result, updated_at"
+        ).gte("updated_at", cutoff).execute()
+
+        # Non-center ratings, ordered by how far from center
+        bias_severity = {"left": 2, "right": 2, "leaning-left": 1, "leaning-right": 1}
+
+        articles = []
+        for article in (result.data or []):
+            bias = article.get("political_bias_result") or {}
+            rating = bias.get("rating", "center")
+            if rating in bias_severity:
+                article["bias_rating"] = rating
+                article["bias_severity"] = bias_severity[rating]
+                articles.append(article)
+
+        # Sort by severity descending (left/right first, then leaning)
+        articles.sort(key=lambda a: a["bias_severity"], reverse=True)
+        return articles
+    except Exception as e:
+        print(f"Error getting recent biased articles: {e}")
+        return []

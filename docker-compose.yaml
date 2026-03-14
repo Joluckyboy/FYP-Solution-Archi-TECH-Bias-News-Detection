@@ -111,16 +111,6 @@ services:
       - ANALYZER_URL=http://analyzer:8017
       - BIAS_URL=http://bias_engine:9000
       - REDIS_URL=redis://redis:6379
-    depends_on:
-      - database
-      - sentiment
-      - emotion
-      - propaganda
-      - scraper
-      - factcheck
-      - analyzer
-      - bias_engine
-      - redis
     restart: always
 
   webapp:
@@ -142,8 +132,6 @@ services:
       - ENV=production
       - APPLICATION_URL=http://application:8010
       - WEB_APP_URL=http://webapp:5173
-    depends_on:
-      - application
     restart: always
 
 volumes:

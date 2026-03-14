@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 
-from api_models import NewsItem, QuizItem
+from api_models import NewsItem, QuizItem, SubscriptionItem
 import news_driver as news_methods
 import quiz_driver as quiz_methods
 import quiz_templates as quiz_templates
@@ -280,6 +280,23 @@ def update_news_emotion_by_url(data: NewsItem):
 def update_news_propaganda_by_url(data: NewsItem):
     news_methods.update_propaganda_by_url(data.url, data.propaganda_result)
     return JSONResponse(status_code=200, content={"message": "Propaganda result updated successfully"})
+
+
+@app.put("/database/political_bias/", responses={
+    200: {
+        "description": "Political bias result updated successfully",
+        "content": {
+            "application/json": {
+                "example": {
+                    "message": "Political bias result updated successfully"
+                }
+            }
+        }
+    }
+})
+def update_news_political_bias_by_url(data: NewsItem):
+    news_methods.update_political_bias_by_url(data.url, data.political_bias_result)
+    return JSONResponse(status_code=200, content={"message": "Political bias result updated successfully"})
 
 
 @app.put("/database/{news_id}/sentiment/", responses={
@@ -579,3 +596,37 @@ def seed_quiz_category(category: str):
             quiz_ids.append(quiz_id)
 
     return JSONResponse(status_code=200, content={"quiz_ids": quiz_ids, "category": category})
+
+
+# ── Digest Subscriptions ─────────────────────────────────────────────────────
+
+@app.post("/database/subscriptions/")
+def create_subscription(item: SubscriptionItem):
+    """Subscribe a Telegram user to the daily bias digest."""
+    result = news_methods.create_subscription(item.telegram_user_id, item.chat_id)
+    if result:
+        return JSONResponse(status_code=200, content={"message": "Subscribed successfully", "data": result})
+    raise HTTPException(status_code=500, detail="Failed to create subscription")
+
+
+@app.delete("/database/subscriptions/{telegram_user_id}")
+def remove_subscription(telegram_user_id: int):
+    """Unsubscribe a Telegram user from the daily bias digest."""
+    success = news_methods.remove_subscription(telegram_user_id)
+    if success:
+        return JSONResponse(status_code=200, content={"message": "Unsubscribed successfully"})
+    raise HTTPException(status_code=404, detail="Subscription not found")
+
+
+@app.get("/database/subscriptions/active")
+def get_active_subscriptions():
+    """Get all active digest subscriptions."""
+    subs = news_methods.get_active_subscriptions()
+    return JSONResponse(status_code=200, content={"subscriptions": subs})
+
+
+@app.get("/database/articles/recent-biased")
+def get_recent_biased_articles(hours: int = 24):
+    """Get recently analyzed articles with non-center political bias."""
+    articles = news_methods.get_recent_biased_articles(hours=hours)
+    return JSONResponse(status_code=200, content={"articles": articles})

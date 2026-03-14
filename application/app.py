@@ -589,10 +589,40 @@ async def get_all_quiz(question_type: str = Query(None, description="Type of que
     return quiz
 
 @app.get("/application/get_quiz")
-async def get_quiz(number: int = Query(..., description="Number of questions"), 
+async def get_quiz(number: int = Query(..., description="Number of questions"),
                    question_type: str = Query(..., description="Type of questions")):
     quiz = methods.get_quiz(number=number, question_type=question_type)
     return quiz
+
+
+# ── Digest Subscriptions ─────────────────────────────────────────────────────
+
+@app.post("/application/digest/subscribe")
+async def digest_subscribe(telegram_user_id: int, chat_id: int):
+    """Subscribe a Telegram user to the daily bias digest."""
+    result = methods.subscribe_digest(telegram_user_id, chat_id)
+    return result
+
+
+@app.post("/application/digest/unsubscribe")
+async def digest_unsubscribe(telegram_user_id: int):
+    """Unsubscribe a Telegram user from the daily bias digest."""
+    result = methods.unsubscribe_digest(telegram_user_id)
+    return result
+
+
+@app.get("/application/digest/subscriptions")
+async def digest_get_subscriptions():
+    """Get all active digest subscriptions."""
+    subs = methods.get_active_subscriptions()
+    return {"subscriptions": subs}
+
+
+@app.get("/application/digest/recent-biased")
+async def digest_recent_biased(hours: int = 24):
+    """Get recently analyzed articles with non-center political bias."""
+    articles = methods.get_recent_biased_articles(hours=hours)
+    return {"articles": articles}
 
 def process_url(url: str, return_news: bool = False, background: bool = True, force_reanalyze: bool = False):
     """
@@ -641,6 +671,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 missing_analyses.append("factcheck")
             if not existing.get("summarise_result"):
                 missing_analyses.append("summarise")
+            if not existing.get("political_bias_result"):
+                missing_analyses.append("political_bias")
             # Check for empty dict or None/null data_summary
             data_summary = existing.get("data_summary")
             if not data_summary or (isinstance(data_summary, dict) and len(data_summary) == 0):
@@ -686,6 +718,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                         retry_tasks.append((methods.get_summarise, "summarise"))
                     if "factcheck" in missing_analyses:
                         retry_tasks.append((methods.get_fact_check, "fact check"))
+                    if "political_bias" in missing_analyses:
+                        retry_tasks.append((methods.get_political_bias, "political bias"))
                     
                     # Run retry tasks in parallel.
                     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -775,7 +809,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 (methods.get_emotion, "emotion"),
                 (methods.get_propaganda, "propaganda"),
                 (methods.get_summarise, "summary"),
-                (methods.get_fact_check, "fact check"),  # Now optimized to 1 API call per article!
+                (methods.get_fact_check, "fact check"),
+                (methods.get_political_bias, "political bias"),
             ]
             
             # Run all independent analyses in parallel using ThreadPoolExecutor

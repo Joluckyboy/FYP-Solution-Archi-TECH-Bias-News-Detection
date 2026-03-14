@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS news_data (
     factcheck_result JSONB,
     summarise_result TEXT,
     data_summary JSONB,
+    political_bias_result JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -52,6 +53,19 @@ CREATE TRIGGER update_news_data_updated_at BEFORE UPDATE ON news_data
 CREATE TRIGGER update_quiz_data_updated_at BEFORE UPDATE ON quiz_data
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Create digest_subscriptions table for Telegram bot digest feature
+CREATE TABLE IF NOT EXISTS digest_subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    telegram_user_id BIGINT NOT NULL UNIQUE,
+    chat_id BIGINT NOT NULL,
+    subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_digest_sub_active
+    ON digest_subscriptions(is_active) WHERE is_active = TRUE;
+
 -- Add comments to tables
 COMMENT ON TABLE news_data IS 'Stores news articles with analysis results';
 COMMENT ON TABLE quiz_data IS 'Stores quiz questions for user engagement';
+COMMENT ON TABLE digest_subscriptions IS 'Stores Telegram bot digest subscription preferences';

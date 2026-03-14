@@ -20,6 +20,7 @@ class NewsItem(URLItem):
     factcheck_result: Optional[List[FactCheckItem]] = None
     summarise_result: Optional[str] = None
     data_summary: Optional[Dict[str, Any]] = None
+    political_bias_result: Optional[Dict[str, Any]] = None
 
 
 class QuizItem(BaseModel):
@@ -28,3 +29,8 @@ class QuizItem(BaseModel):
     answer: List[int]
     question_type: str
     debrief: Optional[str] = None
+
+
+class SubscriptionItem(BaseModel):
+    telegram_user_id: int
+    chat_id: int

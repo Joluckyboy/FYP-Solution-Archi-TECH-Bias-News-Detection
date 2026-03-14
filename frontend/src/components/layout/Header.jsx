@@ -9,12 +9,12 @@ const Header = () => {
 			</Link>
 
       <div className="flex items-center gap-2">
-        <Link
+        {/* <Link
           to="/dashboard"
           className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium"
         >
           Dashboard
-        </Link>
+        </Link> */}
 
         <Link to="/games">
           <div className="m-2 pr-4">

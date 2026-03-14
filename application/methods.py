@@ -1,9 +1,10 @@
 import vars as vars
 from typing import Dict, List, Any
+from urllib.parse import urlparse
 import re
 
 import requests  # type: ignore
-from flask import abort 
+from flask import abort
 
 import pprint
 import logging
@@ -253,6 +254,57 @@ def get_propaganda (text, url, title: str):
         logger.error(f"[app] Propaganda service error: {e}")
         return {}
 
+def get_political_bias(text, url, title: str):
+    try:
+        # Extract site domain from URL
+        site = urlparse(url).netloc.replace("www.", "")
+        sampled = _sample_text(text)
+
+        payload = {"site": site, "title": title, "page_text": sampled}
+
+        # 1. Get bias rating (no Perplexity dependency — fast)
+        logger.info(f"[political_bias] Starting bias rating for {url}")
+        rating_response = requests.post(
+            vars.bias_url + "/biasengine/rate_bias_no_perplexity",
+            json=payload,
+            timeout=30
+        )
+        rating_data = rating_response.json()
+        rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+
+        # 2. Get topics covered/omitted (uses Perplexity, gracefully falls back)
+        logger.info(f"[political_bias] Starting topics analysis for {url}")
+        try:
+            topics_response = requests.post(
+                vars.bias_url + "/biasengine/get_topics",
+                json=payload,
+                timeout=30
+            )
+            topics_data = topics_response.json()
+            topics = topics_data.get("topics", {"covered": [], "omitted": []}) if topics_data.get("status") == 200 else {"covered": [], "omitted": []}
+        except Exception as e:
+            logger.warning(f"[political_bias] Topics analysis failed (non-critical): {e}")
+            topics = {"covered": [], "omitted": []}
+
+        # Combine into single result
+        political_bias_result = {
+            "rating": rating,
+            "topics": topics
+        }
+
+        # Save to DB
+        db_url = vars.database_url + "/database/political_bias/"
+        db_payload = {"url": url, "political_bias_result": political_bias_result}
+        requests.put(db_url, json=db_payload, timeout=30)
+
+        logger.info(f"[political_bias] Completed for {url}: rating={rating}")
+        return political_bias_result
+
+    except Exception as e:
+        logger.error(f"[app] Political bias service error: {e}")
+        return {}
+
+
 def get_fact_check(article_content: str, url: str, title: str ):
     query_url = vars.factcheck_url + "/factcheck/predict/fact-check"
     payload = {
@@ -424,8 +476,36 @@ def get_quiz(number, question_type):
         "number": number,
         "question_type": question_type
     }
-    
+
     response = requests.get(query_url, payload)
     deserialised_response = response.json()
-    
+
     return deserialised_response
+
+
+# ── Digest Subscriptions ─────────────────────────────────────────────────────
+
+def subscribe_digest(telegram_user_id: int, chat_id: int):
+    query_url = vars.database_url + "/database/subscriptions/"
+    data = {"telegram_user_id": telegram_user_id, "chat_id": chat_id}
+    response = requests.post(query_url, json=data, timeout=10)
+    return response.json()
+
+
+def unsubscribe_digest(telegram_user_id: int):
+    query_url = vars.database_url + f"/database/subscriptions/{telegram_user_id}"
+    response = requests.delete(query_url, timeout=10)
+    return response.json()
+
+
+def get_active_subscriptions():
+    query_url = vars.database_url + "/database/subscriptions/active"
+    response = requests.get(query_url, timeout=10)
+    return response.json().get("subscriptions", [])
+
+
+def get_recent_biased_articles(hours: int = 24):
+    query_url = vars.database_url + "/database/articles/recent-biased"
+    params = {"hours": hours}
+    response = requests.get(query_url, params=params, timeout=15)
+    return response.json().get("articles", [])
