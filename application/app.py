@@ -671,7 +671,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 missing_analyses.append("factcheck")
             if not existing.get("summarise_result"):
                 missing_analyses.append("summarise")
-            if not existing.get("political_bias_result"):
+            political_bias = existing.get("political_bias_result")
+            if not political_bias or (isinstance(political_bias, dict) and len(political_bias) == 0):
                 missing_analyses.append("political_bias")
             # Check for empty dict or None/null data_summary
             data_summary = existing.get("data_summary")

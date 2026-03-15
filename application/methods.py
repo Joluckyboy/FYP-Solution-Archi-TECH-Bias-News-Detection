@@ -270,21 +270,29 @@ def get_political_bias(text, url, title: str):
             timeout=30
         )
         rating_data = rating_response.json()
-        rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+        if rating_data.get("status") != 200:
+            logger.error(f"[political_bias] Bias rating failed: {rating_data}")
+            return {}
+        rating = rating_data.get("rating")
+        if not rating:
+            logger.error(f"[political_bias] No rating returned: {rating_data}")
+            return {}
 
-        # 2. Get topics covered/omitted (uses Perplexity, gracefully falls back)
+        # 2. Get topics covered/omitted (uses Perplexity)
         logger.info(f"[political_bias] Starting topics analysis for {url}")
-        try:
-            topics_response = requests.post(
-                vars.bias_url + "/biasengine/get_topics",
-                json=payload,
-                timeout=30
-            )
-            topics_data = topics_response.json()
-            topics = topics_data.get("topics", {"covered": [], "omitted": []}) if topics_data.get("status") == 200 else {"covered": [], "omitted": []}
-        except Exception as e:
-            logger.warning(f"[political_bias] Topics analysis failed (non-critical): {e}")
-            topics = {"covered": [], "omitted": []}
+        topics_response = requests.post(
+            vars.bias_url + "/biasengine/get_topics",
+            json=payload,
+            timeout=30
+        )
+        topics_data = topics_response.json()
+        if topics_data.get("status") != 200:
+            logger.error(f"[political_bias] Topics analysis failed: {topics_data}")
+            return {}
+        topics = topics_data.get("topics")
+        if not topics:
+            logger.error(f"[political_bias] No topics returned: {topics_data}")
+            return {}
 
         # Combine into single result
         political_bias_result = {
