@@ -161,3 +161,14 @@ if 'fastapi' not in sys.modules:
     sys.modules['fastapi.middleware'] = middleware_mod
     sys.modules['fastapi.middleware.cors'] = cors_mod
     sys.modules['fastapi.responses'] = responses_mod
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    passed = len(terminalreporter.stats.get("passed", []))
+    failed = len(terminalreporter.stats.get("failed", []))
+    skipped = len(terminalreporter.stats.get("skipped", []))
+    errors = len(terminalreporter.stats.get("error", []))
+
+    terminalreporter.write_sep(
+        "=",
+        f"TEST SUMMARY: {passed} passed, {failed} failed, {skipped} skipped, {errors} errors"
+    )
