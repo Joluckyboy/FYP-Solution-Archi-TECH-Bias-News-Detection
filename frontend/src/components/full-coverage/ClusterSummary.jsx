@@ -91,19 +91,19 @@ const ClusterSummary = ({ topic, enrichmentLoading }) => {
                 {(silentOutlets.left_silent || silentOutlets.right_silent || silentOutlets.center_silent) && (
                     <div className="mb-5 space-y-2">
                         {silentOutlets.left_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-blue-200 border border-blue-300 rounded-lg text-sm text-blue-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Left outlets are silent</strong> — this story has no left-leaning coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.right_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-red-200 border border-red-300 rounded-lg text-sm text-red-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Right outlets are silent</strong> — this story has no right-leaning coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.center_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-purple-100 border border-purple-200 rounded-lg text-sm text-purple-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Center outlets are silent</strong> — no centrist coverage found for this story.</span>
                             </div>
