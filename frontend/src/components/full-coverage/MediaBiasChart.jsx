@@ -8,11 +8,11 @@ import {
 } from "recharts";
 
 const BIAS_CONFIG = [
-    { key: "left", label: "Left", color: "#2563EB" },
-    { key: "leaningLeft", label: "Leaning Left", color: "#60A5FA" },
-    { key: "center", label: "Center", color: "#7C3AED" },
-    { key: "leaningRight", label: "Leaning Right", color: "#F87171" },
-    { key: "right", label: "Right", color: "#DC2626" },
+    { key: "left", label: "Left", color: "#93C5FD" },         // blue-300
+    { key: "leaningLeft", label: "Leaning Left", color: "#BFDBFE" },  // blue-200
+    { key: "center", label: "Center", color: "#E9D5FF" },       // purple-200
+    { key: "leaningRight", label: "Leaning Right", color: "#FECACA" }, // red-200
+    { key: "right", label: "Right", color: "#FCA5A5" },        // red-300
 ];
 
 const SG_DOMAINS = {
@@ -38,7 +38,7 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
     return (
-        <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central"
+        <text x={x} y={y} fill="#000" textAnchor="middle" dominantBaseline="central"
             style={{ fontSize: 11, fontWeight: 700 }}>
             {`${(percent * 100).toFixed(0)}%`}
         </text>
@@ -106,8 +106,9 @@ const MediaBiasChart = ({ articles, metrics }) => {
                         />
                         <Legend
                             iconType="circle"
-                            iconSize={8}
-                            wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                            iconSize={10}
+                            wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
+                            formatter={(value) => <span style={{ color: "#000000", fontWeight: 500 }}>{value}</span>}
                         />
                     </PieChart>
                 </ResponsiveContainer>
@@ -140,7 +141,7 @@ const MediaBiasChart = ({ articles, metrics }) => {
                                     let pillClass = "bg-slate-100 border-slate-200 text-slate-700";
                                     if (s.bias.includes("left")) pillClass = "bg-blue-100 border-blue-200 text-blue-800";
                                     else if (s.bias.includes("right")) pillClass = "bg-red-100 border-red-200 text-red-800";
-                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-200 text-purple-800";
+                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-00 text-purple-800";
                                     return (
                                         <div key={i}
                                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${pillClass}`}

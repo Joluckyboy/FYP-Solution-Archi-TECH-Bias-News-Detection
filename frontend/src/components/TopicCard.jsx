@@ -22,7 +22,7 @@ const TopicCard = ({ topic }) => {
     const navigate = useNavigate();
 
     const rawImages = allImages?.length > 0 ? allImages : (image ? [image] : []);
-    
+
     // Proactively proxy known blocked domains to avoid the initial 406 error
     const imagesList = rawImages.map((url) => {
         if (!url) return url;
@@ -105,15 +105,15 @@ const TopicCard = ({ topic }) => {
                 {/* Bias Bar Chart */}
                 <div className="mt-2">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1 font-semibold">
-                        <span className="text-blue-500">Left {Math.round(leftPct)}%</span>
+                        <span className="text-blue-600">Left {Math.round(leftPct)}%</span>
                         <span className="text-purple-500">Center {Math.round(centerPct)}%</span>
-                        <span className="text-red-500">Right {Math.round(rightPct)}%</span>
+                        <span className="text-red-600">Right {Math.round(rightPct)}%</span>
                     </div>
 
                     <div className="h-3 w-full flex rounded-full overflow-hidden bg-gray-100">
-                        <div className="h-full bg-blue-400 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
-                        <div className="h-full bg-purple-500 relative group" style={{ width: `${centerPct}%` }} />
-                        <div className="h-full bg-red-400 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
+                        <div className="h-full bg-blue-300 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
+                        <div className="h-full bg-purple-200 relative group" style={{ width: `${centerPct}%` }} />
+                        <div className="h-full bg-red-300 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
                     </div>
                 </div>
             </CardContent>
@@ -122,7 +122,7 @@ const TopicCard = ({ topic }) => {
                 <div className="flex gap-2 w-full">
                     {/* View Full Coverage */}
                     <button
-                        className="flex-1 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-md transition-colors"
+                        className="flex-1 py-2 border border-slate-400 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-md transition-colors"
                         onClick={() => navigate(`/full-coverage/${id}`)}
                     >
                         View Full Coverage
@@ -142,7 +142,6 @@ const TopicCard = ({ topic }) => {
                                 </>
                             ) : (
                                 <>
-                                    <Zap className="h-3.5 w-3.5" />
                                     Analyse Top Article
                                 </>
                             )}
