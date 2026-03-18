@@ -2,7 +2,6 @@ import os
 import time as _time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
 from .core import s3_sync, get_summary_service
 from .helpers import (
     DEFAULT_BIAS_DISTRIBUTION,
@@ -10,8 +9,11 @@ from .helpers import (
     extract_keywords,
     fetch_topics_data,
     _safe_read_csv,
+    find_cluster_id_by_title,
+    filter_related,
+    related_articles_sbert,
 )
-
+from .core.services import get_topic_service
 app = Flask(__name__)
 CORS(app)
 
@@ -253,6 +255,78 @@ def cluster_and_save():
         "articles": len(df),
         "clusters": len(topics),
     }), 200
+
+@app.route("/dashboard/related_articles", methods=["POST"])
+def related_articles():
+    """
+    Fast cluster lookup using precomputed cluster_id from the CSV.
+
+    Body JSON:
+      {
+        "title":         "Article headline",
+        "summary":       "Optional short excerpt",
+        "source_domain": "channelnewsasia.com"
+      }
+
+    Returns:
+      {
+        "matched":       true/false,
+        "cluster_title": "...",
+        "articles":      [...],
+        "reason":        "..."
+      }
+    """
+    import pandas as pd
+    import os
+
+    body          = request.get_json(force=True) or {}
+    query_title   = (body.get("title")   or "").strip()
+    source_domain = (body.get("source_domain") or "").strip().lower()
+
+    if not query_title:
+        return jsonify({"matched": False, "articles": [], "reason": "title required"}), 400
+
+    # ── Load CSV ──────────────────────────────────────────────────────────────
+    csv_path = os.getenv("SCRAPER_DATA_DIR", "/app/data") + "/scraped_articles.csv"
+    if not os.path.exists(csv_path):
+        return jsonify({"matched": False, "articles": [], "reason": "CSV not found"}), 200
+
+    try:
+        df = pd.read_csv(csv_path).fillna("")
+    except Exception as e:
+        return jsonify({"matched": False, "articles": [], "reason": f"CSV read error: {e}"}), 200
+
+    # ── Fast path: use precomputed cluster_id ─────────────────────────────────
+    if "cluster_id" in df.columns and df["cluster_id"].notna().any():
+        cluster_id = find_cluster_id_by_title(df, query_title)
+
+        if cluster_id is None:
+            return jsonify({
+                "matched":  False,
+                "articles": [],
+                "reason":   "Article title not found in cluster database",
+            }), 200
+
+        cluster_articles = df[df["cluster_id"].astype(str) == str(cluster_id)]
+
+        # Representative cluster title = most recent article title
+        cluster_title = query_title
+        if "published_at" in cluster_articles.columns:
+            sorted_cluster = cluster_articles.sort_values("published_at", ascending=False)
+            cluster_title = str(sorted_cluster.iloc[0].get("title", query_title))
+
+        related = filter_related(cluster_articles, source_domain, query_title)
+
+        return jsonify({
+            "matched":       True,
+            "cluster_title": cluster_title,
+            "cluster_id":    str(cluster_id),
+            "articles":      related,
+        }), 200
+
+    # ── Slow fallback: S-BERT similarity (only if no cluster_id column) ───────
+    print(f"[related_articles] No cluster_id column — falling back to S-BERT for: {query_title[:60]}")
+    return related_articles_sbert(df, query_title, source_domain)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8017)

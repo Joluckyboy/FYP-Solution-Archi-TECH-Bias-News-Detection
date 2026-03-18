@@ -154,7 +154,7 @@ def scrape_straits_times(url):
                            and len(p.get_text(strip=True)) > 20]
             body = _join_paragraphs(content_paras)
         
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         if not is_english_text(body):
             logger.warning(f"Non-English content: {url}")
@@ -273,7 +273,7 @@ def scrape_cna(url):
         clean_paras = [p for p in all_paras if not _is_cna_boilerplate(p.get_text())]
         body = _join_paragraphs(clean_paras)
 
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         # Extract image
         image_url = ""
@@ -331,9 +331,6 @@ def scrape_fox_news(url):
         
         paywall = bool(soup.find("div", class_="paywall"))
 
-        # Unwrap inline tags to prevent mid-word spaces in extracted text
-        _unwrap_inline_tags(soup)
-
         headline_elem = soup.find("h1", class_="headline") or soup.find("h1")
         headline = headline_elem.text.strip() if headline_elem else "Headline not found"
         
@@ -375,15 +372,16 @@ def scrape_fox_news(url):
             
             clean_paras = []
             for p in paragraphs:
-                text = p.get_text(strip=True)
+                text = p.get_text(separator=' ', strip=True)
+                text = re.sub(r' {2,}', ' ', text).strip()
                 if text and len(text) > 20:
                     if not any(phrase in text for phrase in boilerplate_phrases):
-                        clean_paras.append(p)
+                        clean_paras.append(text)
             
             # Join with \n\n to preserve paragraph structure
-            body = "\n\n".join([p.get_text(strip=True) for p in clean_paras])
+            body = "\n\n".join(clean_paras)
         
-        body = clean_boilerplate(body.strip())
+        body = clean_boilerplate(body.strip(), preserve_paragraphs=True)
         
         if len(body) < 100:
             logger.warning(f"Fox News insufficient content: {url}")

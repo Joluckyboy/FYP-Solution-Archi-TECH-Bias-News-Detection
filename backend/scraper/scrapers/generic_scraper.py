@@ -124,7 +124,7 @@ def scrape_generic_source(source_url: str, source_name: str, country: str,
                     continue
                 
                 title = result.title.strip()
-                cleaned_text = clean_boilerplate(result.text)
+                cleaned_text = clean_boilerplate(result.text, preserve_paragraphs=True)
                 summary = smart_truncate(cleaned_text, 300)
                 
                 # Skip duplicate summaries
@@ -208,7 +208,7 @@ def scrape_generic_article(url):
             logger.warning(f"newspaper3k insufficient content: {url}")
             return None
         
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         if not is_english_text(body):
             logger.warning(f"Non-English content: {url}")
