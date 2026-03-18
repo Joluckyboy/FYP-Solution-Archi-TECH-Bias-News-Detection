@@ -19,7 +19,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def fix_encoding_issues(text: str) -> str:
+def fix_encoding_issues(text: str, preserve_paragraphs: bool = False) -> str:
     """
     Fix common UTF-8 encoding corruption issues
     
@@ -65,8 +65,13 @@ def fix_encoding_issues(text: str) -> str:
     # Remove any remaining control characters
     text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
     
-    # Clean up multiple spaces
-    text = re.sub(r'\s+', ' ', text)
+    if preserve_paragraphs:
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+    else:
+        # Clean up multiple spaces
+        text = re.sub(r'\s+', ' ', text)
     
     return text.strip()
 
@@ -158,8 +163,35 @@ def remove_usatoday_dates(text: str) -> str:
     
     return text.strip()
 
+def _is_boilerplate_paragraph(text: str) -> bool:
+    if not text:
+        return True
+    if len(text) < 60 and not re.search(r'[.!?]', text):
+        return True
+    words = text.split()
+    if len(words) >= 2 and len(set(w.lower() for w in words)) == 1:
+        return True
+    if text.isupper() and len(text) < 40:
+        return True
+    if re.match(r'^(Published|Updated)\s+[A-Z][a-z]{2}', text):
+        return True
+    if re.search(
+        r'\bis\s+(a|an)\s+(senior|staff|associate|chief|deputy|veteran)?\s*'
+        r'(correspondent|journalist|reporter|editor|writer)\b',
+        text, re.IGNORECASE
+    ):
+        return True
+    if re.match(
+        r'^(sign\s+up|subscribe|read\s+more|click\s+here|need\s+help|'
+        r'follow\s+us|share\s+this|get\s+the\s+\w+|listen\s+to\s+this)',
+        text, re.IGNORECASE
+    ):
+        return True
+    if re.match(r'^[-–—(]\s*(REUTERS|AP|AFP|EPA|AAP|PA)\s*[).]?\s*$', text):
+        return True
+    return False
 
-def clean_boilerplate(text: str) -> str:
+def clean_boilerplate(text: str, preserve_paragraphs: bool = False) -> str:
     """
     Remove common boilerplate text from news articles
     
@@ -178,7 +210,7 @@ def clean_boilerplate(text: str) -> str:
     was_truncated = text.rstrip().endswith('...')
     
     # Fix encoding issues first
-    text = fix_encoding_issues(text)
+    text = fix_encoding_issues(text, preserve_paragraphs=preserve_paragraphs)
     
     # Remove prefixes
     text = remove_location_prefixes(text)
@@ -228,12 +260,24 @@ def clean_boilerplate(text: str) -> str:
     cleaned = re.sub(r'By\s+[A-Z][a-z]+\s+[A-Z][a-z]+', '', cleaned)
     cleaned = re.sub(r'ST PHOTO:\s+[A-Z\s]+', '', cleaned)
     
+    cleaned = re.sub(r'(\bAdvertisement\b[\s]*){2,}', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^\s*Advertisement\s*$', '', cleaned, flags=re.IGNORECASE | re.MULTILINE)
+
     # Fix typos
     cleaned = cleaned.replace('accordingto', 'according to')
     
-    # Collapse multiple spaces
-    cleaned = re.sub(r'\s+', ' ', cleaned)
-    cleaned = cleaned.strip()
+    if preserve_paragraphs:
+        paragraphs = re.split(r'\n{2,}', cleaned)
+        normalized_paragraphs = []
+        for paragraph in paragraphs:
+            normalized = re.sub(r'[ \t\n]+', ' ', paragraph).strip()
+            if normalized and not _is_boilerplate_paragraph(normalized):
+                normalized_paragraphs.append(normalized)
+        cleaned = "\n\n".join(normalized_paragraphs).strip()
+    else:
+        # Collapse multiple spaces
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = cleaned.strip()
     
     # PRESERVE ELLIPSIS if it was there before cleaning
     if was_truncated and not cleaned.endswith('...'):

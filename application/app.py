@@ -4,7 +4,8 @@ from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 
 import vars as vars
-
+import requests as _requests
+from urllib.parse import urlparse
 import threading
 import time
 import json
@@ -892,3 +893,69 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             else:
                 error_message = str(error) if str(error) else "Internal Server Error"
                 raise HTTPException(status_code=500, detail=error_message)
+            
+
+@app.get("/application/related_coverage")
+async def get_related_coverage(url: str = Query(..., description="URL of the analysed article")):
+    """
+    Find related articles from other outlets covering the same story.
+ 
+    Steps:
+      1. Fetch the analysed article's title + summary from DB (or scraper)
+      2. POST to analyzer /dashboard/related_articles with title + url
+      3. Return matched cluster articles filtered to 1-per-outlet, excluding source outlet
+    """
+
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+ 
+    # Get the analysed article data
+    try:
+        article_data = methods.get_news(url)
+    except Exception:
+        article_data = {}
+ 
+    title   = article_data.get("title", "")
+    summary = article_data.get("content", "")[:500] if article_data.get("content") else ""
+ 
+    if not title:
+        # Try to scrape if not in DB yet
+        try:
+            scraped = methods.extract_news(url)
+            title   = scraped.get("headline", "")
+            summary = scraped.get("body", "")[:500] if scraped.get("body") else ""
+        except Exception:
+            pass
+ 
+    if not title:
+        return {"articles": [], "matched": False, "reason": "Could not extract article title"}
+ 
+    # Extract source domain of the submitted article
+    try:
+        source_domain = urlparse(url).netloc.replace("www.", "")
+    except Exception:
+        source_domain = ""
+ 
+    # Call analyzer service to find matching cluster
+    analyzer_url = vars.analyzer_url if hasattr(vars, "analyzer_url") else os.getenv("ANALYZER_URL", "http://localhost:8017")
+ 
+    try:
+        resp = _requests.post(
+            f"{analyzer_url}/dashboard/related_articles",
+            json={"title": title, "summary": summary, "source_domain": source_domain},
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return {
+                "articles":     data.get("articles", []),
+                "cluster_title": data.get("cluster_title", ""),
+                "matched":      data.get("matched", False),
+                "reason":       data.get("reason", ""),
+            }
+        else:
+            return {"articles": [], "matched": False, "reason": f"Analyzer returned {resp.status_code}"}
+    except Exception as e:
+        logger.error(f"Related coverage lookup failed: {e}")
+        return {"articles": [], "matched": False, "reason": "Related coverage unavailable"}
+ 
