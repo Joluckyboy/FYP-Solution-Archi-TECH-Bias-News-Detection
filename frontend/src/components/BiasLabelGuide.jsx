@@ -82,14 +82,14 @@ const BiasLabelGuide = () => {
     const showRightChevron = currentSlide < totalSlides - 1;
   
     return (
-      <Card className="w-full max-w-none mb-8">
+      <Card className="w-full mb-8 grid grid-rows-[auto_1fr_auto] max-h-[520px] md:max-h-none overflow-hidden">
         {/* Header */}
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 px-4 sm:px-6 row-start-1 flex-none h-[100px]">
         <CardTitle className="checkmate-gradient flex items-center gap-2 text-2xl font-bold">
             <Info className="h-5 w-5" />
             Left and Right — What do these political bias labels mean?
         </CardTitle>
-        <p className="text-base text-gray-600 mt-1">
+        <p className="text-sm sm:text-base text-gray-600 mt-1 px-1">
             Source:{" "}
             <a 
             href="https://www.allsides.com/media-bias" 
@@ -102,120 +102,134 @@ const BiasLabelGuide = () => {
         </p>
         </CardHeader>
         
-        <CardContent className="p-0 pb-8">
-          <div className={`p-8 rounded-lg ${bucketColors[slides[currentSlide].color]} h-full`}>
+        <CardContent className="px-6 row-start-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 max-h-[380px] md:max-h-none">
+          <div className={`grid grid-rows-[auto_1fr_auto] h-full min-h-[380px] min-w-[450px] md:min-w-0 p-6 rounded-lg px-2 ${bucketColors[slides[currentSlide].color]}`}>
             {/* Navigation & Title */}
-            <div className="flex items-center gap-4 mb-8 h-14">
+            <div className="flex items-center justify-between md:justify-start md:gap-4 p-2 row-start-1 h-[60px]">
                 {/* Left Chevron */}
-                <div className="w-12 h-12 flex items-center justify-center">
+                <div className="ml-4 w-12 h-12 flex items-center justify-center flex-shrink-0">
                     {showLeftChevron ? (
                     <button
                         onClick={goPrev}
-                        className="p-2 rounded-full hover:bg-white/50"
+                        className="p-2 flex items-center justify-center"
                         aria-label="Previous slide"
                     >
                         <ChevronLeft className="h-6 w-6" />
                     </button>
                     ) : (
-                    <div className="w-10 h-10 rounded-full invisible" aria-hidden="true" />
+                    <div className="invisible" aria-hidden="true" />
                     )}
                 </div>
                 
                 {/* Label */}
-                <h3 className="text-base font-bold text-gray-900">
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 flex-1 min-w-[200px] text-center px-4">
                     {slides[currentSlide].title}
                 </h3>
                 
                 {/* Right Chevron */}
-                <div className="w-12 h-12 flex items-center justify-center">
+                <div className="mr-4 w-12 h-12 flex items-center justify-center flex-shrink-0">
                     {showRightChevron ? (
                     <button
                         onClick={goNext}
-                        className="p-2 rounded-full hover:bg-white/50"
+                        className="p-2 flex items-center justify-center"
                         aria-label="Next slide"
                     >
                         <ChevronRight className="h-6 w-6" />
                     </button>
                     ) : (
-                    <div className="w-10 h-10 rounded-full invisible" aria-hidden="true" />
+                    <div className="invisible" aria-hidden="true" />
                     )}
                 </div>
             </div>
   
             {/* Content */}
-            <div className="prose prose-base max-w-none mb-12"> 
-            <p className="mb-8 text-gray-800 leading-relaxed text-base px-4">
-            <span 
-                dangerouslySetInnerHTML={{
-                __html: slides[currentSlide].explanation
-                    .replace(
-                    /liberal, progressive, or left-wing|conservative, traditional, libertarian, or right-wing/g,
-                    '<span class="font-bold">$&</span>'
-                    )
-                }} 
-            />
-            </p>
+            <div className="flex flex-col gap-6 row-start-2 min-h-[260px] py-4 px-8">
+              {/* Explanation */}
+              <div className="prose prose-sm md:prose-base max-w-none mb-8 px-4 min-h-[120px]"> 
+                <p className="mb-8 mx-6 text-sm md:text-base text-gray-800 leading-relaxed">
+                <span 
+                    dangerouslySetInnerHTML={{
+                    __html: slides[currentSlide].explanation
+                        .replace(
+                        /liberal, progressive, or left-wing|conservative, traditional, libertarian, or right-wing/g,
+                        '<span class="font-bold">$&</span>'
+                        )
+                    }} 
+                />
+                </p>
               
               {/* Examples */}
-              <div className="bg-white/60 rounded-xl p-8 border-2 border-white/50 shadow-lg">
+              <div className="bg-white/60 rounded-xl p-6 border-2 border-white/50 shadow-lg mx-4 min-h-[120px]">
                 {slides[currentSlide].examplesIntro && slides[currentSlide].examples.length > 0 ? (
                     <>
-                    <h4 className="font-medium mb-4 text-gray-800 text-base leading-relaxed text-left">
+                    <h4 className="font-medium mb-4 text-gray-800 text-base leading-relaxed text-left min-h-[24px]">
                         <span dangerouslySetInnerHTML={{
                         __html: slides[currentSlide].examplesIntro
                             .replace(/most likely/g, '<strong>most likely</strong>')
                             .replace(/may moderately/g, '<strong>may moderately</strong>')
                         }} />
                     </h4>
-                    <ul className="mt-2 text-base space-y-1 ml-8 list-disc">
+                    <ul className="mt-2 text-sm md:text-base space-y-1 ml-4 md:ml-8 list-disc min-h-[60px]">
                         {slides[currentSlide].examples.slice(0, 3).map((example, idx) => (
-                        <li key={idx} className="text-base text-gray-800 leading-relaxed ml-4">
+                        <li key={idx} className="text-sm md:text-base text-gray-800 leading-relaxed">
                             {example}
                         </li>
                         ))}
                     </ul>
                     </>
                 ) : slides[currentSlide].id === "center" ? (
-                    <p className="text-base text-center font-bold leading-relaxed italic">
+                    <p className="text-sm md:text-base text-center font-bold leading-relaxed italic min-h-[80px] flex items-center justify-center">
                     {slides[currentSlide].centerNote}
                     </p>
                 ) : null}
                 </div>
+              </div>
             </div>
   
-            {/* Progress Lines */}
-            <div className="flex items-center justify-center gap-3 pb-4"> 
-              {Array.from({ length: totalSlides }, (_, i) => (
-                <div
-                  key={i}
-                  onClick={() => goToSlide(i)}
-                  className={`w-12 h-1.5 rounded-full cursor-pointer transition-all duration-300 hover:scale-[1.15] shadow-sm ${
-                    i === currentSlide 
-                      ? "bg-gray-900"  
-                      : "bg-gray-300 hover:bg-gray-400"  
-                  }`}
-                  aria-label={`Go to slide ${i + 1}`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      goToSlide(i);
-                    }
-                  }}
-                />
-              ))}
+            {/* Progress Labels */}
+            <div className="flex items-center justify-center gap-2 pb-4 row-start-3 h-[60px] px-6 min-w-[420px] md:min-w-0">
+              {slides.map((slide, i) => {
+                const shortLabel = slide.id === 'left' ? 'L' :
+                                  slide.id === 'lean-left' ? 'LL' :
+                                  slide.id === 'center' ? 'C' :
+                                  slide.id === 'lean-right' ? 'LR' : 'R';
+                const isActive = i === currentSlide;
+                
+                return (
+                  <button
+                    key={i}
+                    onClick={() => goToSlide(i)}
+                    className={`w-12 h-10 flex items-center justify-center rounded-full text-xs sm:text-sm font-bold transition-all duration-300 shadow-sm border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 flex-shrink-0 ${
+                      isActive 
+                        ? 'text-white bg-black border-checkmate-gradient shadow-lg scale-110 focus:ring-checkmate-gradient' 
+                        : 'text-gray-700 hover:scale-105 hover:text-gray-900 hover:border-gray-400 bg-white/80 hover:bg-white border-gray-300 focus:ring-gray-400'
+                    } ${bucketColors[slide.color] || 'bg-gray-100 border-gray-200'}`} 
+                    role="tab"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') goToSlide(i);
+                    }}
+                    aria-label={`Go to ${slide.title} slide`}
+                    aria-selected={isActive}
+                  >
+                    {shortLabel}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </CardContent>
   
         {/* CardFooter */}
-        <CardFooter className="pb-6 px-8">
-        <p className="text-base text-gray-600 italic leading-relaxed"> {/* text-base */}
-            A Center outlet may leave out valid perspectives or arguments from the left or right. <br/>
+        <CardFooter className="sm:px-8 row-start-3 flex-none h-[80px]">
+        <p className="text-sm sm:text-base text-gray-600 italic leading-relaxed">
+            A Center outlet may leave out valid perspectives or arguments from the left or right.
+            <br/>
             As such, we strongly encourage you to read outlets across the political spectrum to gain multiple perspectives.
         </p>
         </CardFooter>
       </Card>
+    
     );
   };
   

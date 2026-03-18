@@ -318,13 +318,15 @@ const LandingPage = () => {
 
         {/* Visualisations */}
         <div className="grid grid-cols-1 gap-8 mb-12">
+          
           {/* Guide to Political Bias Labels */}
           <BiasLabelGuide />
+
           {/* Outlet Bias */}
           <Card className="h-[650px] flex flex-col">
             <CardHeader className="flex-none">
               <CardTitle className="checkmate-gradient">
-                Bias Distribution
+                Political Bias — Distribution across outlets
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">
@@ -350,16 +352,7 @@ const LandingPage = () => {
           </Card>
         </div>
 
-        {/* Link to Explanations */}
-        <div className="text-center mb-10">
-          <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
-            How This Works!
-          </Link>
-        </div>
-
-
       </div>
-
     </div>
   );
 };
