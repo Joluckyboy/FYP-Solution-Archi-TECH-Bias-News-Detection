@@ -252,7 +252,7 @@ const TrustSnapshot = ({ data, apiUrl }) => {
       factcheckResult:  data.factcheck_result,
       propagandaResult: data.propaganda_result,
     });
-  }, [data, data?.factcheck_result, data?.propaganda_result]);
+  }, [data]);
 
   if (!data) return null;
 

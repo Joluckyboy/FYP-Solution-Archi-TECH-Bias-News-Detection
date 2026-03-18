@@ -54,7 +54,7 @@ function SourceFavicon({ source }) {
 
 // ─── Article card ─────────────────────────────────────────────────────────────
 
-function RelatedArticleCard({ article, analysedArticle, apiUrl }) {
+function RelatedArticleCard({ article, analysedArticle }) {
   const navigate = useNavigate();
   const bias     = getBiasStyle(article.political_bias);
   const date     = article.published_at ? String(article.published_at).slice(0, 10) : null;

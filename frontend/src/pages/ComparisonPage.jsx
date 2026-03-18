@@ -467,7 +467,7 @@ const ComparisonPage = () => {
           if (isComplete(u)||Date.now()-t0>90_000) {
             es.close(); esRef.current=null; setLoadingStage("done");
           }
-        } catch {}
+        } catch (e) { console.error("[ComparisonPage] SSE parse error:", e); }
       };
       es.onerror = () => { es.close(); esRef.current=null; setLoadingStage("done"); };
     } catch(err) {

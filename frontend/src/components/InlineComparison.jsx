@@ -343,7 +343,7 @@ const InlineComparison = ({ analysedArticle, relatedArticle, apiUrl, onClose }) 
             esRef.current = null;
             setLoadingState("done");
           }
-        } catch (_) { /* ignore parse errors */ }
+        } catch (e) { console.error("[InlineComparison] SSE parse error:", e); }
       };
 
       es.onerror = () => {
