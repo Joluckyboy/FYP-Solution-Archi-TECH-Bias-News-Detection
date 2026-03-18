@@ -237,39 +237,6 @@ function FactCell({ data, loading }) {
   );
 }
 
-function parseSummary(text) {
-  if (!text) return [];
-  const FILLER = /^(here is a summary|here's a summary)/i;
-  const result = [];
-  const paragraphs = String(text).split(/\n\n|\n/).map(p => p.trim()).filter(Boolean);
-  let i = 0;
-  while (i < paragraphs.length) {
-    const para = paragraphs[i];
-    if (FILLER.test(para)) { i++; continue; }
-    const parts = para.split(/\s*\*\s+/).map(p => p.trim()).filter(Boolean);
-    if (parts.length === 1) {
-      const nextPara  = paragraphs[i + 1] || "";
-      const nextParts = nextPara.split(/\s*\*\s+/).map(p => p.trim()).filter(Boolean);
-      const nextHasBullets = nextParts.length > 1 || nextPara.trimStart().startsWith("*");
-      if (parts[0].endsWith(":") && nextHasBullets) {
-        result.push({ text: parts[0], children: nextParts.filter(Boolean) });
-        i += 2;
-        continue;
-      } else {
-        result.push({ text: parts[0], children: [] });
-      }
-    } else if (parts.length > 1) {
-      if (parts[0].endsWith(":")) {
-        result.push({ text: parts[0], children: parts.slice(1) });
-      } else {
-        parts.forEach(p => result.push({ text: p, children: [] }));
-      }
-    }
-    i++;
-  }
-  return result;
-}
-
 function SummaryCell({ data, loading }) {
   if (!data?.summarise_result) return <Pending loading={loading} />;
   return (
