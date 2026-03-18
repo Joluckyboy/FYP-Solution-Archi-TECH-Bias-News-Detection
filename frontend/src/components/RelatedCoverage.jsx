@@ -161,7 +161,7 @@ function RelatedCoverageSkeleton() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl, hideHeader = false }) => {
+const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl,hideHeader = false }) => {
   const [articles,     setArticles]     = useState([]);
   const [clusterTitle, setClusterTitle] = useState("");
   const [loading,      setLoading]      = useState(false);
