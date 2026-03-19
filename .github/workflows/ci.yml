@@ -66,6 +66,12 @@ jobs:
           - path: backend/database
             name: database
             changed: ${{ needs.changes.outputs.database }}
+          - path: backend/analyzer
+            name: analyzer
+            changed: ${{ needs.changes.outputs.analyzer }}
+          - path: backend/political_bias
+            name: political_bias
+            changed: ${{ needs.changes.outputs.political_bias }}
           - path: backend/fact-check
             name: fact-check
             changed: ${{ needs.changes.outputs.factcheck }}
