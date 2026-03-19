@@ -1,7 +1,11 @@
 import os
 import time as _time
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from .core import s3_sync, get_summary_service
 from .helpers import (
     DEFAULT_BIAS_DISTRIBUTION,
@@ -14,8 +18,6 @@ from .helpers import (
     related_articles_sbert,
 )
 from .core.services import get_topic_service
-app = Flask(__name__)
-CORS(app)
 
 # ---------------------------------------------------------------------------
 # In-memory enrichment cache
@@ -25,16 +27,42 @@ CORS(app)
 _ENRICHMENT_CACHE: dict = {}
 _ENRICHMENT_TTL: int = 3600  # 1 hour in seconds
 
-print("Analyzer starting (lazy model loading).")
-s3_sync.ensure_scraped_csv()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Analyzer starting (lazy model loading).")
+    s3_sync.ensure_scraped_csv()
+    yield
 
 
-@app.route("/dashboard/topics", methods=["GET"])
+app = FastAPI(title="Analyzer API", version="1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "analyzer"}
+
+
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
+
+@app.get("/dashboard/topics")
 def dashboard_topics():
     topics_data, error = fetch_topics_data()
     if error:
-        return jsonify({"error": error}), 404
-
+        return JSONResponse({"error": error}, status_code=404)
     try:
         formatted_topics = [
             {
@@ -44,67 +72,57 @@ def dashboard_topics():
                 "image": t.get("image") or "https://placehold.co/600x400?text=No+Image",
                 "allImages": t.get("all_images", []),
                 "sourceCount": t.get("source_count", 0),
-                "biasDistribution": t.get(
-                    "bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)
-                ),
+                "biasDistribution": t.get("bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)),
                 "date": t.get("latest_date", ""),
                 "frontUrl": t["articles"][0]["url"] if t.get("articles") else None,
             }
             for t in topics_data
         ]
-        return jsonify({"topics": formatted_topics[:50]}), 200
+        return {"topics": formatted_topics[:50]}
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.route("/dashboard/topic_details/<int:topic_id>", methods=["GET"])
-def get_topic_details(topic_id):
+@app.get("/dashboard/topic_details/{topic_id}")
+def get_topic_details(topic_id: int):
     topics_data, error = fetch_topics_data()
     if error:
-        return jsonify({"error": error}), 404
-
+        return JSONResponse({"error": error}, status_code=404)
     topic = next((t for t in topics_data if t["id"] == topic_id), None)
     if not topic:
-        return jsonify({"error": "Topic not found"}), 404
-
-    # Returning base data ONLY - no LLM enrichment here to keep it fast
-    return jsonify(
-        {
-            "id": topic["id"],
-            "title": topic["title"],
-            "image": topic.get("image"),
-            "bias_distribution": topic.get(
-                "bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)
-            ),
-            "source_count": topic.get("source_count", 0),
-            "latest_date": topic.get("latest_date", ""),
-            "contextual_insight": topic.get("contextual_insight", ""),
-            "articles": topic.get("articles", []),
-            "silent_outlets": topic.get("silent_outlets", {}),
-            "framing_differences": topic.get("framing_differences", {}),
-            "lead_articles": topic.get("lead_articles", {}),
-            "linguistic_framing": topic.get("linguistic_framing", {}),
-        }
-    ), 200
+        return JSONResponse({"error": "Topic not found"}, status_code=404)
+    return {
+        "id": topic["id"],
+        "title": topic["title"],
+        "image": topic.get("image"),
+        "bias_distribution": topic.get("bias_distribution", dict(DEFAULT_BIAS_DISTRIBUTION)),
+        "source_count": topic.get("source_count", 0),
+        "latest_date": topic.get("latest_date", ""),
+        "contextual_insight": topic.get("contextual_insight", ""),
+        "articles": topic.get("articles", []),
+        "silent_outlets": topic.get("silent_outlets", {}),
+        "framing_differences": topic.get("framing_differences", {}),
+        "lead_articles": topic.get("lead_articles", {}),
+        "linguistic_framing": topic.get("linguistic_framing", {}),
+    }
 
 
-@app.route("/dashboard/topic_enrichment/<int:topic_id>", methods=["GET"])
-def get_topic_enrichment(topic_id):
     # ── Check cache first ────────────────────────────────────────────────────
+@app.get("/dashboard/topic_enrichment/{topic_id}")
+def get_topic_enrichment(topic_id: int):
     now = _time.time()
     cached = _ENRICHMENT_CACHE.get(topic_id)
     if cached and (now - cached["ts"]) < _ENRICHMENT_TTL:
         print(f"[enrichment cache] HIT for topic {topic_id}")
-        return jsonify(cached["data"]), 200
+        return cached["data"]
 
     # ── Cache miss — fetch base topic data ───────────────────────────────────
     topics_data, error = fetch_topics_data()
     if error:
-        return jsonify({"error": error}), 404
-
+        return JSONResponse({"error": error}, status_code=404)
     topic = next((t for t in topics_data if t["id"] == topic_id), None)
     if not topic:
-        return jsonify({"error": "Topic not found"}), 404
+        return JSONResponse({"error": "Topic not found"}, status_code=404)
 
     # ── Perform LLM enrichment ───────────────────────────────────────────────
     svc = get_summary_service()
@@ -121,60 +139,37 @@ def get_topic_enrichment(topic_id):
     # ── Store in cache ───────────────────────────────────────────────────────
     _ENRICHMENT_CACHE[topic_id] = {"data": result, "ts": now}
     print(f"[enrichment cache] STORED for topic {topic_id}")
+    return result
 
-    return jsonify(result), 200
 
-
-@app.route("/dashboard/trending_keywords", methods=["GET"])
+@app.get("/dashboard/trending_keywords")
 def trending_keywords():
     df = _safe_read_csv(SCRAPED_DATA_PATH)
     if df is None or len(df) == 0:
-        return jsonify({"keywords": []}), 200
+        return {"keywords": []}
     df = df.fillna("")
-    return jsonify({"keywords": extract_keywords(df, top_k=10)}), 200
+    return {"keywords": extract_keywords(df, top_k=10)}
 
 
-@app.route("/dashboard/topic_coverage", methods=["GET"])
-def topic_coverage():
+@app.get("/dashboard/topic_coverage")
+def topic_coverage(topic: str = ""):
     df = _safe_read_csv(SCRAPED_DATA_PATH)
     if df is None or len(df) == 0:
-        return jsonify({"topics": [], "coverage": []}), 200
-
+        return {"topics": [], "coverage": []}
     df = df.fillna("")
     if "topic" not in df.columns or "source" not in df.columns:
-        return jsonify({"topics": [], "coverage": []}), 200
-
+        return {"topics": [], "coverage": []}
     df["topic"] = df["topic"].astype(str).str.strip()
     df.loc[df["topic"] == "", "topic"] = "General"
-
-    selected_topic = request.args.get("topic", "").strip()
-    if selected_topic:
-        df = df[df["topic"] == selected_topic]
-
+    if topic:
+        df = df[df["topic"] == topic]
     counts = df.groupby("source").size().sort_values(ascending=False).head(50)
     coverage = [{"source": str(src), "count": int(cnt)} for src, cnt in counts.items()]
     topics = sorted(df["topic"].unique().tolist())
+    return {"topics": topics, "coverage": coverage}
 
-    return jsonify({"topics": topics, "coverage": coverage}), 200
 
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "service": "analyzer"}), 200
-
-@app.route("/", methods=["GET"])
-def root():
-    return {
-        "service": "analyzer",
-        "status": "ok",
-        "message": "Analyzer API is running"
-    }, 200
-
-# ---------------------------------------------------------------------------
-# NEW — called by bias-classifier sidecar after upload_csv()
-# ---------------------------------------------------------------------------
-
-@app.route("/dashboard/cluster", methods=["POST"])
+@app.post("/dashboard/cluster")
 def cluster_and_save():
     """
     Called once per day by the ECS bias-classifier container after it finishes
@@ -194,12 +189,12 @@ def cluster_and_save():
     import analyzer.helpers.data_helpers as _dh
     from .core.services import get_topic_service
 
-    S3_BUCKET  = os.environ.get("S3_BUCKET")
-    S3_KEY     = os.environ.get("SCRAPER_S3_KEY", "scraped_articles/scraped_articles.csv")
+    S3_BUCKET = os.environ.get("S3_BUCKET")
+    S3_KEY = os.environ.get("SCRAPER_S3_KEY", "scraped_articles/scraped_articles.csv")
     AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-1")
 
     if not S3_BUCKET:
-        return jsonify({"error": "S3_BUCKET env var not set"}), 500
+        return JSONResponse({"error": "S3_BUCKET env var not set"}, status_code=500)
 
     os.makedirs(os.path.dirname(SCRAPED_DATA_PATH), exist_ok=True)
 
@@ -210,19 +205,19 @@ def cluster_and_save():
         s3.download_file(S3_BUCKET, S3_KEY, SCRAPED_DATA_PATH)
         print(f"[cluster] Downloaded fresh CSV from s3://{S3_BUCKET}/{S3_KEY}")
     except Exception as e:
-        return jsonify({"error": f"S3 download failed: {e}"}), 500
+        return JSONResponse({"error": f"S3 download failed: {e}"}, status_code=500)
 
     # ── 2. Read CSV ───────────────────────────────────────────────────────────
     df = _safe_read_csv(SCRAPED_DATA_PATH)
     if df is None or df.empty:
-        return jsonify({"error": "CSV is empty after download"}), 500
+        return JSONResponse({"error": "CSV is empty after download"}, status_code=500)
 
     # ── 3. Cluster ────────────────────────────────────────────────────────────
     try:
-        svc    = get_topic_service()
+        svc = get_topic_service()
         topics = svc.cluster_articles(df)
     except Exception as e:
-        return jsonify({"error": f"Clustering failed: {e}"}), 500
+        return JSONResponse({"error": f"Clustering failed: {e}"}, status_code=500)
 
     # Build title → cluster_id lookup
     cluster_map: dict[str, str] = {}
@@ -242,70 +237,50 @@ def cluster_and_save():
         s3.upload_file(SCRAPED_DATA_PATH, S3_BUCKET, S3_KEY)
         print(f"[cluster] Uploaded enriched CSV → s3://{S3_BUCKET}/{S3_KEY}")
     except Exception as e:
-        return jsonify({"error": f"S3 upload failed: {e}"}), 500
+        return JSONResponse({"error": f"S3 upload failed: {e}"}, status_code=500)
 
     # ── 5. Bust in-memory topics cache ────────────────────────────────────────
-    _dh._topics_cache           = None
-    _dh._topics_cache_time      = 0.0
+    _dh._topics_cache = None
+    _dh._topics_cache_time = 0.0
     _dh._topics_cache_csv_mtime = 0.0
 
     print(f"[cluster] Done. {len(topics)} clusters from {len(df)} articles.")
-    return jsonify({
-        "status":   "ok",
-        "articles": len(df),
-        "clusters": len(topics),
-    }), 200
+    return {"status": "ok", "articles": len(df), "clusters": len(topics)}
 
-@app.route("/dashboard/related_articles", methods=["POST"])
-def related_articles():
-    """
-    Fast cluster lookup using precomputed cluster_id from the CSV.
 
-    Body JSON:
-      {
-        "title":         "Article headline",
-        "summary":       "Optional short excerpt",
-        "source_domain": "channelnewsasia.com"
-      }
-
-    Returns:
-      {
-        "matched":       true/false,
-        "cluster_title": "...",
-        "articles":      [...],
-        "reason":        "..."
-      }
-    """
+@app.post("/dashboard/related_articles")
+async def related_articles(request: Request):
     import pandas as pd
-    import os
 
-    body          = request.get_json(force=True) or {}
-    query_title   = (body.get("title")   or "").strip()
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    query_title = (body.get("title") or "").strip()
     source_domain = (body.get("source_domain") or "").strip().lower()
 
     if not query_title:
-        return jsonify({"matched": False, "articles": [], "reason": "title required"}), 400
+        return JSONResponse(
+            {"matched": False, "articles": [], "reason": "title required"},
+            status_code=400,
+        )
 
     # ── Load CSV ──────────────────────────────────────────────────────────────
     csv_path = os.getenv("SCRAPER_DATA_DIR", "/app/data") + "/scraped_articles.csv"
     if not os.path.exists(csv_path):
-        return jsonify({"matched": False, "articles": [], "reason": "CSV not found"}), 200
+        return {"matched": False, "articles": [], "reason": "CSV not found"}
 
     try:
         df = pd.read_csv(csv_path).fillna("")
     except Exception as e:
-        return jsonify({"matched": False, "articles": [], "reason": f"CSV read error: {e}"}), 200
+        return {"matched": False, "articles": [], "reason": f"CSV read error: {e}"}
 
     # ── Fast path: use precomputed cluster_id ─────────────────────────────────
     if "cluster_id" in df.columns and df["cluster_id"].notna().any():
         cluster_id = find_cluster_id_by_title(df, query_title)
-
         if cluster_id is None:
-            return jsonify({
-                "matched":  False,
+            return {
+                "matched": False,
                 "articles": [],
-                "reason":   "Article title not found in cluster database",
-            }), 200
+                "reason": "Article title not found in cluster database",
+            }
 
         cluster_articles = df[df["cluster_id"].astype(str) == str(cluster_id)]
 
@@ -316,17 +291,21 @@ def related_articles():
             cluster_title = str(sorted_cluster.iloc[0].get("title", query_title))
 
         related = filter_related(cluster_articles, source_domain, query_title)
-
-        return jsonify({
-            "matched":       True,
+        return {
+            "matched": True,
             "cluster_title": cluster_title,
-            "cluster_id":    str(cluster_id),
-            "articles":      related,
-        }), 200
+            "cluster_id": str(cluster_id),
+            "articles": related,
+        }
 
-    # ── Slow fallback: S-BERT similarity (only if no cluster_id column) ───────
-    print(f"[related_articles] No cluster_id column — falling back to S-BERT for: {query_title[:60]}")
-    return related_articles_sbert(df, query_title, source_domain)
+    # Slow fallback: S-BERT
+    print(f"[related_articles] No cluster_id — falling back to S-BERT for: {query_title[:60]}")
+    # related_articles_sbert returns (JSONResponse, status_code) tuple from Flask;
+    # unwrap it for FastAPI
+    result, status_code = related_articles_sbert(df, query_title, source_domain)
+    return JSONResponse(result.get_json(), status_code=status_code)
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8017)
+    import uvicorn
+    uvicorn.run("analyzer.app:app", host="0.0.0.0", port=8017, reload=False)

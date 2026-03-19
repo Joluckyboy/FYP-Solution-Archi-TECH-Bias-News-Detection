@@ -696,6 +696,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             if not text or not title:
                 logger.warning(f"Stored content missing for {url}, re-scraping...")
                 data = methods.extract_news(url)
+                if not data:
+                    raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
                 text = data.get("body", "")
                 title = data.get("headline", "")
                 if not text or not title:
@@ -789,6 +791,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             # NEW ARTICLE: Scrape and save content
             logger.info(f"New article detected: {url}")
             data = methods.extract_news(url)
+            if not data:
+                raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
             text = data.get("body", "")
             title = data.get("headline", "")
             

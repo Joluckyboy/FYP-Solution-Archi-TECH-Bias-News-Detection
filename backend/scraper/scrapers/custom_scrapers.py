@@ -119,7 +119,7 @@ def _join_paragraphs(paragraphs: list) -> str:
     return "\n\n".join(result)
 
 
-def scrape_straits_times(url):
+def scrape_straits_times(url, skip_age_check=False):
     """Scrape Straits Times article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
@@ -189,7 +189,7 @@ def scrape_straits_times(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Straits Times article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
@@ -217,7 +217,7 @@ def scrape_straits_times(url):
         return None
 
 
-def scrape_cna(url):
+def scrape_cna(url, skip_age_check=False):
     """Scrape CNA article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
@@ -299,7 +299,7 @@ def scrape_cna(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old CNA article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
@@ -323,7 +323,7 @@ def scrape_cna(url):
         return None
 
 
-def scrape_fox_news(url):
+def scrape_fox_news(url, skip_age_check=False):
     """Scrape Fox News article with DATE FILTERING and paragraph preservation"""
     try:
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
@@ -347,7 +347,7 @@ def scrape_fox_news(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Fox News article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:

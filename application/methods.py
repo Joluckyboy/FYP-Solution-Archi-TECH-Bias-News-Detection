@@ -1,12 +1,10 @@
+from fastapi import HTTPException
 import vars as vars
 from typing import Dict, List, Any
 from urllib.parse import urlparse
 import re
 
 import requests  # type: ignore
-from flask import abort
-
-import pprint
 import logging
 
 from typing import List, Dict, Any
@@ -116,14 +114,16 @@ def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def extract_news(url):
     query_url = vars.scraper_url + "/scraper/get-article"
     params = {"url": url}
-
     response = requests.get(query_url, params=params)
 
     if response.status_code == 400:
-        abort(400, description="Invalid URL format")
-
-    text = response.json()
-    return text
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+    if response.status_code != 200:
+        return None
+    data = response.json()
+    if not isinstance(data, dict):
+        return None
+    return data
 
 # Database calls
 def check_exists (url):
