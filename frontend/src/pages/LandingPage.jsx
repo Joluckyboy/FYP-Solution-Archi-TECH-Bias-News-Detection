@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
 import get_api, { get_analyzer } from "@/config/config";
 import BiasLabelGuide from "@/components/BiasLabelGuide";
