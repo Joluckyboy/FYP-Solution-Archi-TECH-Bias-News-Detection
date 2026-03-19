@@ -323,17 +323,17 @@ const LandingPage = () => {
           <BiasLabelGuide />
 
           {/* Outlet Bias */}
-          <Card className="h-[650px] flex flex-col">
+          <Card className="flex flex-col">
             <CardHeader className="flex-none">
               <CardTitle className="checkmate-gradient">
-                Political Bias — Distribution across outlets
+                News Outlets: Political Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col">
               <TopicOutletBias />
             </CardContent>
-            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none">
-              <p className="text-base text-gray-600 italic m-0">
+            <CardFooter className="px-4 sm:px-8 pt-4 from-gray-50 to-blue-50 flex items-center flex-none">
+              <p className="text-sm sm:text-base text-gray-600 italic">
                 Ratings reflect outlet perspective only, not accuracy or credibility.
               </p>
             </CardFooter>
@@ -341,12 +341,12 @@ const LandingPage = () => {
         </div>
 
         {/* Trending Keywords */}
-        <div className="mb-12">
+        <div className="pb-12">
           <Card className="w-full min-h-[300px]">
             <CardHeader className="pb-3">
               <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 h-[240px] overflow-hidden">
+            <CardContent className="p-4 overflow-auto">
               <TrendingKeywords />
             </CardContent>
           </Card>

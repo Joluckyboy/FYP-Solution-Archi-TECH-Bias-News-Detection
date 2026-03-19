@@ -59,14 +59,14 @@ export default function TrendingKeywords() {
   };
 
   return (
-    <div className="h-full p-2 max-h-[340px] overflow-hidden">
+    <div className="h-full p-2">
       {topKeywords.length === 0 ? (
-        <div className="h-full flex items-center justify-center text-sm text-gray-500">
+        <div className="h-full flex items-center justify-center text-lg">
           Loading...
         </div>
       ) : (
-        <div className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-none">
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-none">
             {topKeywords.slice(0, 8).map((keyword, index) => (
               <Button
                 key={index}
