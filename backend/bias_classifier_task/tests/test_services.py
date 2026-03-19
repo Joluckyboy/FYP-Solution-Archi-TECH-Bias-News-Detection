@@ -91,3 +91,40 @@ def test_trigger_clustering_calls_analyzer():
     with patch("classify_task.requests.post", return_value=mock_response) as mock_post:
         classify_task.trigger_clustering()
         assert mock_post.called
+
+
+def test_main_runs_full_pipeline_and_triggers_clustering():
+    sample_articles = [
+        {
+            "title": "A",
+            "source": "CNA",
+            "url": "https://example.com/a",
+            "published_at": "2026-03-19",
+            "summary": "summary",
+            "image_url": "",
+            "country": "SG",
+            "topic": "Politics",
+            "political_bias": "",
+        }
+    ]
+    call_order = []
+
+    with patch("classify_task.wait_for_all_services") as mock_wait, \
+        patch("classify_task.boto3.client", return_value=MagicMock()) as mock_boto_client, \
+        patch("classify_task.run_scrape_job") as mock_scrape, \
+        patch("classify_task.download_csv", return_value=sample_articles) as mock_download, \
+        patch("classify_task.classify_all", return_value=sample_articles) as mock_classify, \
+        patch("classify_task.remove_old_articles", return_value=sample_articles) as mock_cleanup, \
+        patch("classify_task.upload_csv", side_effect=lambda *_args, **_kwargs: call_order.append("upload")) as mock_upload, \
+        patch("classify_task.trigger_clustering", side_effect=lambda *_args, **_kwargs: call_order.append("cluster")) as mock_cluster:
+        classify_task.main()
+
+    assert mock_wait.called
+    assert mock_boto_client.called
+    assert mock_scrape.called
+    assert mock_download.called
+    assert mock_classify.called
+    assert mock_cleanup.called
+    assert mock_upload.called
+    assert mock_cluster.called
+    assert call_order == ["upload", "cluster"]
