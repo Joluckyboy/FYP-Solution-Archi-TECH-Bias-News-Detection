@@ -74,6 +74,7 @@ def _sample_text(text: str, max_chars: int = SAMPLE_MAX_CHARS) -> str:
 
     return result
 
+
 def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Sanitizes the fact-check data to ensure it conforms to the FactCheckItem model.
@@ -380,6 +381,7 @@ def get_data_summary(
     sentiment=None,
     emotion=None,
     propaganda=None,
+    political_bias=None,
     summarise=None,
     allow_partial_local: bool = False,
 ):
@@ -395,8 +397,10 @@ def get_data_summary(
         sentiment = sentiment or news_data.get("sentiment_result") or {}
         emotion = emotion or news_data.get("emotion_result") or {}
         propaganda = propaganda or news_data.get("propaganda_result") or {}
+        political_bias = political_bias or news_data.get("political_bias_result") or {}
         summarise = summarise or news_data.get("summarise_result") or ""
     else:
+        political_bias = political_bias or {}
         summarise = summarise or ""
 
     has_sentiment = bool(sentiment)
@@ -415,6 +419,7 @@ def get_data_summary(
         "sentiment_result": sentiment,
         "emotion_result": emotion,
         "propaganda_result": propaganda,
+        "political_bias_result": political_bias,
         "summarise_result": summarise,
     }
 
@@ -434,7 +439,7 @@ def get_data_summary(
         print(f"[app] Error calling data summary service ({trigger}): {e}")
         return {}
 
-    summary_fields = {"sentiment_summary", "emotion_summary", "propaganda_summary"}
+    summary_fields = {"sentiment_summary", "emotion_summary", "propaganda_summary", "political_bias_summary"}
     merged_summary = {key: value for key, value in new_summary.items() if key in summary_fields}
 
     db_url = vars.database_url + "/database/ModelDataSummary/"

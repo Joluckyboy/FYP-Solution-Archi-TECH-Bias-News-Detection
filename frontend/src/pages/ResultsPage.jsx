@@ -195,6 +195,7 @@ const ResultsPage = () => {
   const emotionSummaryText    = data?.data_summary?.emotion_summary    || "No emotion summary available";
   const propagandaSummaryText = data?.data_summary?.propaganda_summary || "No propaganda summary available";
   const sentimentSummaryText  = data?.data_summary?.sentiment_summary  || "No sentiment summary available";
+  const politicalBiasSummaryText = data?.data_summary?.political_bias_summary || "No political bias summary available";
 
   return (
     <div className="app-container">
@@ -425,6 +426,12 @@ const ResultsPage = () => {
                     <CardTitle className="text-3xl">Political Bias</CardTitle>
                   </div>
                   <CardDescription>Analyses the political leaning and topic framing of the article.</CardDescription>
+                  <Accordion type="single" collapsible className="w-full mt-2">
+                    <AccordionItem value="b-sum">
+                      <AccordionTrigger className="bg-fuchsia-200 p-2 px-3 rounded font-semibold text-sm">Summary of this analysis</AccordionTrigger>
+                      <AccordionContent className="px-3 pt-2 text-sm text-gray-500">{politicalBiasSummaryText}</AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </CardHeader>
                 <CardContent>
                   <PoliticalBias politicalBiasResult={data.political_bias_result} />

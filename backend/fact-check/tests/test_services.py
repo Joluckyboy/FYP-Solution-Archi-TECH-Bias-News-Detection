@@ -38,19 +38,20 @@ async def test_summarise_data(mock_post):
         sentiment_result={"Positive": 0.9},
         emotion_result={"Happy": 0.8},
         propaganda_result={"None": 0.95},
+        political_bias_result={"rating": "center", "topics": {"covered": ["A"], "omitted": ["B"]}},
         summarise_result="This is the summary."
     )
 
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "choices": [{"message": {"content": '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'}}]
+        "choices": [{"message": {"content": '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None", "political_bias_summary": "Center"}'}}]
     }
     mock_post.return_value = mock_response
 
     result = await summarise_data(json_payload)
 
-    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'  # Removed <think> tags from mock
+    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None", "political_bias_summary": "Center"}'
     mock_post.assert_called_once_with(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=ANY)
 
 @patch("requests.post")

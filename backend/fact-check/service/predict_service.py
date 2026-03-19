@@ -7,6 +7,7 @@ from config.config import Config
 from models.datapayload import DataPayload, ModelDataPayload
 from models.statementformat import StatementFormat
 from models.predictformat import PredictFormat
+from models.modeldataformat import ModelDataFormat
 
 
 def normalize_url(url):
@@ -106,7 +107,7 @@ async def summarise_data(json_payload: ModelDataPayload):
                 },
                 {
                     "role": "user",
-                    "content": "Please output JSON object(s) containing the following fields: sentiment_summary, emotion_summary, propaganda_summary. These summaries should be short paragraphs describing the data in layman terms to guide readers through understanding one data point then leading them to the next. Make use of summarise_result to understand what the data is about. Besides the specified format, do not mention anything else."
+                    "content": "Please output JSON object(s) containing the following fields: sentiment_summary, emotion_summary, propaganda_summary, political_bias_summary. These summaries should be short paragraphs describing the data in layman terms to guide readers through understanding one data point then leading them to the next. Make use of summarise_result to understand what the data is about. Besides the specified format, do not mention anything else."
                 }
             ],
             "response_format": {
