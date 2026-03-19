@@ -54,10 +54,10 @@ function dominantSentiment(r) {
 function dominantEmotion(r) {
   if (!r?.dominant_emotion) return null;
   const em = r.dominant_emotion;
-  return `${em.charAt(0).toUpperCase()+em.slice(1)} (${Math.round((r.dominant_score??0)*100)}%)`;
+  return `${em.charAt(0).toUpperCase()+em.slice(1)} (${((r.dominant_score??0) * 100).toFixed(1)}%)`;
 }
 function propagandaScore(r) {
-  return r?.propaganda_probability != null ? Math.round(r.propaganda_probability*100) : null;
+  return r?.propaganda_probability != null ? parseFloat((r.propaganda_probability * 100).toFixed(1)) : null;
 }
 function factcheckSummary(r) {
   if (!Array.isArray(r)||!r.length) return null;
@@ -175,13 +175,13 @@ function SentimentCell({ data, loading }) {
         <sent.Icon className="h-5 w-5 shrink-0" style={{ color: sent.color }} />
         <span className="text-base font-bold" style={{ color: sent.color }}>
           {sent.label}
-          <span className="text-sm font-normal text-slate-400 ml-1.5">({Math.round(sent.value*100)}%)</span>
+          <span className="text-sm font-normal text-slate-400 ml-1.5">({(sent.value*100).toFixed(1)}%)</span>
         </span>
       </div>
       <div className="space-y-2">
         {[{key:"positive",color:"#22c55e"},{key:"negative",color:"#ef4444"},{key:"neutral",color:"#94a3b8"}]
           .map(({key,color}) => {
-            const val = Math.round((data.sentiment_result[key]??0)*100);
+            const val = parseFloat(((data.sentiment_result[key] ?? 0) * 100).toFixed(1));
             return (
               <div key={key} className="flex items-center gap-3">
                 <span className="text-sm text-slate-500 w-16 capitalize">{key}</span>
@@ -212,7 +212,7 @@ function PropCell({ data, loading }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-3xl font-bold text-slate-700">{prop}%</span>
+        <span className="text-3xl font-bold text-slate-700">{prop.toFixed(1)}%</span>
         <span className={`text-sm font-bold px-3 py-1 rounded-full ${badgeCls}`}>
           {prop>=65 ? "High" : prop>=35 ? "Moderate" : "Low"}
         </span>

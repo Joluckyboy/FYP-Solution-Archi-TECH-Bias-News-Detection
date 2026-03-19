@@ -11,15 +11,15 @@ const detectBackend = async () => {
     if (_cachedAPI) return;
 
     // Try cloud first
-    try {
-        const res = await fetch(`${CLOUD_API}/`, { signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-            _cachedAPI = CLOUD_API;
-            _cachedAnalyzer = CLOUD_ANALYZER;
-            console.log("[Checkmate] Using cloud backend:", _cachedAPI);
-            return;
-        }
-    } catch { /* cloud unavailable */ }
+    // try {
+    //     const res = await fetch(`${CLOUD_API}/`, { signal: AbortSignal.timeout(5000) });
+    //     if (res.ok) {
+    //         _cachedAPI = CLOUD_API;
+    //         _cachedAnalyzer = CLOUD_ANALYZER;
+    //         console.log("[Checkmate] Using cloud backend:", _cachedAPI);
+    //         return;
+    //     }
+    // } catch { /* cloud unavailable */ }
 
     // Fall back to localhost
     try {
