@@ -42,12 +42,6 @@ const showCites = (fact) => {
   return !["no sources","no source","sources do not","do not mention","does not mention"].some(p => e.includes(p));
 };
 
-const formatBiasLabel = (rating = "") => {
-  const normalized = rating.toLowerCase().trim().replace(/[_-]/g, " ");
-  if (!normalized) return "Center";
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-};
-
 // ─── Paginated fact-check — shows 10 at a time so 30 claims don't overwhelm ──
 
 function FactCheckList({ facts }) {
