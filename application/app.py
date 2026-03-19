@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+﻿from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
@@ -750,6 +750,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                             sentiment=fresh_data.get("sentiment_result"),
                             emotion=fresh_data.get("emotion_result"),
                             propaganda=fresh_data.get("propaganda_result"),
+                            political_bias=fresh_data.get("political_bias_result"),
                             summarise=fresh_data.get("summarise_result"),
                             allow_partial_local=True,
                         )
@@ -848,6 +849,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     sentiment=fresh_data.get("sentiment_result"),
                     emotion=fresh_data.get("emotion_result"),
                     propaganda=fresh_data.get("propaganda_result"),
+                    political_bias=fresh_data.get("political_bias_result"),
                     summarise=fresh_data.get("summarise_result"),
                     allow_partial_local=True,
                 )
