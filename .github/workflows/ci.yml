@@ -72,6 +72,9 @@ jobs:
           - path: backend/political_bias
             name: political_bias
             changed: ${{ needs.changes.outputs.political_bias }}
+          - path: backend/bias_classifier_task
+            name: bias_classifier_task
+            changed: ${{ needs.changes.outputs.bias_classifier_task }}
           - path: backend/fact-check
             name: fact-check
             changed: ${{ needs.changes.outputs.factcheck }}

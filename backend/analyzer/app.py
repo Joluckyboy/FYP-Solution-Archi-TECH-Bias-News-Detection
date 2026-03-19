@@ -1,4 +1,5 @@
 import os
+import tempfile
 import time as _time
 from contextlib import asynccontextmanager
 
@@ -26,6 +27,21 @@ from .core.services import get_topic_service
 # ---------------------------------------------------------------------------
 _ENRICHMENT_CACHE: dict = {}
 _ENRICHMENT_TTL: int = 3600  # 1 hour in seconds
+
+
+def _resolve_writable_scraped_data_path() -> str:
+    default_path = SCRAPED_DATA_PATH
+    target_dir = os.path.dirname(default_path) or "."
+
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+        return default_path
+    except PermissionError:
+        fallback_dir = os.path.join(tempfile.gettempdir(), "analyzer-data")
+        os.makedirs(fallback_dir, exist_ok=True)
+        fallback_path = os.path.join(fallback_dir, os.path.basename(default_path) or "scraped_articles.csv")
+        print(f"[cluster] Falling back to writable path: {fallback_path}")
+        return fallback_path
 
 
 @asynccontextmanager
@@ -196,19 +212,19 @@ def cluster_and_save():
     if not S3_BUCKET:
         return JSONResponse({"error": "S3_BUCKET env var not set"}, status_code=500)
 
-    os.makedirs(os.path.dirname(SCRAPED_DATA_PATH), exist_ok=True)
+    scraped_data_path = _resolve_writable_scraped_data_path()
 
     # ── 1. Force download fresh CSV from S3 ───────────────────────────────────
     # Bypass the 12h TTL — we know S3 just got a new file from bias-classifier.
     try:
         s3 = boto3.client("s3", region_name=AWS_REGION)
-        s3.download_file(S3_BUCKET, S3_KEY, SCRAPED_DATA_PATH)
+        s3.download_file(S3_BUCKET, S3_KEY, scraped_data_path)
         print(f"[cluster] Downloaded fresh CSV from s3://{S3_BUCKET}/{S3_KEY}")
     except Exception as e:
         return JSONResponse({"error": f"S3 download failed: {e}"}, status_code=500)
 
     # ── 2. Read CSV ───────────────────────────────────────────────────────────
-    df = _safe_read_csv(SCRAPED_DATA_PATH)
+    df = _safe_read_csv(scraped_data_path)
     if df is None or df.empty:
         return JSONResponse({"error": "CSV is empty after download"}, status_code=500)
 
@@ -231,10 +247,10 @@ def cluster_and_save():
     df["cluster_id"] = df["title"].map(cluster_map).fillna("unclustered")
 
     # ── 4. Save locally + upload enriched CSV to S3 ───────────────────────────
-    df.to_csv(SCRAPED_DATA_PATH, index=False)
+    df.to_csv(scraped_data_path, index=False)
 
     try:
-        s3.upload_file(SCRAPED_DATA_PATH, S3_BUCKET, S3_KEY)
+        s3.upload_file(scraped_data_path, S3_BUCKET, S3_KEY)
         print(f"[cluster] Uploaded enriched CSV → s3://{S3_BUCKET}/{S3_KEY}")
     except Exception as e:
         return JSONResponse({"error": f"S3 upload failed: {e}"}, status_code=500)
