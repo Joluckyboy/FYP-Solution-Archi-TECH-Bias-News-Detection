@@ -116,14 +116,14 @@ function _buildVerdict(weighted_avg, dominant_emotion) {
       return {
         style: "bg-rose-50 border-rose-300 text-rose-800",
         icon: "⚠️",
-        text: `This article carries a strong ${domLower} tone (${Math.round((weighted_avg[domLower] ?? 0) * 100)}%). Be aware of how this may shape your reaction to the content.`,
+        text: `This article carries a strong ${domLower} tone (${((weighted_avg[domLower] ?? 0) * 100).toFixed(1)}%). Be aware of how this may shape your reaction to the content.`,
       };
     }
     if (POSITIVE_EMOTIONS.includes(domLower)) {
       return {
         style: "bg-green-50 border-green-300 text-green-800",
         icon: "✅",
-        text: `This article carries a positive ${domLower} tone (${Math.round((weighted_avg[domLower] ?? 0) * 100)}%). Positive framing can sometimes make content seem more credible than it is.`,
+        text: `This article carries a positive ${domLower} tone (${((weighted_avg[domLower] ?? 0) * 100).toFixed(1)}%). Positive framing can sometimes make content seem more credible than it is.`,
       };
     }
   }
@@ -140,13 +140,13 @@ function _buildVerdict(weighted_avg, dominant_emotion) {
 
     // Mention second emotion if notable
     const secondPart = secondaries.length > 1
-      ? ` and ${secondaries[1][0]} (${Math.round(secondaries[1][1] * 100)}%)`
+      ? ` and ${secondaries[1][0]} (${((secondaries[1][1] ?? 0) * 100).toFixed(1)}%)`
       : "";
 
     return {
       style: isNeg ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-blue-50 border-blue-300 text-blue-800",
       icon: isNeg ? "⚠️" : "💬",
-      text: `This article is mostly neutral in tone, but contains notable ${secEmotion} (${Math.round(secScore * 100)}%)${secondPart} language. This may subtly shape how you feel while reading.`,
+      text: `This article is mostly neutral in tone, but contains notable ${secEmotion} (${(secScore * 100).toFixed(1)}%)${secondPart} language. This may subtly shape how you feel while reading.`,
     };
   }
 
@@ -240,7 +240,7 @@ const EmotionTab = ({ emotionResult }) => {
     .filter(([, v]) => v >= THRESHOLD)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, value]) => ({ name, value: Math.round(value * 100) }));
+    .map(([name, value]) => ({ name, value: parseFloat((value * 100).toFixed(1)) }));
 
   const readerInsights = _buildReaderInsights(weighted_avg, dominant_emotion);
   const verdict        = _buildVerdict(weighted_avg, dominant_emotion);
@@ -310,7 +310,7 @@ const EmotionTab = ({ emotionResult }) => {
                     {/* Show percentage for non-dominant emotions so user understands scale */}
                     {emotion !== domLower && weighted_avg[emotion] !== undefined && (
                       <span className="text-[10px] text-gray-400 ml-auto">
-                        {Math.round((weighted_avg[emotion] ?? 0) * 100)}% of article
+                        {((weighted_avg[emotion] ?? 0) * 100).toFixed(1)}% of article
                       </span>
                     )}
                   </div>
@@ -356,7 +356,28 @@ const EmotionTab = ({ emotionResult }) => {
               <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }}
                 tickFormatter={v => v.charAt(0).toUpperCase() + v.slice(1)} />
-              <Tooltip formatter={(v, name) => [`${v}%`, name.charAt(0).toUpperCase() + name.slice(1)]} />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const { name, value } = payload[0];
+                  return (
+                    <div style={{
+                      background: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      fontSize: 12,
+                    }}>
+                      <p style={{ margin: 0, fontWeight: 500, color: "#374151", textTransform: "capitalize" }}>
+                        {name}
+                      </p>
+                      <p style={{ margin: 0, color: "#6b7280" }}>
+                        {Number(value).toFixed(1)}%
+                      </p>
+                    </div>
+                  );
+                }}
+              />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {chartData.map(e => <Cell key={e.name} fill={getColor(e.name)} />)}
               </Bar>

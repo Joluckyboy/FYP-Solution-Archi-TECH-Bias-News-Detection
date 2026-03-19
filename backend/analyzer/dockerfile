@@ -19,5 +19,4 @@ COPY . ./analyzer/
 # Expose port
 EXPOSE 8017
 
-# Run as a module so relative imports work correctly
-CMD ["python", "-m", "analyzer.app"]
+CMD ["uvicorn", "analyzer.app:app", "--host", "0.0.0.0", "--port", "8017", "--workers", "2"]
