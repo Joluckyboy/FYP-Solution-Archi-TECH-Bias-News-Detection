@@ -8,7 +8,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from flask import jsonify
 
 from .data_helpers import fetch_topics_data
 from ..core.services import get_topic_service
@@ -54,24 +53,23 @@ def _is_same_outlet(source_name: str, source_domain: str) -> bool:
     if not source_domain:
         return False
 
-    source_name_lower  = source_name.lower().strip()
+    source_name_lower   = source_name.lower().strip()
     source_domain_lower = source_domain.lower().strip()
 
-    # ── Check 1: slug substring match (original logic) ───────────────────────
+    # Check 1: slug substring match
     domain_slug = source_domain_lower.replace(".", "").replace("-", "").replace("/", "")
     source_slug = source_name_lower.replace(" ", "").replace("-", "").replace(".", "")
     if source_slug in domain_slug or domain_slug[:8] in source_slug:
         return True
 
-    # ── Check 2: display name → known domain lookup ──────────────────────────
+    # Check 2: display name → known domain lookup
     mapped_domain = SOURCE_NAME_TO_DOMAIN.get(source_name_lower)
     if mapped_domain:
         # Compare core domain parts (ignore subdomains like "sg.news.")
         # e.g. "sg.news.yahoo.com" and "sg.news.yahoo.com" → match
         # e.g. "sg.news.yahoo.com" and "yahoo.com" → also match via core
-        mapped_core  = mapped_domain.lower().replace("www.", "")
-        submit_core  = source_domain_lower.replace("www.", "")
-        # Direct match
+        mapped_core = mapped_domain.lower().replace("www.", "")
+        submit_core = source_domain_lower.replace("www.", "")
         if mapped_core == submit_core:
             return True
         # One contains the other (handles sg.news.yahoo.com vs yahoo.com)
@@ -82,18 +80,11 @@ def _is_same_outlet(source_name: str, source_domain: str) -> bool:
 
 
 def find_cluster_id_by_title(df: pd.DataFrame, query_title: str):
-    """
-    Find the cluster_id for a given title.
-
-    Strategy (in order):
-      1. Exact match (case-insensitive)
-      2. Substring match — query title is contained in a stored title or vice versa
-      3. Word-overlap match — at least 60% of query words appear in a stored title
-    """
-    query_lower = query_title.lower().strip()
+    """Find the cluster_id for a given title using exact → substring → word-overlap."""
+    query_lower  = query_title.lower().strip()
     query_tokens = set(re.findall(r"[a-z]{3,}", query_lower))
 
-    titles = df["title"].astype(str).str.strip()
+    titles      = df["title"].astype(str).str.strip()
     cluster_ids = df["cluster_id"].astype(str)
 
     # 1. Exact match
@@ -107,13 +98,13 @@ def find_cluster_id_by_title(df: pd.DataFrame, query_title: str):
         if query_lower in title_lower or title_lower in query_lower:
             return cluster_ids[idx]
 
-    # 3. Word-overlap match (≥60% of query tokens found in stored title)
+    # 3. Word-overlap (≥60%)
     if not query_tokens:
         return None
 
     best_score = 0.0
-    best_cid = None
-    threshold = 0.6
+    best_cid   = None
+    threshold  = 0.6
 
     for idx, title in titles.items():
         title_tokens = set(re.findall(r"[a-z]{3,}", title.lower()))
@@ -122,46 +113,27 @@ def find_cluster_id_by_title(df: pd.DataFrame, query_title: str):
         overlap = len(query_tokens & title_tokens) / len(query_tokens)
         if overlap > best_score:
             best_score = overlap
-            best_cid = cluster_ids[idx]
+            best_cid   = cluster_ids[idx]
 
-    if best_score >= threshold:
-        return best_cid
-
-    return None
+    return best_cid if best_score >= threshold else None
 
 
 def filter_related(cluster_df: pd.DataFrame, source_domain: str, query_title: str) -> list:
-    """
-    From a cluster dataframe, return 1 article per outlet excluding:
-      - The outlet that submitted the article (matched by domain slug OR display name)
-      - The exact article being analysed (matched by title)
-    Sorted left → center → right.
-    """
+    """Return 1 article per outlet (excluding submitter and exact match), sorted by bias."""
     keep_cols = [
-        "title",
-        "source",
-        "url",
-        "political_bias",
-        "summary",
-        "published_at",
-        "image_url",
+        "title", "source", "url", "political_bias",
+        "summary", "published_at", "image_url",
     ]
     available = [c for c in keep_cols if c in cluster_df.columns]
 
     bias_order = {
-        "left": 0,
-        "leaning left": 1,
-        "leaning-left": 1,
-        "center": 2,
-        "centre": 2,
-        "neutral": 2,
-        "leaning right": 3,
-        "leaning-right": 3,
-        "right": 4,
+        "left": 0, "leaning left": 1, "leaning-left": 1,
+        "center": 2, "centre": 2, "neutral": 2,
+        "leaning right": 3, "leaning-right": 3, "right": 4,
     }
 
     seen_sources: set = set()
-    related: list = []
+    related: list     = []
 
     # Sort by most recent first so we pick the freshest article per outlet
     sort_col = "published_at" if "published_at" in cluster_df.columns else None
@@ -193,64 +165,60 @@ def filter_related(cluster_df: pd.DataFrame, source_domain: str, query_title: st
 
     # Sort by bias spectrum
     related.sort(
-        key=lambda article: bias_order.get(
-            (article.get("political_bias") or "").lower().strip(), 5
+        key=lambda a: bias_order.get(
+            (a.get("political_bias") or "").lower().strip(), 5
         )
     )
-
     return related[:15]
 
 
 def related_articles_sbert(df: pd.DataFrame, query_title: str, source_domain: str):
     """
-    S-BERT fallback — only reached when CSV has no cluster_id column.
-    Embeds cluster representative titles and finds the closest match.
-    Capped at 10s to avoid gateway timeouts.
+    S-BERT fallback — returns a (dict, status_code) tuple.
+    Only reached when CSV has no cluster_id column.
     """
     topics_data, error = fetch_topics_data()
     if error or not topics_data:
-        return jsonify({"matched": False, "articles": [], "reason": error or "no topics"}), 200
+        return {"matched": False, "articles": [], "reason": error or "no topics"}, 200
 
     svc = get_topic_service()
     if svc is None:
-        return jsonify({"matched": False, "articles": [], "reason": "embedding model unavailable"}), 200
+        return {"matched": False, "articles": [], "reason": "embedding model unavailable"}, 200
 
     try:
-        query_embedding = svc.model.encode([query_title], convert_to_tensor=True).cpu().numpy()
-        query_embedding = _l2_normalize_rows(query_embedding)
-        cluster_titles = [t.get("title", "") for t in topics_data]
-        cluster_embeddings = svc.model.encode(cluster_titles, convert_to_tensor=True).cpu().numpy()
+        query_embedding = (
+            svc.model.encode([query_title], convert_to_tensor=True).cpu().numpy()
+        )
+        query_embedding    = _l2_normalize_rows(query_embedding)
+        cluster_titles     = [t.get("title", "") for t in topics_data]
+        cluster_embeddings = (
+            svc.model.encode(cluster_titles, convert_to_tensor=True).cpu().numpy()
+        )
         cluster_embeddings = _l2_normalize_rows(cluster_embeddings)
     except Exception as e:
-        return jsonify({"matched": False, "articles": [], "reason": f"embedding failed: {e}"}), 200
+        return {"matched": False, "articles": [], "reason": f"embedding failed: {e}"}, 200
 
     similarities = (cluster_embeddings @ query_embedding.T).flatten()
-    best_idx = int(np.argmax(similarities))
-    best_score = float(similarities[best_idx])
+    best_idx     = int(np.argmax(similarities))
+    best_score   = float(similarities[best_idx])
 
-    similarity_threshold = 0.55
-    if best_score < similarity_threshold:
-        return jsonify(
-            {
-                "matched": False,
-                "articles": [],
-                "reason": f"No close match (best similarity: {best_score:.2f})",
-            }
-        ), 200
+    if best_score < 0.55:
+        return {
+            "matched": False,
+            "articles": [],
+            "reason": f"No close match (best similarity: {best_score:.2f})",
+        }, 200
 
     matched_topic = topics_data[best_idx]
+    cluster_df    = pd.DataFrame(matched_topic.get("articles", []))
 
-    cluster_df = pd.DataFrame(matched_topic.get("articles", []))
     if cluster_df.empty:
-        return jsonify({"matched": False, "articles": [], "reason": "cluster empty"}), 200
+        return {"matched": False, "articles": [], "reason": "cluster empty"}, 200
 
     related = filter_related(cluster_df, source_domain, query_title)
-
-    return jsonify(
-        {
-            "matched": True,
-            "cluster_title": matched_topic.get("title", ""),
-            "similarity": round(best_score, 3),
-            "articles": related,
-        }
-    ), 200
+    return {
+        "matched": True,
+        "cluster_title": matched_topic.get("title", ""),
+        "similarity": round(best_score, 3),
+        "articles": related,
+    }, 200

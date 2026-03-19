@@ -95,7 +95,7 @@ function buildKeyDifference(a, b) {
   const bProp = propagandaScore(b?.propaganda_result);
   if (aProp != null && bProp != null && Math.abs(aProp - bProp) >= 20) {
     const higher = aProp > bProp ? "this article" : "the related article";
-    diffs.push(`${higher.charAt(0).toUpperCase() + higher.slice(1)} has notably higher influence language (${Math.max(aProp, bProp)}% vs ${Math.min(aProp, bProp)}%).`);
+    diffs.push(`${higher.charAt(0).toUpperCase() + higher.slice(1)} has notably higher influence language (${Math.max(aProp, bProp).toFixed(1)}% vs ${Math.min(aProp, bProp).toFixed(1)}%).`);
   }
 
   return diffs.length === 0
@@ -198,7 +198,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
                 <sent.Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: sent.color }} />
                 <span className="text-sm font-semibold" style={{ color: sent.color }}>
                   {sent.label}
-                  <span className="text-xs font-normal text-slate-400 ml-1">({Math.round(sent.value * 100)}%)</span>
+                  <span className="text-xs font-normal text-slate-400 ml-1">({Math.round(sent.value * 100).toFixed(1)}%)</span>
                 </span>
               </div>
             ) : <p className="text-xs text-slate-400 italic">Not available yet</p>}
@@ -207,7 +207,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
           {/* Emotion */}
           <MetricBlock label="Dominant Emotion">
             {emotion
-              ? <p className="text-sm font-semibold text-slate-700">{emotion}</p>
+              ? <p className="text-sm font-semibold text-slate-700">{emotion.toFixed(1)}</p>
               : <p className="text-xs text-slate-400 italic">Not available yet</p>}
           </MetricBlock>
 
@@ -216,7 +216,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
             {prop != null ? (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-bold text-slate-700">{prop}%</span>
+                  <span className="text-sm font-bold text-slate-700">{prop.toFixed(1)}%</span>
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
                     prop >= 65 ? "bg-red-100 text-red-700"
                     : prop >= 35 ? "bg-amber-100 text-amber-700"

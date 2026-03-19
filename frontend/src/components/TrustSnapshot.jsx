@@ -22,28 +22,26 @@ function computeTrustScore({ factcheckResult, propagandaResult }) {
     return { ready: false, status: "loading", loadingServices: ["propaganda"] };
   }
 
-  // Fact accuracy — weighted
   const total = factcheckResult.length;
   const weightedSum = factcheckResult.reduce((acc, f) => {
     const c = (f.correctness ?? "").toLowerCase();
-    if (c === "factual")                return acc + 1.0;
-    if (c === "cannot be determined")   return acc + 0.5;
-    return acc; // unfactual = 0
+    if (c === "factual")              return acc + 1.0;
+    if (c === "cannot be determined") return acc + 0.5;
+    return acc;
   }, 0);
-  const factScore = total > 0 ? Math.round((weightedSum / total) * 50) : 0;
 
-  // Propaganda score
+  // ── Keep as plain numbers — NO .toFixed() here ──
+  const factScore = total > 0 ? (weightedSum / total) * 50 : 0;
   const propProb  = propagandaResult.propaganda_probability ?? 0;
-  const propScore = Math.round((1 - propProb) * 50);
-
-  const total100 = Math.min(100, Math.max(0, factScore + propScore));
+  const propScore = (1 - propProb) * 50;
+  const total100  = Math.min(100, Math.max(0, factScore + propScore));
 
   return {
-    ready:      true,
-    total:      total100,
-    factScore,
-    propScore,
-    factTotal:  total,
+    ready:     true,
+    total:     total100,   // number ✅
+    factScore,             // number ✅
+    propScore,             // number ✅
+    factTotal: total,
     factCounts: {
       factual:   factcheckResult.filter(f => (f.correctness ?? "").toLowerCase() === "factual").length,
       unclear:   factcheckResult.filter(f => (f.correctness ?? "").toLowerCase() === "cannot be determined").length,
@@ -160,7 +158,7 @@ function ScoreRow({ label, score, max, icon }) {
     <div>
       <div className="flex justify-between mb-1">
         <span className="text-xs text-gray-500">{icon} {label}</span>
-        <span className="text-xs font-medium text-gray-700">{score}/{max}</span>
+        <span className="text-xs font-medium text-gray-700">{score.toFixed(1)}/{max}</span>
       </div>
       <div className="w-full h-1.5 bg-gray-100 rounded-full">
         <div
@@ -267,16 +265,16 @@ const TrustSnapshot = ({ data, apiUrl }) => {
     if (!s) return null;
     const neg = s.negative ?? 0, pos = s.positive ?? 0, neu = s.neutral ?? 0;
     const max = Math.max(neg, pos, neu);
-    if (max === neg) return { dotColor: "#ef4444", label: "Sentiment Tone", value: `Negative (${Math.round(neg * 100)}%)`, valueColor: "#991b1b" };
-    if (max === pos) return { dotColor: "#10b981", label: "Sentiment Tone", value: `Positive (${Math.round(pos * 100)}%)`, valueColor: "#065f46" };
-    return               { dotColor: "#9ca3af", label: "Sentiment Tone", value: `Neutral (${Math.round(neu * 100)}%)`,   valueColor: "#374151" };
+    if (max === neg) return { dotColor: "#ef4444", label: "Sentiment Tone", value: `Negative (${(neg * 100).toFixed(1)}%)`, valueColor: "#991b1b" };
+    if (max === pos) return { dotColor: "#10b981", label: "Sentiment Tone", value: `Positive (${(pos * 100).toFixed(1)}%)`, valueColor: "#065f46" };
+    return               { dotColor: "#9ca3af", label: "Sentiment Tone", value: `Neutral (${(neu * 100).toFixed(1)}%)`,   valueColor: "#374151" };
   })();
 
   const emotionSignal = (() => {
     const e = data?.emotion_result;
     if (!e?.dominant_emotion) return null;
     const em = e.dominant_emotion;
-    return { dotColor: "#8b5cf6", label: "Dominant emotion", value: `${em.charAt(0).toUpperCase() + em.slice(1)} (${Math.round((e.dominant_score ?? 0) * 100)}%)` };
+    return { dotColor: "#8b5cf6", label: "Dominant emotion", value: `${em.charAt(0).toUpperCase() + em.slice(1)} (${((e.dominant_score ?? 0) * 100).toFixed(1)}%)` };
   })();
 
   const biasSignal = (() => {
@@ -309,7 +307,7 @@ const TrustSnapshot = ({ data, apiUrl }) => {
                   className="font-sans text-5xl font-bold leading-none"
                   style={{ color: verdict?.color }}
                 >
-                  {trust.total}
+                  {trust.total.toFixed(1)}
                 </span>
                 <span className="font-sans text-base text-gray-400">/100</span>
               </div>
@@ -436,16 +434,16 @@ const TrustSnapshot = ({ data, apiUrl }) => {
               {/* Removed "Score impact" card — no penalty system */}
               <div className="grid grid-cols-2 gap-2">
                 {credibility.credibility_score != null && (
-                  <MetricCard label="Credibility score" value={`${credibility.credibility_score}/100`} />
+                  <MetricCard label="Credibility score" value={`${credibility.credibility_score.toFixed(1)}/100`} />
                 )}
                 <MetricCard label="Articles tracked" value={credibility.articles_analyzed} />
                 {credibility.factual_accuracy_rate != null && (
-                  <MetricCard label="Fact accuracy" value={`${Math.round(credibility.factual_accuracy_rate * 100)}%`} />
+                  <MetricCard label="Fact accuracy" value={`${(credibility.factual_accuracy_rate * 100).toFixed(1)}%`} />
                 )}
                 {credibility.avg_propaganda_probability != null && (
                   <MetricCard
                     label="Average propaganda"
-                    value={`${Math.round(credibility.avg_propaganda_probability * 100)}%`}
+                    value={`${(credibility.avg_propaganda_probability * 100).toFixed(1)}%`}
                     valueColor={credibility.avg_propaganda_probability > 0.5 ? "#991b1b" : undefined}
                   />
                 )}
