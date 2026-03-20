@@ -10,6 +10,7 @@ class ModelDataPayload(BaseModel):
     sentiment_result: dict
     emotion_result: dict
     propaganda_result: dict
+    political_bias_result: dict
     summarise_result: str
 
 class SummarisePayload(BaseModel):

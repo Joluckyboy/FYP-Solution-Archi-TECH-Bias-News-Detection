@@ -22,9 +22,9 @@ const sentColor = (l) =>
 const sentimentVerdict = (r) => {
   if (!r) return null;
   const neg = r.negative ?? 0, pos = r.positive ?? 0, neu = r.neutral ?? 0;
-  if (neg > 0.4)  return { cls: "bg-red-50 border-red-300 text-red-800",       icon: "⚠️", text: `This article leans notably negative (${Math.round(neg*100)}%). Much of the language expresses criticism, conflict, or concern.` };
-  if (pos > 0.3)  return { cls: "bg-green-50 border-green-300 text-green-800", icon: "✅", text: `This article leans positive (${Math.round(pos*100)}%). Much of the language is supportive or optimistic.` };
-  return            { cls: "bg-blue-50 border-blue-300 text-blue-800",         icon: "📰", text: `This article is mostly neutral (${Math.round(neu*100)}%). It presents information in a balanced, factual tone — typical of news reporting.` };
+  if (neg > 0.4)  return { cls: "bg-red-50 border-red-300 text-red-800",       icon: "⚠️", text: `This article leans notably negative (${(neg*100).toFixed(1)}%). Much of the language expresses criticism, conflict, or concern.` };
+  if (pos > 0.3)  return { cls: "bg-green-50 border-green-300 text-green-800", icon: "✅", text: `This article leans positive (${(pos*100).toFixed(1)}%). Much of the language is supportive or optimistic.` };
+  return            { cls: "bg-blue-50 border-blue-300 text-blue-800",         icon: "📰", text: `This article is mostly neutral (${(neu*100).toFixed(1)}%). It presents information in a balanced, factual tone — typical of news reporting.` };
 };
 
 /**
@@ -111,7 +111,7 @@ const SentimentTab = ({ sentimentResult }) => {
                       <span className="text-[10px] text-gray-500 bg-gray-100 rounded-full w-[18px] h-[18px] inline-flex items-center justify-center cursor-help border border-gray-300 font-bold select-none">?</span>
                     </Tooltip>
                   </div>
-                  <span className="text-sm font-semibold text-gray-600">{val.toFixed(0)}%</span>
+                  <span className="text-sm font-semibold text-gray-600">{val.toFixed(1)}%</span>
                 </div>
                 <Progress
                   value={val}

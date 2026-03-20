@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 class ModelDataFormat(BaseModel):
-    sentiment_result: str
-    emotion_result: str
-    propaganda_result: str
+    sentiment_summary: str
+    emotion_summary: str
+    propaganda_summary: str
+    political_bias_summary: str

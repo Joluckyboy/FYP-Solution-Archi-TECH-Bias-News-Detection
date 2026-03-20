@@ -46,3 +46,48 @@ def test_analyze_sentiment(mock_model):
     assert result["positive"] == pytest.approx(positive_score, rel=1e-2)
     assert result["negative"] == pytest.approx(negative_score, rel=1e-2)
     assert result["neutral"] == pytest.approx(neutral_score, rel=1e-2)
+
+
+def test_analyze_sentiment_missing_text_field():
+    response = client.post("/sentiment/analyze_sentiment", json={})
+    assert response.status_code == 422
+
+
+def test_analyze_sentiment_empty_text_returns_neutral():
+    response = client.post("/sentiment/analyze_sentiment", json={"text": "   "})
+    assert response.status_code == 200
+    payload = response.json()
+    result = payload["sentiment_result"]
+    assert result["positive"] == 0.0
+    assert result["negative"] == 0.0
+    assert result["neutral"] == 1.0
+    assert result["sentence_sentiments"] == []
+
+
+def test_analyze_sentiment_multiple_sentences_batch_call():
+    with patch("app.model") as mock_model:
+        mock_model.predict_sentiment_batch_sentences.return_value = [
+            [0.1, 0.2, 0.7],
+            [0.7, 0.2, 0.1],
+        ]
+        response = client.post(
+            "/sentiment/analyze_sentiment",
+            json={"text": "First sentence. Second sentence."},
+        )
+
+        assert response.status_code == 200
+        mock_model.predict_sentiment_batch_sentences.assert_called_once()
+        called_sentences = mock_model.predict_sentiment_batch_sentences.call_args[0][0]
+        assert len(called_sentences) == 2
+
+
+def test_analyze_sentiment_max_sentences_cap():
+    long_text = " ".join([f"This is a sufficiently long sentence number {i}." for i in range(60)])
+    with patch("app.model") as mock_model:
+        mock_model.predict_sentiment_batch_sentences.return_value = [
+            [0.2, 0.6, 0.2 + (i * 0.0001)] for i in range(50)
+        ]
+        response = client.post("/sentiment/analyze_sentiment", json={"text": long_text})
+        assert response.status_code == 200
+        called_sentences = mock_model.predict_sentiment_batch_sentences.call_args[0][0]
+        assert len(called_sentences) == 50

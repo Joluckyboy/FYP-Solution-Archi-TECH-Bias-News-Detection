@@ -39,10 +39,5 @@ RUN mkdir -p /app/datasets && \
 # Expose the port the app runs on
 EXPOSE 8015
 
-# Command to run the application with optimized worker settings
-# --timeout 1800: 30 minute timeout for long-running scraping requests (like original app_old.py)
-# --workers 2: Reduced from default to limit memory usage
-# --worker-class sync: Sync workers (simple, stable)
-# --max-requests 50: Restart workers after 50 requests (memory cleanup)
-# --max-requests-jitter 10: Randomize restart to avoid all workers restarting at once
-CMD ["gunicorn", "--timeout", "1800", "--workers", "2", "--worker-class", "sync", "--max-requests", "50", "--max-requests-jitter", "10", "-b", "0.0.0.0:8015", "app:app"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8015", \
+     "--workers", "2", "--timeout-keep-alive", "1800"]

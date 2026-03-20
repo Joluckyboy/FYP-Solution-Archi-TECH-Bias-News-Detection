@@ -124,7 +124,7 @@ def scrape_generic_source(source_url: str, source_name: str, country: str,
                     continue
                 
                 title = result.title.strip()
-                cleaned_text = clean_boilerplate(result.text)
+                cleaned_text = clean_boilerplate(result.text, preserve_paragraphs=True)
                 summary = smart_truncate(cleaned_text, 300)
                 
                 # Skip duplicate summaries
@@ -177,7 +177,7 @@ def scrape_generic_source(source_url: str, source_name: str, country: str,
     return articles
 
 
-def scrape_generic_article(url):
+def scrape_generic_article(url, skip_age_check=False):
     """Scrape a single article using newspaper3k with DATE FILTERING"""
     try:
         article = Article(url)
@@ -192,10 +192,11 @@ def scrape_generic_article(url):
                     logger.warning(f"Future-dated article skipped: {url}")
                     return None
 
-                article_age = datetime.now() - article.publish_date
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
-                    logger.warning(f"Article too old ({article_age.days} days): {url}")
-                    return None
+                if not skip_age_check and article.publish_date:
+                    article_age = datetime.now() - article.publish_date.replace(tzinfo=None)
+                    if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                        logger.warning(f"Article too old ({article_age.days} days): {url}")
+                        return None
             except Exception as date_error:
                 logger.debug(f"Date parsing error: {date_error}")
                 # Continue if date parsing fails
@@ -208,7 +209,7 @@ def scrape_generic_article(url):
             logger.warning(f"newspaper3k insufficient content: {url}")
             return None
         
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         if not is_english_text(body):
             logger.warning(f"Non-English content: {url}")

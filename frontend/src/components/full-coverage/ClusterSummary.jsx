@@ -35,8 +35,8 @@ const parseInsightText = (text) => {
             if (headerMatch) {
                 const [, heading, rest] = headerMatch;
                 return (
-                    <li key={idx} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
-                        <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-indigo-400" />
+                    <li key={idx} className="flex gap-3">
+                        <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-slate-700" />
                         <span className="text-sm text-slate-700 leading-relaxed">
                             <strong className="font-semibold text-slate-900 block mb-0.5">{heading}</strong>
                             {parseBold(rest.trim())}
@@ -45,7 +45,7 @@ const parseInsightText = (text) => {
                 );
             }
             return (
-                <li key={idx} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
+                <li key={idx} className="flex gap-3">
                     <span className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-slate-700" />
                     <span className="text-sm text-slate-700 leading-relaxed">{parseBold(content)}</span>
                 </li>
@@ -91,19 +91,19 @@ const ClusterSummary = ({ topic, enrichmentLoading }) => {
                 {(silentOutlets.left_silent || silentOutlets.right_silent || silentOutlets.center_silent) && (
                     <div className="mb-5 space-y-2">
                         {silentOutlets.left_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-blue-200 border border-blue-300 rounded-lg text-sm text-blue-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Left outlets are silent</strong> — this story has no left-leaning coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.right_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-red-200 border border-red-300 rounded-lg text-sm text-red-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Right outlets are silent</strong> — this story has no right-leaning coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.center_silent && (
-                            <div className="flex items-start gap-2.5 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                            <div className="flex items-start gap-2.5 p-3 bg-purple-100 border border-purple-200 rounded-lg text-sm text-purple-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                 <span><strong>Center outlets are silent</strong> — no centrist coverage found for this story.</span>
                             </div>
@@ -121,7 +121,7 @@ const ClusterSummary = ({ topic, enrichmentLoading }) => {
                         <Skeleton className="h-4 w-5/6" />
                     </div>
                 ) : rawInsight ? (
-                    <ul className="list-none space-y-0 divide-y divide-slate-100">
+                    <ul className="list-none space-y-2">
                         {parseInsightText(rawInsight)}
                     </ul>
                 ) : (
