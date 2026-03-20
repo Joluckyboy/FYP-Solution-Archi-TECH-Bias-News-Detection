@@ -1,1 +1,1 @@
-# Package marker only.
+# App package — FastAPI app is created in main.py
