@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
     BarChart,
@@ -29,50 +29,11 @@ const getBiasKey = (rawBias) => {
     return 'center';
 };
 
-// --- Clustering Helpers ---
-const STOP_WORDS = new Set([
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "with", "by", "of", "from",
-    "as", "is", "are", "was", "were", "be", "been", "this", "that", "these", "those", "it", "its", "has", "have"
-]);
-
-const tokenize = (text) => {
-    if (!text) return new Set();
-    const words = text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
-    return new Set(words.filter(w => w.length > 2 && !STOP_WORDS.has(w)));
-};
-
-const getJaccardSimilarity = (setA, setB) => {
-    const intersection = new Set([...setA].filter(x => setB.has(x)));
-    const union = new Set([...setA, ...setB]);
-    return intersection.size / (union.size || 1);
-};
-
-const groupArticlesIntoEvents = (articles, similarityThreshold = 0.25) => {
-    const events = [];
-    articles.forEach(article => {
-        const title = article.title || "";
-        const tokens = tokenize(title);
-        if (tokens.size === 0) return;
-        let bestMatch = null;
-        let highestSim = 0;
-        for (const event of events) {
-            const sim = getJaccardSimilarity(tokens, event.tokens);
-            if (sim > highestSim) { highestSim = sim; bestMatch = event; }
-        }
-        if (bestMatch && highestSim >= similarityThreshold) {
-            bestMatch.articles.push(article);
-        } else {
-            events.push({ title, tokens, articles: [article] });
-        }
-    });
-    return events.sort((a, b) => b.articles.length - a.articles.length);
-};
-
 // Custom Tooltip
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     const dateData = payload[0]?.payload;
-    const events = dateData?.events || [];
+    const rawArticles = dateData?.rawArticles || [];
     const total = dateData?.totalArticles || 0;
 
     const getBiasColor = (bias) => {
@@ -93,53 +54,35 @@ const CustomTooltip = ({ active, payload, label }) => {
             <p style={{ fontWeight: 700, color: '#1E293B', marginBottom: '8px', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
                 📅 {label} <span style={{ fontWeight: 400, color: '#64748B', marginLeft: '4px' }}>({total} articles)</span>
             </p>
-            {/* Bias breakdown */}
-            <div style={{ marginBottom: events.length ? '10px' : 0, display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {payload.map((p, i) => {
-                    if (p.value <= 0) return null;
-
-                    const tooltipColor =
-                        BIAS_CONFIG.find(c => c.label === p.name)?.tooltipColor || p.fill;
-
-                    return (
-                        <span key={i} style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            background: `${tooltipColor}15`,
-                            border: `1px solid ${tooltipColor}40`,
-                            color: tooltipColor,
-                        }}>
-                            {p.name}: {p.value}
-                        </span>
-                    );
-                })}
-            </div>
-            {events.length > 0 && (
+            <div style={{ marginBottom: rawArticles.length ? '10px' : 0 }}></div>
+            {rawArticles.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {events.slice(0, 3).map((evt, idx) => (
+                    {rawArticles.slice(0, 5).map((a, idx) => (
                         <div key={idx}>
-                            <p style={{ fontWeight: 700, color: '#334155', marginBottom: '4px', lineHeight: '1.3' }}>
-                                📌 {evt.title}
+                            <p style={{ fontWeight: 600, color: '#334155', marginBottom: '4px', lineHeight: '1.3' }}>
+                                📰 {a.title}
                             </p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                {evt.articles.map((a, i) => (
-                                    <span key={i} style={{
-                                        display: 'inline-block', padding: '2px 6px', borderRadius: '4px',
-                                        background: `${getBiasColor(a.bias)}15`,
-                                        border: `1px solid ${getBiasColor(a.bias)}30`,
-                                        color: getBiasColor(a.bias), fontWeight: 600, fontSize: '10px'
-                                    }}>
-                                        {a.source}
+                                <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    padding: '2px 6px', borderRadius: '4px',
+                                    background: `${getBiasColor(a.bias)}15`,
+                                    border: `1px solid ${getBiasColor(a.bias)}30`,
+                                    color: getBiasColor(a.bias), fontWeight: 600, fontSize: '10px'
+                                }}>
+                                    {a.source}
+                                    <span style={{ fontWeight: 400 }}>
+                                        ({BIAS_CONFIG.find(c => c.key === a.bias)?.label || 'Unknown Bias'})
                                     </span>
-                                ))}
+                                </span>
                             </div>
                         </div>
                     ))}
+                    {rawArticles.length > 5 && (
+                        <p style={{ fontWeight: 600, color: '#94A3B8', fontSize: '11px', fontStyle: 'italic', marginTop: '2px' }}>
+                            + {rawArticles.length - 5} more articles
+                        </p>
+                    )}
                 </div>
             )}
         </div>
@@ -147,11 +90,23 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const CoverageTimeline = ({ articles }) => {
+    const [selectedSource, setSelectedSource] = useState('All');
+
+    const sources = useMemo(() => {
+        if (!articles || articles.length === 0) return [];
+        const uniqueSources = new Set(articles.map(a => a.source || 'Unknown'));
+        return Array.from(uniqueSources).sort();
+    }, [articles]);
+
     const data = useMemo(() => {
         if (!articles || articles.length === 0) return [];
 
+        const filteredArticles = selectedSource === 'All'
+            ? articles
+            : articles.filter(a => (a.source || 'Unknown') === selectedSource);
+
         const dateMap = {};
-        articles.forEach(a => {
+        filteredArticles.forEach(a => {
             const rawDate = a.published_at || a.published_date || a.publishedAt;
             if (!rawDate) return;
             const dateObj = new Date(rawDate);
@@ -181,11 +136,8 @@ const CoverageTimeline = ({ articles }) => {
             });
         });
 
-        return Object.values(dateMap).map(day => ({
-            ...day,
-            events: groupArticlesIntoEvents(day.rawArticles),
-        })).sort((a, b) => a.timestamp - b.timestamp);
-    }, [articles]);
+        return Object.values(dateMap).sort((a, b) => a.timestamp - b.timestamp);
+    }, [articles, selectedSource]);
 
     if (!data || data.length === 0) {
         return (
@@ -206,13 +158,33 @@ const CoverageTimeline = ({ articles }) => {
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full w-full overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-slate-500" />
-                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">Coverage Timeline</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full w-full overflow-visible">
+            <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-slate-500" />
+                        <h3 className="text-lg font-bold text-slate-800 tracking-tight">Coverage Timeline</h3>
+                    </div>
+                    <p className="text-sm text-slate-500 mt-1">Article volume per day</p>
                 </div>
-                <p className="text-sm text-slate-500 mb-3">Article volume per day, broken down by political bias</p>
+                {sources && sources.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="source-filter" className="text-sm font-medium text-slate-600">
+                            Outlet:
+                        </label>
+                        <select
+                            id="source-filter"
+                            className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer min-w-[140px]"
+                            value={selectedSource}
+                            onChange={(e) => setSelectedSource(e.target.value)}
+                        >
+                            <option value="All">All Outlets</option>
+                            {sources.map(source => (
+                                <option key={source} value={source}>{source}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
             <div className="flex-1 w-full min-h-[320px] p-6">
                 <ResponsiveContainer width="100%" height="100%">
@@ -232,18 +204,13 @@ const CoverageTimeline = ({ articles }) => {
                             allowDecimals={false}
                             label={{ value: 'No. of Articles', angle: -90, position: 'insideLeft', offset: 10, fontSize: 11, fill: '#94A3B8', fontStyle: 'italic' }}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '24px' }} formatter={(value) => <span style={{ color: "#000000", fontWeight: 500 }}>{value}</span>} />
-                        {BIAS_CONFIG.map(({ key, label, color }) => (
-                            <Bar
-                                key={key}
-                                dataKey={key}
-                                name={label}
-                                stackId="bias"
-                                fill={color}
-                                radius={key === 'right' ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                            />
-                        ))}
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} allowEscapeViewBox={{ x: true, y: true }} wrapperStyle={{ zIndex: 50 }} />
+                        <Bar
+                            dataKey="totalArticles"
+                            name="Articles"
+                            fill="#3B82F6"
+                            radius={[4, 4, 0, 0]}
+                        />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
