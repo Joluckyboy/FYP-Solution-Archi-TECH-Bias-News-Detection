@@ -202,9 +202,9 @@ const FullCoveragePage = () => {
                                 ))
                             ) : (
                                 [
-                                    { key: "left", label: "Left Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-100" },
+                                    { key: "left", label: "Left Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-200" },
                                     { key: "center", label: "Center Framing", headerClass: "text-purple-600", dotClass: "bg-purple-400", bgClass: "bg-purple-100" },
-                                    { key: "right", label: "Right Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-100" },
+                                    { key: "right", label: "Right Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-200" },
                                 ].map(({ key, label, headerClass, dotClass, bgClass }) => (
                                     <div key={key} className={`p-5 ${bgClass}`}>
                                         <div className="flex items-center gap-2 mb-3">

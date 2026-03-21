@@ -81,6 +81,27 @@ const PopupPage = () => {
     return Math.round(Math.max(neutral, negative, positive) * 100);
   };
 
+  // Political bias helpers
+  const biasScale = ["left", "leaning-left", "center", "leaning-right", "right"];
+  const biasLabels = {
+    left: "Left",
+    "leaning-left": "Leaning Left",
+    center: "Center",
+    "leaning-right": "Leaning Right",
+    right: "Right",
+  };
+  const getBiasEmoji = (rating) => {
+    if (rating === "center") return "⚖️";
+    if (rating === "leaning-left" || rating === "leaning-right") return "↔️";
+    return "⚠️";
+  };
+  const getBiasColor = (rating) => {
+    if (rating === "center") return "bg-green-500";
+    if (rating === "leaning-left" || rating === "leaning-right")
+      return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   // Check if URL is likely a news article
   const isLikelyNewsUrl = (url) => {
     if (!url) return false;
@@ -423,8 +444,8 @@ const PopupPage = () => {
   // Initialize and fetch data
   useEffect(() => {
     const init = async () => {
-      const apiUrl = await get_api();
-      setAPI_URL(apiUrl);
+      // Start API detection in parallel — don't block cache check on it
+      const apiPromise = get_api().then((url) => { setAPI_URL(url); return url; }).catch(() => null);
 
       // Get current tab URL
       if (
@@ -440,7 +461,7 @@ const PopupPage = () => {
               const isNews = isLikelyNewsUrl(response.tabUrl);
               setIsNewsPage(isNews);
 
-              if (isNews && apiUrl) {
+              if (isNews) {
                 // Helper to check if data has complete analysis (requires BOTH)
                 const isCompleteAnalysis = (data) =>
                   data &&
@@ -448,9 +469,8 @@ const PopupPage = () => {
                   data.propaganda_result?.propaganda_probability !== undefined &&
                   data.sentiment_result;
 
-                // Check if article is analyzed - first check local cache, then API
+                // Check local cache FIRST (instant, no network needed)
                 try {
-                  // Check local cache first (chrome.storage.local)
                   const cacheKey = `analysis_${response.tabUrl}`;
                   const cached = await chrome.storage.local.get(cacheKey);
 
@@ -473,47 +493,55 @@ const PopupPage = () => {
                         console.log("Could not update badge from cache:", e);
                       }
                     }
-                  } else {
-                    // Clear incomplete cache if exists
-                    if (cached[cacheKey]) {
-                      console.log("Clearing incomplete cached data");
-                      await chrome.storage.local.remove(cacheKey);
-                    }
+                    return; // Cache hit — done, no need to wait for API
+                  }
 
-                    // Show UI immediately - don't block on API check
+                  // Cache miss — now wait for API URL and check server
+                  const apiUrl = await apiPromise;
+                  if (!apiUrl) {
                     setIsLoading(false);
+                    return;
+                  }
 
-                    // Check API in background for previously analyzed articles
-                    fetch(`${apiUrl}/application/new_query`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ url: response.tabUrl, force: false }),
-                    })
-                      .then((res) => res.ok ? res.json() : null)
-                      .then((data) => {
-                        if (data && isCompleteAnalysis(data)) {
-                          console.log("Found existing analysis from API");
-                          setAnalysisData(data);
-                          setArticleId(data.id);
-                          setIsAnalyzed(true);
-                          // Cache locally for faster access next time
-                          chrome.storage.local.set({ [cacheKey]: data });
-                          // Update badge
-                          if (data.propaganda_result?.propaganda_probability !== undefined) {
-                            try {
-                              chrome.runtime.sendMessage({
-                                action: "propagandaResultReceived",
-                                propagandaProbability: data.propaganda_result.propaganda_probability,
-                                url: response.tabUrl,
-                              });
-                            } catch (e) {
-                              console.log("Could not update badge from API:", e);
-                            }
+                  // Clear incomplete cache if exists
+                  if (cached[cacheKey]) {
+                    console.log("Clearing incomplete cached data");
+                    await chrome.storage.local.remove(cacheKey);
+                  }
+
+                  // Show UI immediately - don't block on API check
+                  setIsLoading(false);
+
+                  // Check API in background for previously analyzed articles
+                  fetch(`${apiUrl}/application/new_query`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: response.tabUrl, force: false }),
+                  })
+                    .then((res) => res.ok ? res.json() : null)
+                    .then((data) => {
+                      if (data && isCompleteAnalysis(data)) {
+                        console.log("Found existing analysis from API");
+                        setAnalysisData(data);
+                        setArticleId(data.id);
+                        setIsAnalyzed(true);
+                        // Cache locally for faster access next time
+                        chrome.storage.local.set({ [cacheKey]: data });
+                        // Update badge
+                        if (data.propaganda_result?.propaganda_probability !== undefined) {
+                          try {
+                            chrome.runtime.sendMessage({
+                              action: "propagandaResultReceived",
+                              propagandaProbability: data.propaganda_result.propaganda_probability,
+                              url: response.tabUrl,
+                            });
+                          } catch (e) {
+                            console.log("Could not update badge from API:", e);
                           }
                         }
-                      })
-                      .catch((err) => console.log("Background API check failed:", err));
-                  }
+                      }
+                    })
+                    .catch((err) => console.log("Background API check failed:", err));
                 } catch (error) {
                   console.log("Could not fetch analysis data:", error);
                   setIsLoading(false);
@@ -697,6 +725,40 @@ const PopupPage = () => {
     </div>
   );
 
+  // Political Bias indicator row (categorical, not percentage-based)
+  const BiasIndicatorRow = ({ rating }) => {
+    const idx = biasScale.indexOf(rating);
+    const label = biasLabels[rating] || "Unknown";
+    const emoji = getBiasEmoji(rating);
+    const dotColor = getBiasColor(rating);
+
+    return (
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+        <span className="text-2xl">{emoji}</span>
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-1">
+            <span className="font-medium text-sm">Political Bias</span>
+            <span className="text-xs text-gray-500">{label}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {biasScale.map((level, i) => (
+              <div
+                key={level}
+                className={`h-2 flex-1 rounded-full ${
+                  i === idx ? dotColor : "bg-gray-200"
+                }`}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-[10px] text-gray-400">Left</span>
+            <span className="text-[10px] text-gray-400">Right</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render skeleton loader
   const SkeletonLoader = () => (
     <div className="space-y-3">
@@ -807,6 +869,13 @@ const PopupPage = () => {
                     analysisData.sentiment_result,
                   )}
                   colorClass={getSentimentColor(analysisData.sentiment_result)}
+                />
+              )}
+
+              {/* Political Bias Indicator */}
+              {analysisData?.political_bias_result?.rating && (
+                <BiasIndicatorRow
+                  rating={analysisData.political_bias_result.rating}
                 />
               )}
 

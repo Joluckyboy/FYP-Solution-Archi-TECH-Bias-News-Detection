@@ -43,3 +43,46 @@ def test_analyze_emotion(mock_hybrid_aggregation, mock_predict, mock_classifier,
     assert "dominant_score" in result
     assert "section_emotions" in result
     assert "sentence_emotions" in result
+
+
+def test_analyze_emotion_missing_text_field():
+    response = client.post("/emotion/analyze_emotion", json={})
+    assert response.status_code == 422
+
+
+@patch('app.predict')
+@patch('app.hybrid_aggregation')
+@patch('app.model.chunk_text')
+def test_analyze_emotion_sentence_top_emotions(mock_chunk_text, mock_hybrid, mock_predict):
+    mock_chunk_text.return_value = ["chunk"]
+    mock_predict.return_value = [[{"label": "joy", "score": 0.9}]]
+
+    def agg_side_effect(results, weights):
+        return ({"joy": 0.9, "neutral": 0.05, "sadness": 0.05}, [["joy", 1]])
+
+    mock_hybrid.side_effect = agg_side_effect
+
+    response = client.post(
+        "/emotion/analyze_emotion",
+        json={"text": "This sentence is definitely long enough to be analyzed by the model."},
+    )
+    assert response.status_code == 200
+    body = response.json()["emotion_result"]
+    assert isinstance(body["section_emotions"], list)
+    assert isinstance(body["sentence_emotions"], list)
+    if body["sentence_emotions"]:
+        assert "top_emotions" in body["sentence_emotions"][0]
+
+
+@patch('app.predict')
+@patch('app.hybrid_aggregation')
+@patch('app.model.chunk_text')
+def test_analyze_emotion_short_sentences_filtered(mock_chunk_text, mock_hybrid, mock_predict):
+    mock_chunk_text.return_value = ["chunk"]
+    mock_predict.return_value = [[{"label": "neutral", "score": 0.99}]]
+    mock_hybrid.return_value = ({"neutral": 0.99}, [["neutral", 1]])
+
+    response = client.post("/emotion/analyze_emotion", json={"text": "Too short."})
+    assert response.status_code == 200
+    result = response.json()["emotion_result"]
+    assert result["sentence_emotions"] == []

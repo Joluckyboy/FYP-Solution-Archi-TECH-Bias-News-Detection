@@ -15,9 +15,9 @@ const FeaturedCoverageGrid = ({ featuredLeft, featuredCenter, featuredRight }) =
             <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
-                        { label: "Left", article: featuredLeft, cardClass: "bg-blue-100 border-blue-200", hoverColor: "group-hover:text-blue-700", dividerColor: "border-blue-200/50", emptyMsg: "No left-leaning coverage found." },
+                        { label: "Left", article: featuredLeft, cardClass: "bg-blue-200 border-blue-300", hoverColor: "group-hover:text-blue-700", dividerColor: "border-blue-200/50", emptyMsg: "No left-leaning coverage found." },
                         { label: "Center", article: featuredCenter, cardClass: "bg-purple-100 border-purple-200", hoverColor: "group-hover:text-purple-700", dividerColor: "border-purple-100", emptyMsg: "No center coverage found." },
-                        { label: "Right", article: featuredRight, cardClass: "bg-red-100 border-red-200", hoverColor: "group-hover:text-red-700", dividerColor: "border-red-200/50", emptyMsg: "No right-leaning coverage found." },
+                        { label: "Right", article: featuredRight, cardClass: "bg-red-200 border-red-300", hoverColor: "group-hover:text-red-700", dividerColor: "border-red-200/50", emptyMsg: "No right-leaning coverage found." },
                     ].map(({ label, article, cardClass, hoverColor, dividerColor, emptyMsg }) => (
                         <div key={label} className="flex flex-col">
                             <h3 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1.5">{label}</h3>

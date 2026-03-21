@@ -119,7 +119,7 @@ def _join_paragraphs(paragraphs: list) -> str:
     return "\n\n".join(result)
 
 
-def scrape_straits_times(url):
+def scrape_straits_times(url, skip_age_check=False):
     """Scrape Straits Times article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
@@ -154,7 +154,7 @@ def scrape_straits_times(url):
                            and len(p.get_text(strip=True)) > 20]
             body = _join_paragraphs(content_paras)
         
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         if not is_english_text(body):
             logger.warning(f"Non-English content: {url}")
@@ -189,7 +189,7 @@ def scrape_straits_times(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Straits Times article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
@@ -217,7 +217,7 @@ def scrape_straits_times(url):
         return None
 
 
-def scrape_cna(url):
+def scrape_cna(url, skip_age_check=False):
     """Scrape CNA article with DATE FILTERING and paragraph preservation"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
@@ -273,7 +273,7 @@ def scrape_cna(url):
         clean_paras = [p for p in all_paras if not _is_cna_boilerplate(p.get_text())]
         body = _join_paragraphs(clean_paras)
 
-        body = clean_boilerplate(body)
+        body = clean_boilerplate(body, preserve_paragraphs=True)
         
         # Extract image
         image_url = ""
@@ -299,7 +299,7 @@ def scrape_cna(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old CNA article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
@@ -323,16 +323,13 @@ def scrape_cna(url):
         return None
 
 
-def scrape_fox_news(url):
+def scrape_fox_news(url, skip_age_check=False):
     """Scrape Fox News article with DATE FILTERING and paragraph preservation"""
     try:
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
         soup = bs(res.content, "html.parser")
         
         paywall = bool(soup.find("div", class_="paywall"))
-
-        # Unwrap inline tags to prevent mid-word spaces in extracted text
-        _unwrap_inline_tags(soup)
 
         headline_elem = soup.find("h1", class_="headline") or soup.find("h1")
         headline = headline_elem.text.strip() if headline_elem else "Headline not found"
@@ -350,7 +347,7 @@ def scrape_fox_news(url):
                 publish_date = date_obj.strftime("%Y-%m-%d")
                 
                 article_age = datetime.now() - date_obj.replace(tzinfo=None)
-                if article_age.days > MAX_ARTICLE_AGE_DAYS:
+                if not skip_age_check and article_age.days > MAX_ARTICLE_AGE_DAYS:
                     logger.debug(f"Skipping old Fox News article ({article_age.days} days): {headline[:50]}")
                     return None
             except Exception as date_error:
@@ -375,15 +372,16 @@ def scrape_fox_news(url):
             
             clean_paras = []
             for p in paragraphs:
-                text = p.get_text(strip=True)
+                text = p.get_text(separator=' ', strip=True)
+                text = re.sub(r' {2,}', ' ', text).strip()
                 if text and len(text) > 20:
                     if not any(phrase in text for phrase in boilerplate_phrases):
-                        clean_paras.append(p)
+                        clean_paras.append(text)
             
             # Join with \n\n to preserve paragraph structure
-            body = "\n\n".join([p.get_text(strip=True) for p in clean_paras])
+            body = "\n\n".join(clean_paras)
         
-        body = clean_boilerplate(body.strip())
+        body = clean_boilerplate(body.strip(), preserve_paragraphs=True)
         
         if len(body) < 100:
             logger.warning(f"Fox News insufficient content: {url}")

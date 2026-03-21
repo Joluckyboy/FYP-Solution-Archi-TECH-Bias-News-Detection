@@ -11,11 +11,8 @@ WORKDIR /app
 
 # Copy the requirements file
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
-
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Copy the application files
 COPY . .
@@ -23,4 +20,4 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 9000
 
-CMD ["gunicorn", "-b", "0.0.0.0:9000", "--workers", "4",  "--limit-request-line", "0", "app:create_app()"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9000", "--workers", "4"]

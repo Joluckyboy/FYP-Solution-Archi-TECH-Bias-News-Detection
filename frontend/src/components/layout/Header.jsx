@@ -17,10 +17,17 @@ const Header = () => {
         </Link> */}
 
         <Link to="/games">
-          <div className="m-2 pr-4">
-            <img src="/game.svg" alt="gamelogo" />
+          <div className="m-2">
+            <img src="/game.svg" alt="gamelogo" className="w-9 h-9"/>
           </div>
         </Link>
+
+        <Link to="/how-it-works">
+          <div className="m-2">
+            <img src="/how-it-works.svg" alt="howitworkslogo" className="w-9 h-9"/>
+          </div>
+        </Link>
+
       </div>
 		</div>
 	);
