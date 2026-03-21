@@ -35,7 +35,7 @@ def test_new_query_existing_url(mock_methods):
     mock_methods.get_news.return_value = {"url": "test_url", "title": "test_title", "content": "test_content"}
     response = client.post("/application/new_query", json={"url": "test_url", "background": True})
     assert response.status_code == 200
-    assert response.json() == {'url': 'test_url', 'id': None, 'title': 'test_title', 'content': 'test_content', 'sentiment_result': None, 'emotion_result': None, 'propaganda_result': None, 'factcheck_result': None, 'summarise_result': None, 'data_summary': None}
+    assert response.json() == {'url': 'test_url', 'id': None, 'title': 'test_title', 'content': 'test_content', 'sentiment_result': None, 'emotion_result': None, 'propaganda_result': None, 'political_bias_result': None, 'factcheck_result': None, 'summarise_result': None, 'data_summary': None}
 
 def test_new_query_new_url(mock_methods):
     mock_methods.check_exists.return_value = {"exists": False}
@@ -43,7 +43,7 @@ def test_new_query_new_url(mock_methods):
     mock_methods.create_news.return_value = {"id": "new_id"}
     response = client.post("/application/new_query", json={"url": "test_url", "background": True})
     assert response.status_code == 200
-    assert response.json() == {'url': None, 'id': 'new_id', 'title': None, 'content': None, 'sentiment_result': None, 'emotion_result': None, 'propaganda_result': None, 'factcheck_result': None, 'summarise_result': None, 'data_summary': None}
+    assert response.json() == {'url': None, 'id': 'new_id', 'title': None, 'content': None, 'sentiment_result': None, 'emotion_result': None, 'propaganda_result': None, 'political_bias_result': None, 'factcheck_result': None, 'summarise_result': None, 'data_summary': None}
 
 def test_retrieve_query(mock_methods):
     mock_methods.get_news_by_id.return_value = {"id": "test_id", "url": "test_url", "title": "test_title"}
