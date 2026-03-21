@@ -247,7 +247,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"\u2696\ufe0f Propaganda Probability: {propaganda_result*100:.2f}%\n"
         + "\n"
         f"\U0001F3DB\ufe0f Political Bias: {bias_rating}\n"
-        "-------------------------------------\n"
+        + (
+            (
+                ("\U0001F7E2 Topics Covered: " + ", ".join(political_bias["topics"]["covered"]) + "\n"
+                 if political_bias.get("topics", {}).get("covered") else "")
+                + ("\U0001F534 Topics Omitted: " + ", ".join(political_bias["topics"]["omitted"]) + "\n"
+                   if political_bias.get("topics", {}).get("omitted") else "")
+            ) if political_bias else ""
+        )
+        + "-------------------------------------\n"
         f"See full article breakdown at {redirect_url}"
     )
 
