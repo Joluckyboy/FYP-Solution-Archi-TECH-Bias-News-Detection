@@ -12,11 +12,11 @@ import {
 } from 'recharts';
 
 const BIAS_CONFIG = [
-    { key: 'left', label: 'Left', color: '#2563EB' },
-    { key: 'leaning_left', label: 'Leaning Left', color: '#60A5FA' },
-    { key: 'center', label: 'Center', color: '#7C3AED' },
-    { key: 'leaning_right', label: 'Leaning Right', color: '#F87171' },
-    { key: 'right', label: 'Right', color: '#DC2626' },
+    { key: "left", label: "Left", color: "#93C5FD", tooltipColor: "#2563EB" },         // blue-300
+    { key: "leaning_left", label: "Leaning Left", color: "#BFDBFE", tooltipColor: "#3B82F6" },  // blue-200
+    { key: "center", label: "Center", color: "#E9D5FF", tooltipColor: "#9333EA" },       // purple-200
+    { key: "leaning_right", label: "Leaning Right", color: "#FECACA", tooltipColor: "#EF4444" }, // red-200
+    { key: "right", label: "Right", color: "#FCA5A5", tooltipColor: "#DC2626" },        // red-300
 ];
 
 const getBiasKey = (rawBias) => {
@@ -77,7 +77,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     const getBiasColor = (bias) => {
         const config = BIAS_CONFIG.find(c => c.key === bias);
-        return config ? config.color : '#94A3B8';
+        return config ? config.tooltipColor : '#64748B';
     };
 
     return (
@@ -95,15 +95,29 @@ const CustomTooltip = ({ active, payload, label }) => {
             </p>
             {/* Bias breakdown */}
             <div style={{ marginBottom: events.length ? '10px' : 0, display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {payload.map((p, i) => p.value > 0 && (
-                    <span key={i} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 600,
-                        background: `${p.fill}15`, border: `1px solid ${p.fill}40`, color: p.fill,
-                    }}>
-                        {p.name}: {p.value}
-                    </span>
-                ))}
+                {payload.map((p, i) => {
+                    if (p.value <= 0) return null;
+
+                    const tooltipColor =
+                        BIAS_CONFIG.find(c => c.label === p.name)?.tooltipColor || p.fill;
+
+                    return (
+                        <span key={i} style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background: `${tooltipColor}15`,
+                            border: `1px solid ${tooltipColor}40`,
+                            color: tooltipColor,
+                        }}>
+                            {p.name}: {p.value}
+                        </span>
+                    );
+                })}
             </div>
             {events.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -219,7 +233,7 @@ const CoverageTimeline = ({ articles }) => {
                             label={{ value: 'No. of Articles', angle: -90, position: 'insideLeft', offset: 10, fontSize: 11, fill: '#94A3B8', fontStyle: 'italic' }}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '24px' }} />
+                        <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '24px' }} formatter={(value) => <span style={{ color: "#000000", fontWeight: 500 }}>{value}</span>} />
                         {BIAS_CONFIG.map(({ key, label, color }) => (
                             <Bar
                                 key={key}

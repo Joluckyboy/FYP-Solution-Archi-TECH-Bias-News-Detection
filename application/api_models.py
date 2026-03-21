@@ -28,6 +28,7 @@ class NewsItem(URLItem):
     sentiment_result: Optional[Dict[str, Any]] = None
     emotion_result: Optional[Dict[str, Any]] = None
     propaganda_result: Optional[Dict[str, Any]] = None
+    political_bias_result: Optional[Dict[str, Any]] = None
     factcheck_result: Optional[List[FactCheckItem]] = None
     summarise_result: Optional[str] = None
     data_summary: Optional[Dict[str, Any]] = None

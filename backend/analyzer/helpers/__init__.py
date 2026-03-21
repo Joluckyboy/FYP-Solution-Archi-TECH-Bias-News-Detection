@@ -11,6 +11,11 @@ from .data_helpers import (
     DEFAULT_BIAS_DISTRIBUTION,
     SCRAPED_DATA_PATH,
 )
+from .related_helpers import (
+    find_cluster_id_by_title,
+    filter_related,
+    related_articles_sbert,
+)
 
 __all__ = [
     "fetch_topics_data",
@@ -18,4 +23,7 @@ __all__ = [
     "_safe_read_csv",
     "DEFAULT_BIAS_DISTRIBUTION",
     "SCRAPED_DATA_PATH",
+    "find_cluster_id_by_title",
+    "filter_related",
+    "related_articles_sbert",
 ]

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
 import get_api, { get_analyzer } from "@/config/config";
 import BiasLabelGuide from "@/components/BiasLabelGuide";
@@ -148,30 +148,27 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full mt-6 sm:mt-12 mb-12 flex flex-col items-center px-4 sm:px-0">
       {/* Header Text */}
-      <div className="text-center m-12 mt-48 slide-in-right">
-        <h1
-          className={`checkmate-gradient pb-4 ${isMobile ? "text-3xl" : "text-5xl"
-            }`}
-        >
+      <div className="text-center mx-4 sm:m-12 mt-16 sm:mt-48 slide-in-right">
+        <h1 className="checkmate-gradient pb-4 sm:pb-8 text-3xl sm:text-5xl">
           Your Move Against Misinformation
         </h1>
-        <h2 className={`text-2xl ${isMobile ? "text-xl" : "text-2xl"}`}>
+        <h2 className="text-lg sm:text-2xl">
           Analyse any article for emotions, sentiment, and facts.
         </h2>
       </div>
 
       {/* Search Input */}
-      <div className="flex justify-center items-center w-full mb-6">
-        <div className="w-[50%]">
+      <div className="flex justify-center items-center w-full mt-6 sm:mt-0">
+        <div className="w-[90%] sm:w-[70%] md:w-[50%]">
           <CustomInput
             placeholder="Drop an article link"
             value={articleURL}
             onChange={handleInputChange}
           />
           <br />
-          <div className="flex justify-center items-center w-full mt-4 mb-16">
+          <div className="flex justify-center items-center w-full mt-4 mb-8 sm:mb-16">
             <Button onClick={handleButtonClick} className="bg-blue-700">
               Analyse Now
             </Button>
@@ -193,85 +190,99 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Resizable Panels */}
-      <div className="flex w-full justify-center items-center slide-in-left mb-12">
-        <div className={`w-[75%] ${isMobile ? "h-[700px]" : ""}`}>
-          <ResizablePanelGroup
-            direction={isMobile ? "vertical" : "horizontal"}
-            className="mb-6"
-          >
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <BadgeCheck size={30} />
+      {/* Feature Cards — grid on mobile, resizable panels on desktop */}
+      <div className="flex w-full justify-center items-center slide-in-left mb-12 sm:mb-24">
+        {isMobile ? (
+          <div className="w-[90%] grid grid-cols-2 gap-3">
+            {[
+              { icon: <BadgeCheck size={24} />, title: "Fact-Checking", desc: "Make sure the content is accurate and trustworthy." },
+              { icon: <Gauge size={24} />, title: "Sentiment Analysis", desc: "Find out if the article's sentiment is positive, negative, or neutral." },
+              { icon: <SmilePlus size={24} />, title: "Emotion Analysis", desc: "Understand underlying emotions and see if they run high in this article." },
+              { icon: <Scale size={24} />, title: "Propaganda Analysis", desc: "Check if the article leans or favours a certain side." },
+              { icon: <Landmark size={24} />, title: "Political Bias", desc: "Analyze the political bias of the article and see what topics are covered or omitted." },
+            ].map((item, i) => (
+              <div key={i} className={`p-4 rounded-lg border bg-white ${i === 4 ? "col-span-2" : ""}`}>
+                <div className="pb-2">{item.icon}</div>
+                <h3 className="font-semibold pb-1 text-sm">{item.title}</h3>
+                <p className="text-slate-600 text-xs">{item.desc}</p>
               </div>
-              <h3 className="font-semibold pb-3 ">Fact-Checking</h3>
-              <p className="text-slate-600">
-                Make sure the content is accurate and trustworthy.
-              </p>
-            </ResizablePanel>
+            ))}
+          </div>
+        ) : (
+          <div className="w-[75%]">
+            <ResizablePanelGroup direction="horizontal" className="mb-6">
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <BadgeCheck size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Fact-Checking</h3>
+                <p className="text-slate-600">
+                  Make sure the content is accurate and trustworthy.
+                </p>
+              </ResizablePanel>
 
-            {/* Render the handle only in horizontal mode */}
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Gauge size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Sentiment Analysis</h3>
-              <p className="text-slate-600">
-                Find out if the article's sentiment is positive, negative, or
-                neutral.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Gauge size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Sentiment Analysis</h3>
+                <p className="text-slate-600">
+                  Find out if the article's sentiment is positive, negative, or
+                  neutral.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <SmilePlus size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Emotion Analysis</h3>
-              <p className="text-slate-600">
-                Understand underlying emotions and see if they run high in this
-                article.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <SmilePlus size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Emotion Analysis</h3>
+                <p className="text-slate-600">
+                  Understand underlying emotions and see if they run high in this
+                  article.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Scale size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Propaganda Analysis</h3>
-              <p className="text-slate-600">
-                Check if the article leans or favours a certain side.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Scale size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Propaganda Analysis</h3>
+                <p className="text-slate-600">
+                  Check if the article leans or favours a certain side.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Landmark size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Political Bias</h3>
-              <p className="text-slate-600">
-                Analyze the political bias of the article and see what topics are covered or omitted.
-              </p>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Landmark size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Political Bias</h3>
+                <p className="text-slate-600">
+                  Analyze the political bias of the article and see what topics are covered or omitted.
+                </p>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        )}
       </div>
 
-      <div className="ml-12 mr-12">
+      <div className="mx-4 sm:ml-12 sm:mr-12 w-[calc(100%-2rem)] sm:w-auto">
 
         {/* Latest Topics Card */}
         <div className="mb-12">
-          <Card className="w-full h-[600px] flex flex-col">
-            <CardHeader>
+          <Card className="w-full h-[400px] sm:h-[600px] flex flex-col">
+            <CardHeader className="px-4 sm:px-6">
               <div className="flex flex-col gap-3">
-                <CardTitle className="text-left checkmate-gradient">News Clusters  — Find all the Latest News here! </CardTitle>
+                <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">News Clusters — Find all the Latest News here!</CardTitle>
                 {/* Filter pills */}
                 {(() => {
                   const cats = [...new Set(topics.map(t => t.topicName).filter(Boolean))].sort();
@@ -304,7 +315,7 @@ const LandingPage = () => {
                 })()}
               </div>
             </CardHeader>
-            <CardContent className="p-6 flex-1 overflow-y-auto">
+            <CardContent className="p-4 sm:p-6 flex-1 overflow-y-auto">
               <TopicFeed
                 compact={true}
                 topics={topics}
@@ -318,20 +329,22 @@ const LandingPage = () => {
 
         {/* Visualisations */}
         <div className="grid grid-cols-1 gap-8 mb-12">
+
           {/* Guide to Political Bias Labels */}
           <BiasLabelGuide />
+
           {/* Outlet Bias */}
-          <Card className="h-[650px] flex flex-col">
+          <Card className="flex flex-col">
             <CardHeader className="flex-none">
-              <CardTitle className="checkmate-gradient">
-                Bias Distribution
+              <CardTitle className="checkmate-gradient text-lg sm:text-2xl">
+                News Outlets: Political Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col">
               <TopicOutletBias />
             </CardContent>
-            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none">
-              <p className="text-base text-gray-600 italic m-0">
+            <CardFooter className="px-4 sm:px-8 pt-4 from-gray-50 to-blue-50 flex items-center flex-none">
+              <p className="text-xs sm:text-base text-gray-600 italic">
                 Ratings reflect outlet perspective only, not accuracy or credibility.
               </p>
             </CardFooter>
@@ -339,27 +352,18 @@ const LandingPage = () => {
         </div>
 
         {/* Trending Keywords */}
-        <div className="mb-12">
-          <Card className="w-full min-h-[300px]">
+        <div className="pb-12">
+          <Card className="w-full min-h-[250px] sm:min-h-[300px]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
+              <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">Trending Keywords</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 h-[240px] overflow-hidden">
+            <CardContent className="p-3 sm:p-4 overflow-auto">
               <TrendingKeywords />
             </CardContent>
           </Card>
         </div>
 
-        {/* Link to Explanations */}
-        <div className="text-center mb-10">
-          <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
-            How This Works!
-          </Link>
-        </div>
-
-
       </div>
-
     </div>
   );
 };

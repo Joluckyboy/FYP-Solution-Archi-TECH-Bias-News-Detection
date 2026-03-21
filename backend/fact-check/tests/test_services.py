@@ -1,13 +1,16 @@
 import pytest
+import asyncio
 import json
 import re
 from unittest.mock import patch, AsyncMock, MagicMock, ANY
+from fastapi.testclient import TestClient
 
 from service.predict_service import processStatement, summarise, summarise_data, getStatement, fact_check
 from models.datapayload import DataPayload, ModelDataPayload
 from config.config import Config
+from app.main import app as api_app
 
-pytestmark = pytest.mark.asyncio  # Ensures pytest handles async functions
+client = TestClient(api_app)
 
 @pytest.mark.parametrize("content, expected", [
     ('```json[{"statement": "Fact 1"}, {"statement": "Fact 2"}]```', ["Fact 1", "Fact 2"]),
@@ -17,8 +20,12 @@ pytestmark = pytest.mark.asyncio  # Ensures pytest handles async functions
 def test_processStatement(content, expected):
     assert processStatement(content) == expected
 
+
+def test_processStatement_empty_payload():
+    assert processStatement("[]") == []
+
 @patch("requests.post")
-async def test_summarise(mock_post):
+def test_summarise(mock_post):
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -27,34 +34,35 @@ async def test_summarise(mock_post):
     mock_post.return_value = mock_response
 
     text = "This is a long article that needs summarization."
-    result = await summarise(text)
+    result = asyncio.run(summarise(text))
 
     assert result == "<think>irrelevant</think> Summary result"
     mock_post.assert_called_once_with(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=ANY)
 
 @patch("requests.post")
-async def test_summarise_data(mock_post):
+def test_summarise_data(mock_post):
     json_payload = ModelDataPayload(
         sentiment_result={"Positive": 0.9},
         emotion_result={"Happy": 0.8},
         propaganda_result={"None": 0.95},
+        political_bias_result={"rating": "center", "topics": {"covered": ["A"], "omitted": ["B"]}},
         summarise_result="This is the summary."
     )
 
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "choices": [{"message": {"content": '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'}}]
+        "choices": [{"message": {"content": '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None", "political_bias_summary": "Center"}'}}]
     }
     mock_post.return_value = mock_response
 
-    result = await summarise_data(json_payload)
+    result = asyncio.run(summarise_data(json_payload))
 
-    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None"}'  # Removed <think> tags from mock
+    assert result == '{"sentiment_summary": "Positive", "emotion_summary": "Happy", "propaganda_summary": "None", "political_bias_summary": "Center"}'
     mock_post.assert_called_once_with(Config.DEEPSEEK_URL, headers=Config.HEADERS_DS, json=ANY)
 
 @patch("requests.post")
-async def test_getStatement(mock_post):
+def test_getStatement(mock_post):
     json_payload = DataPayload(content="This is a test article.", title="Test Title")
 
     mock_response = MagicMock()
@@ -64,7 +72,7 @@ async def test_getStatement(mock_post):
     }
     mock_post.return_value = mock_response
 
-    result = await getStatement(json_payload)
+    result = asyncio.run(getStatement(json_payload))
 
     assert result == ["Test statement 1", "Test statement 2"]
     mock_post.assert_called_once_with(
@@ -74,7 +82,7 @@ async def test_getStatement(mock_post):
     )
 
 @patch("requests.post")
-async def test_fact_check(mock_post):
+def test_fact_check(mock_post):
     statements = ["Statement 1"]
     original_article_title = "Fake News Example"
     original_article_url = "https://example.com/fake-news"  # ADD THIS
@@ -99,7 +107,7 @@ async def test_fact_check(mock_post):
     mock_post.return_value = mock_response
 
     # UPDATE THIS LINE - now requires 3 parameters
-    result = await fact_check(statements, original_article_title, original_article_url)
+    result = asyncio.run(fact_check(statements, original_article_title, original_article_url))
     
     print("Mocked API Response:", result)
     
@@ -112,3 +120,87 @@ async def test_fact_check(mock_post):
     mock_post.assert_called_once_with(
         Config.PERPLEXITY_URL, headers=Config.HEADERS, json=ANY
     )
+
+
+def test_api_health_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_api_health_factcheck():
+    response = client.get("/factcheck")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+@patch("app.main.getStatement", new_callable=AsyncMock)
+def test_api_predict_statements(mock_get_statements):
+    mock_get_statements.return_value = ["s1", "s2"]
+    response = client.post(
+        "/factcheck/predict/statements",
+        json={"content": "article content", "title": "title", "url": "https://example.com"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"response": ["s1", "s2"]}
+
+
+@patch("app.main.summarise", new_callable=AsyncMock)
+def test_api_summarise(mock_summarise):
+    mock_summarise.return_value = "summary text"
+    response = client.post("/factcheck/summarise", json={"content": "abc"})
+    assert response.status_code == 200
+    assert response.json() == {"response": "summary text"}
+
+
+@patch("app.main.summarise_data", new_callable=AsyncMock)
+def test_api_summarise_model_data(mock_summarise_data):
+    mock_summarise_data.return_value = '{"sentiment_summary":"ok"}'
+    response = client.post(
+        "/factcheck/summarise/model-data",
+        json={
+            "sentiment_result": {},
+            "emotion_result": {},
+            "propaganda_result": {},
+            "political_bias_result": {},
+            "summarise_result": "",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {"response": {"sentiment_summary": "ok"}}
+
+
+@patch("app.main.getStatement", new_callable=AsyncMock)
+@patch("app.main.fact_check", new_callable=AsyncMock)
+def test_api_predict_fact_check(mock_fact_check, mock_get_statements):
+    mock_get_statements.return_value = ["claim"]
+    mock_fact_check.return_value = [{"statement": "claim", "correctness": "factual", "explanation": "ok", "citations": []}]
+    response = client.post(
+        "/factcheck/predict/fact-check",
+        json={"content": "article", "title": "title", "url": "https://example.com"},
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json()["response"], list)
+
+
+@patch("app.main.fact_check", new_callable=AsyncMock)
+def test_api_claim_short_input_returns_400(mock_fact_check):
+    response = client.post("/factcheck/claim", json={"claim": "short", "page_title": "t", "page_url": "u"})
+    assert response.status_code == 400
+
+
+@patch("app.main.fact_check", new_callable=AsyncMock)
+def test_api_claim_success(mock_fact_check):
+    mock_fact_check.return_value = [{
+        "statement": "This is a long enough claim",
+        "correctness": "factual",
+        "explanation": "checked",
+        "citations": ["https://source.com"],
+    }]
+    response = client.post(
+        "/factcheck/claim",
+        json={"claim": "This is a long enough claim", "page_title": "t", "page_url": "https://x.com"},
+    )
+    assert response.status_code == 200
+    body = response.json()["response"]
+    assert body["correctness"] == "factual"

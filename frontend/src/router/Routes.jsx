@@ -19,7 +19,8 @@ const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const HowItWorksPage = lazy(() => import("@/pages/HowItWorksPage"));
 // Keywords
 const KeywordArticlesPage = lazy(() => import("@/pages/KeywordArticlesPage"));
-
+// Comparison
+const ComparisonPage = lazy(() => import("@/pages/ComparisonPage"));
 export const PUBLIC_ROUTES = [
     { path: "/", element: <LandingPage /> },
     { path: "/results/:id?", element: <ResultsPage /> },
@@ -31,6 +32,7 @@ export const PUBLIC_ROUTES = [
     { path: "/*", element: <Navigate to="/" /> },
     { path: "/dashboard", element: <DashboardPage /> },
     { path: "/how-it-works", element: <HowItWorksPage /> },
+    { path: "/compare", element: <ComparisonPage /> },
     { path: "/*", element: <Navigate to="/" /> },
 ];
 
