@@ -98,13 +98,30 @@ const CoverageTimeline = ({ articles }) => {
         return Array.from(uniqueSources).sort();
     }, [articles]);
 
+    // Global date range computed from ALL articles — never changes when filter changes
+    const globalDateRange = useMemo(() => {
+        let min = Infinity;
+        let max = -Infinity;
+        (articles || []).forEach(a => {
+            const rawDate = a.published_at || a.published_date || a.publishedAt;
+            if (!rawDate) return;
+            const dateObj = new Date(rawDate);
+            if (isNaN(dateObj)) return;
+            const ts = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime();
+            if (ts < min) min = ts;
+            if (ts > max) max = ts;
+        });
+        return min === Infinity ? null : { min, max };
+    }, [articles]);
+
     const data = useMemo(() => {
-        if (!articles || articles.length === 0) return [];
+        if (!articles || articles.length === 0 || !globalDateRange) return [];
 
         const filteredArticles = selectedSource === 'All'
             ? articles
             : articles.filter(a => (a.source || 'Unknown') === selectedSource);
 
+        // Build a map of dates that have articles for the selected source
         const dateMap = {};
         filteredArticles.forEach(a => {
             const rawDate = a.published_at || a.published_date || a.publishedAt;
@@ -112,14 +129,16 @@ const CoverageTimeline = ({ articles }) => {
             const dateObj = new Date(rawDate);
             if (isNaN(dateObj)) return;
 
-            const month = dateObj.toLocaleString('default', { month: 'short' });
-            const day = dateObj.getDate();
+            const dayStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+            const ts = dayStart.getTime();
+            const month = dayStart.toLocaleString('default', { month: 'short' });
+            const day = dayStart.getDate();
             const dateKey = `${month} ${day}`;
 
             if (!dateMap[dateKey]) {
                 dateMap[dateKey] = {
                     date: dateKey,
-                    timestamp: dateObj.getTime(),
+                    timestamp: ts,
                     left: 0, leaning_left: 0, center: 0, leaning_right: 0, right: 0,
                     totalArticles: 0,
                     rawArticles: [],
@@ -136,8 +155,28 @@ const CoverageTimeline = ({ articles }) => {
             });
         });
 
-        return Object.values(dateMap).sort((a, b) => a.timestamp - b.timestamp);
-    }, [articles, selectedSource]);
+        // Always fill from the GLOBAL min→max so the x-axis is identical for every outlet
+        const msPerDay = 86400000;
+        const allDates = [];
+        for (let ts = globalDateRange.min; ts <= globalDateRange.max; ts += msPerDay) {
+            const dayObj = new Date(ts);
+            const month = dayObj.toLocaleString('default', { month: 'short' });
+            const day = dayObj.getDate();
+            const dateKey = `${month} ${day}`;
+
+            allDates.push(
+                dateMap[dateKey] ?? {
+                    date: dateKey,
+                    timestamp: ts,
+                    left: 0, leaning_left: 0, center: 0, leaning_right: 0, right: 0,
+                    totalArticles: 0,
+                    rawArticles: [],
+                }
+            );
+        }
+
+        return allDates;
+    }, [articles, selectedSource, globalDateRange]);
 
     if (!data || data.length === 0) {
         return (
