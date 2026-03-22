@@ -477,20 +477,20 @@ def get_source_credibility(domain: str = Query(..., description="Domain to check
         skew = 0.0
 
     # Credibility score (0-100):
-    # - Low propaganda = good (weight 40%)
-    # - High factual accuracy = good (weight 40%)
+    # - Low propaganda = good (weight 20%)
+    # - High factual accuracy = good (weight 60%)
     # - Low sentiment skew = good (weight 20%)
     if label is None:
-        propaganda_score = (1.0 - avg_propaganda) * 40
-        accuracy_score = factual_accuracy * 40
+        propaganda_score = (1.0 - avg_propaganda) * 20
+        accuracy_score = factual_accuracy * 60
         skew_score = (1.0 - min(skew, 1.0)) * 20
         credibility_score = round(propaganda_score + accuracy_score + skew_score, 1)
 
-        if credibility_score >= 80:
+        if credibility_score >= 50:
             label = "Highly Credible"
-        elif credibility_score >= 60:
-            label = "Moderately Credible"
         elif credibility_score >= 40:
+            label = "Moderately Credible"
+        elif credibility_score >= 20:
             label = "Questionable"
         else:
             label = "Low Credibility"
