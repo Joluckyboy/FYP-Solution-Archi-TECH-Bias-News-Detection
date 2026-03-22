@@ -94,7 +94,7 @@ const BiasLabelGuide = () => {
 
       {/* Header */}
       <CardHeader className="pb-4 px-4 sm:px-6">
-        <CardTitle className="checkmate-gradient flex items-center gap-2 text-xl sm:text-2xl font-bold leading-snug">
+        <CardTitle className="checkmate-gradient flex items-center gap-2 text-xl sm:text-2xl leading-snug">
           <Info className="h-5 w-5 flex-shrink-0" />
           Left and Right — What do these political bias labels mean?
         </CardTitle>
@@ -189,18 +189,17 @@ const BiasLabelGuide = () => {
               const isActive = i === currentSlide;
               const shortLabel =
                 slide.id === 'left' ? 'L' :
-                slide.id === 'lean-left' ? 'LL' :
-                slide.id === 'center' ? 'C' :
-                slide.id === 'lean-right' ? 'LR' : 'R';
+                  slide.id === 'lean-left' ? 'LL' :
+                    slide.id === 'center' ? 'C' :
+                      slide.id === 'lean-right' ? 'LR' : 'R';
               return (
                 <button
                   key={i}
                   onClick={() => goToSlide(i)}
-                  className={`w-11 h-11 flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 flex-shrink-0 ${
-                    isActive
+                  className={`w-11 h-11 flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 flex-shrink-0 ${isActive
                       ? "bg-black text-white shadow-lg scale-110"
                       : `${progressBarColors[slide.color]} text-black hover:brightness-95`
-                  }`}
+                    }`}
                   role="tab"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goToSlide(i); }}
