@@ -150,7 +150,7 @@ const LandingPage = () => {
   return (
     <div className="w-full mt-6 sm:mt-12 mb-12 flex flex-col items-center px-4 sm:px-0">
       {/* Header Text */}
-      <div className="text-center mx-4 sm:mx-12 mt-8 sm:mt-16 sm:mb-8 slide-in-right">
+      <div className="text-center mx-4 sm:m-12 mt-16 sm:mt-48 slide-in-right">
         <h1 className="checkmate-gradient pb-4 sm:pb-8 text-3xl sm:text-5xl">
           Your Move Against Misinformation
         </h1>
