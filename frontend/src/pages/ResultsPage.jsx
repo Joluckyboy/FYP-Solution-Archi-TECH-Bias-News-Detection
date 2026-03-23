@@ -31,15 +31,15 @@ import "../index.css";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const FACTUALITY = {
-  factual:                "bg-teal-100 text-teal-900",
+  factual: "bg-teal-100 text-teal-900",
   "cannot be determined": "bg-amber-100 text-amber-900",
-  unfactual:              "bg-rose-100 text-rose-900",
+  unfactual: "bg-rose-100 text-rose-900",
 };
 
 const showCites = (fact) => {
   if (!fact.citations?.length) return false;
   const e = (fact.explanation || "").toLowerCase();
-  return !["no sources","no source","sources do not","do not mention","does not mention"].some(p => e.includes(p));
+  return !["no sources", "no source", "sources do not", "do not mention", "does not mention"].some(p => e.includes(p));
 };
 
 // ─── Paginated fact-check — shows 10 at a time so 30 claims don't overwhelm ──
@@ -129,12 +129,12 @@ function FactCheckList({ facts }) {
 
 const ResultsPage = () => {
   const location = useLocation();
-  const { id }   = useParams();
+  const { id } = useParams();
 
-  const [data,         setData]         = useState(location.state?.data || null);
-  const [API_URL,      setAPI_URL]      = useState(null);
+  const [data, setData] = useState(location.state?.data || null);
+  const [API_URL, setAPI_URL] = useState(null);
   const [badgeUpdated, setBadgeUpdated] = useState(false);
-  const [,             setIsMobile]     = useState(false);
+  const [, setIsMobile] = useState(false);
   const summaryRegenTriggeredRef = useRef(new Set());
 
   useEffect(() => {
@@ -154,11 +154,11 @@ const ResultsPage = () => {
   useEffect(() => {
     if (!API_URL || !data || !data.url) return;
     const dataSummary = data.data_summary;
-    const hasSummary  = dataSummary && typeof dataSummary === "object" && Object.keys(dataSummary).length > 0;
-    const articleKey  = data.id || data.url;
+    const hasSummary = dataSummary && typeof dataSummary === "object" && Object.keys(dataSummary).length > 0;
+    const articleKey = data.id || data.url;
     if (!articleKey) return;
     if (!hasSummary && data.sentiment_result && data.emotion_result && data.propaganda_result
-        && !summaryRegenTriggeredRef.current.has(articleKey)) {
+      && !summaryRegenTriggeredRef.current.has(articleKey)) {
       summaryRegenTriggeredRef.current.add(articleKey);
       fetch(`${API_URL}/application/new_query`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -169,7 +169,7 @@ const ResultsPage = () => {
 
   useEffect(() => {
     if (!badgeUpdated && data?.propaganda_result?.propaganda_probability !== undefined
-        && typeof chrome !== "undefined" && chrome.runtime?.id) {
+      && typeof chrome !== "undefined" && chrome.runtime?.id) {
       chrome.runtime.sendMessage({
         action: "propagandaResultReceived",
         propagandaProbability: data.propaganda_result.propaganda_probability,
@@ -192,9 +192,9 @@ const ResultsPage = () => {
     </div>
   );
 
-  const emotionSummaryText    = data?.data_summary?.emotion_summary    || "No emotion summary available";
+  const emotionSummaryText = data?.data_summary?.emotion_summary || "No emotion summary available";
   const propagandaSummaryText = data?.data_summary?.propaganda_summary || "No propaganda summary available";
-  const sentimentSummaryText  = data?.data_summary?.sentiment_summary  || "No sentiment summary available";
+  const sentimentSummaryText = data?.data_summary?.sentiment_summary || "No sentiment summary available";
   const politicalBiasSummaryText = data?.data_summary?.political_bias_summary || "No political bias summary available";
 
   return (
@@ -247,28 +247,28 @@ const ResultsPage = () => {
                 <CardTitle className="text-2xl font-base">Article Summary</CardTitle>
               </div>
             </CardHeader>
-              <CardContent>
-                {data?.summarise_result && typeof data.summarise_result === "string" && data.summarise_result.trim() ? (
-                  <ReactMarkdown
-                    components={{
-                      ul: ({ children }) => <ul className="list-disc ml-6 space-y-2 text-sm">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal ml-6 space-y-2 text-sm">{children}</ol>,
-                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                      p:  ({ children }) => <p className="text-sm leading-relaxed mb-2">{children}</p>,
-                      strong: ({ children }) => <span className="font-semibold text-gray-800">{children}</span>,
-                    }}
-                  >
-                    {data.summarise_result}
-                  </ReactMarkdown>
-                ) : data?.summarise_result == null ? (
-                  <div className="text-center flex flex-col items-center">
-                    <br />Analysis in progress<br /><br />
-                    <HashLoader color="#1E5EDD" size={50} />
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">No summary available</div>
-                )}
-              </CardContent>
+            <CardContent>
+              {data?.summarise_result && typeof data.summarise_result === "string" && data.summarise_result.trim() ? (
+                <ReactMarkdown
+                  components={{
+                    ul: ({ children }) => <ul className="list-disc ml-6 space-y-2 text-sm">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal ml-6 space-y-2 text-sm">{children}</ol>,
+                    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                    p: ({ children }) => <p className="text-sm leading-relaxed mb-2">{children}</p>,
+                    strong: ({ children }) => <span className="font-semibold text-gray-800">{children}</span>,
+                  }}
+                >
+                  {data.summarise_result}
+                </ReactMarkdown>
+              ) : data?.summarise_result == null ? (
+                <div className="text-center flex flex-col items-center">
+                  <br />Analysis in progress<br /><br />
+                  <HashLoader color="#1E5EDD" size={50} />
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">No summary available</div>
+              )}
+            </CardContent>
           </Card>
 
           {/* ── Analysis Tabs ─────────────────────────────────────────── */}
@@ -344,7 +344,7 @@ const ResultsPage = () => {
                     </AccordionItem>
                   </Accordion>
                 </CardHeader>
-                <Separator />
+                <Separator className="mb-4" />
                 <CardContent>
                   <SentimentTab sentimentResult={data.sentiment_result} sentimentSummaryText={sentimentSummaryText} />
                 </CardContent>
@@ -367,7 +367,7 @@ const ResultsPage = () => {
                     </AccordionItem>
                   </Accordion>
                 </CardHeader>
-                <Separator />
+                <Separator className="mb-4" />
                 {!data.emotion_result || !Object.keys(data.emotion_result).length ? (
                   <CardContent>
                     <div className="text-center flex flex-col items-center">
@@ -401,7 +401,7 @@ const ResultsPage = () => {
                     </AccordionItem>
                   </Accordion>
                 </CardHeader>
-                <Separator />
+                <Separator className="mb-4" />
                 {!data.propaganda_result || !Object.keys(data.propaganda_result).length ? (
                   <CardContent>
                     <div className="text-center flex flex-col items-center">
@@ -433,6 +433,7 @@ const ResultsPage = () => {
                     </AccordionItem>
                   </Accordion>
                 </CardHeader>
+                <Separator className="mb-4" />
                 <CardContent>
                   <PoliticalBias politicalBiasResult={data.political_bias_result} />
                 </CardContent>
@@ -451,6 +452,7 @@ const ResultsPage = () => {
                     Same story covered by other outlets — click <strong>Compare</strong> for a side-by-side analysis.
                   </CardDescription>
                 </CardHeader>
+                <Separator className="mb-4" />
                 <CardContent>
                   {data?.url && API_URL ? (
                     <RelatedCoverage
