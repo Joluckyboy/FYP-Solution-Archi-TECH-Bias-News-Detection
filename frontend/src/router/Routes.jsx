@@ -13,8 +13,8 @@ const PersonalityQuizPage = lazy(() => import("@/pages/GamesQuizzes/PersonalityQ
 const GamesQuizPage = lazy(() => import("@/pages/GamesQuizzes/GamesQuizPage"));
 // Coverage
 const FullCoveragePage = lazy(() => import("@/pages/FullCoveragePage"));
-// Dashboard
-const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+// // Dashboard
+// const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 // How It Works
 const HowItWorksPage = lazy(() => import("@/pages/HowItWorksPage"));
 // Keywords
@@ -30,7 +30,7 @@ export const PUBLIC_ROUTES = [
     { path: "/full-coverage/:topicId", element: <FullCoveragePage /> },
     { path: "/keywords/:keyword", element: <KeywordArticlesPage /> },
     { path: "/*", element: <Navigate to="/" /> },
-    { path: "/dashboard", element: <DashboardPage /> },
+    // { path: "/dashboard", element: <DashboardPage /> },
     { path: "/how-it-works", element: <HowItWorksPage /> },
     { path: "/compare", element: <ComparisonPage /> },
     { path: "/*", element: <Navigate to="/" /> },

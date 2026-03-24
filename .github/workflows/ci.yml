@@ -96,6 +96,9 @@ jobs:
           - path: application
             name: application
             changed: ${{ needs.changes.outputs.application }}
+          - path: telebot
+            name: telebot
+            changed: ${{ needs.changes.outputs.telebot }}
 
     steps:
       - name: Skip if no changes
