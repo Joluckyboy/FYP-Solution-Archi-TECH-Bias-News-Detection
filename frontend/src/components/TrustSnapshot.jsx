@@ -383,7 +383,7 @@ const TrustSnapshot = ({ data, apiUrl }) => {
               <div className="flex flex-col gap-3">
                 <ScoreRow label="Fact Accuracy" score={trust.factScore} max={50} icon="✅" />
                 <FactPills counts={trust.factCounts} total={trust.factTotal} />
-                <ScoreRow label="Low Influence Language" score={trust.propScore} max={50} icon="🧠" />
+                <ScoreRow label="Propaganda Language" score={trust.propScore} max={50} icon="🧠" />
                 <div
                   className="rounded-lg px-3 py-2.5 mt-1"
                   style={{ background: "rgba(0,0,0,0.03)", border: "0.5px solid rgba(0,0,0,0.06)" }}
