@@ -84,7 +84,6 @@ FYP-Solution-Archi-TECH-Bias-News-Detection
 ├── datasets/                   # Training/evaluation datasets
 ├── frontend/                   # React web application / Chrome extension
 ├── telebot/                    # Telegram bot
-├── test_cases/                 # Comprehensive test suite
 │
 ├── docker-compose.yaml
 ├── README.md
@@ -146,6 +145,12 @@ TINYURL_API_TOKEN=your_tinyurl_api_token_here
 ```
 
 **Getting Your Telegram Bot Token:**
+1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` and follow instructions
+3. Choose a name (e.g., "FYP News Analyzer")
+4. Choose a username (must end with `_bot`, e.g., `@fyp_news_bot`)
+5. Copy the token provided (format: `123456789:ABCdefGHI...`)
+6. Paste it as `TELEBOT_TOKEN` in your `.env`
 
 **Architecture Details:**
 - ✅ **Containerized Architecture**: All 12 local services run as Docker containers via `docker-compose`
@@ -155,13 +160,6 @@ TINYURL_API_TOKEN=your_tinyurl_api_token_here
 - ✅ **Telegram Bot (Port 8020)**: Flask webhook receiver (not FastAPI)
 - ✅ **Redis Cache (Port 6379)**: In-memory cache for response caching and session management
 - ⏳ **ECS Bias Classifier Task**: Separate AWS ECS scheduled job (not in local docker-compose; runs daily for batch processing)
-1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
-2. Send `/newbot` and follow instructions
-3. Choose a name (e.g., "FYP News Analyzer")
-4. Choose a username (must end with `_bot`, e.g., `@fyp_news_bot`)
-5. Copy the token provided (format: `123456789:ABCdefGHI...`)
-6. Paste it as `TELEBOT_TOKEN` in your `.env`
-
 #### Backend `.env` File (for Analysis Services)
 
 Create `.env` in the `backend/` directory:
@@ -201,8 +199,6 @@ S3_MODEL_KEY=bias_model/best_model_ba_12_wd.pt
 | `API_KEYDS` | Groq API key for LLM inference (fact-checking) | [Groq Console](https://console.groq.com) | ✅ Required |
 | `API_KEY` | Perplexity API key (alternative LLM) | [Perplexity API](https://www.perplexity.ai/) | ✅ Required |
 | `MODEL` | Model identifier | Set to `deepseek` | ✅ Required |
-
-#### Getting Your API Keys
 | `S3_BUCKET` | S3 bucket for scraped/enriched article CSV | AWS S3 | ✅ Required for ECS daily pipeline |
 | `SCRAPER_S3_KEY` | S3 object key for article CSV | Default: `scraped_articles/scraped_articles.csv` | ✅ Required |
 | `AWS_REGION` | AWS region for S3/model operations | AWS Console | ✅ Required (default: `ap-southeast-1`) |
@@ -241,11 +237,10 @@ S3_MODEL_KEY=bias_model/best_model_ba_12_wd.pt
      - `AWS_SECRET_ACCESS_KEY`
    - If running in ECS with a task role, you can omit local key pairs
 
-5. **TinyURL API Token (Optional, for Telegram URL shortening):**
+5. **TinyURL API Token (for Telegram URL shortening):**
    - Visit https://tinyurl.com/app/dev
    - Create API token
    - Add token to root `.env` as `TINYURL_API_TOKEN`
-   - If not provided, Telegram bot will use full URLs instead
 
 ### 3. Start All Services
 
@@ -281,7 +276,7 @@ Wait for all services to initialize. You should see:
 ```bash
 # Show running containers
 docker compose ps
-
+```
 ## 🧩 Chrome Extension Setup
 
 The FYP system includes a **Chrome extension** for analyzing news directly from your browser.
@@ -310,13 +305,18 @@ This generates the `dist` folder with all compiled extension files.
 
 #### 3. Using the Extension
 
-- **Click the extension icon** in your Chrome toolbar to open the side panel
-- The extension displays:
-  - Quiz system for media literacy
-  - Bias detection analysis
-  - Real-time article analysis
+- **Click the extension icon** in your Chrome toolbar to open the **Popup** UI
+- From the popup, you can:
+   - Analyze the current article URL
+   - View quick indicators (bias, sentiment, propaganda)
+   - Open full analysis page in a new tab
+   - Toggle right-click fact-check menu on/off
+- **Right-click Fact-check popup flow:**
+   1. Highlight a claim on a supported news article page
+   2. Right click and choose **"Fact-check this claim"**
+   3. A floating fact-check result popup appears on-page with verdict, explanation, and citations
 - **Current URL is automatically captured** when you switch tabs
-
+        
 ### Development Workflow
 
 When you make code changes:
@@ -338,11 +338,9 @@ npm run build
 
 ### Extension Features
 
-- 📚 **Quiz Generation** - Auto-generated media literacy quizzes
-- 🔍 **Bias Detection** - Analyze current article for bias
-- 💾 **Quiz Data** - Store and track quiz responses
+- 🧩 **Toolbar Popup UI** - Quick analysis and controls from extension icon
+- 🖱️ **Right-click Fact-check Popup** - Context menu fact-check for selected claims
 - 🎯 **Real-time Analysis** - Instant analysis of web content
-- 📊 **Side Panel UI** - Seamless Chrome integration
 
 ### Troubleshooting
 
@@ -357,18 +355,35 @@ npm run build
 
 ### Frontend Configuration
 
-The frontend is configured to use `localhost:8010` for API requests. This is set in:
-- `frontend/src/config/config.js`
+Frontend API selection is configured in `frontend/src/config/config.js`.
 
-### React Router Configuration
+- `PROD_HOST` sets the cloud host IP/domain
+- `CLOUD_API` / `CLOUD_ANALYZER` are cloud endpoints
+- `LOCAL_API` / `LOCAL_ANALYZER` are localhost endpoints
 
-The app uses React Router with v7 future flags enabled for better performance:
-- `v7_startTransition` - Wraps state updates in React.startTransition
-- `v7_relativeSplatPath` - Updated relative route resolution
+### Extension Backend Configuration
 
-### Chrome Extension Support
+Chrome extension backend detection is configured in `frontend/background.js`.
 
-The application can run as both a web app and a Chrome extension. Extension-specific features are automatically disabled when running in browser mode.
+- Extension uses cloud-first fallback logic:
+   - Cloud: `http://<PROD_HOST>:8010` and `http://<PROD_HOST>:8016`
+   - Fallback: `http://localhost:8010` and `http://localhost:8016`
+- Fact-check context menu and badge updates are handled by the background service worker
+
+### Popup & Right-Click Fact-Check Configuration
+
+Popup behavior and right-click toggle are configured in:
+
+- `frontend/popup.html` (extension popup entry)
+- `frontend/src/pages/PopupPage.jsx` (popup UI + controls)
+- `frontend/background.js` (context menu creation and click handling)
+
+Key settings:
+
+- `contextMenuEnabled` is stored in `chrome.storage.sync`
+- Right-click menu label: **"Fact-check this claim"**
+- Menu is shown only on likely news URLs and when toggle is enabled
+- Selected text is fact-checked via the fact-check service and shown as an on-page floating popup
 
 ---
 
@@ -428,11 +443,34 @@ Provides a conversational interface for news analysis via Telegram.
 3. Rebuild: `docker-compose up -d --build telebot`
 4. Test: Send `/start` to your bot
 
+**Supported Commands:**
+- `/start` — Welcome + usage guide
+- `/help` — List all commands
+- `/source <domain>` — Source credibility lookup (example: `/source cna.com`)
+- `/subscribe` — Subscribe to daily politically-biased-articles digest
+- `/unsubscribe` — Stop daily digest
+
+**Daily Digest Subscription (Implemented in Telebot):**
+- Digest job runs daily at **08:00 UTC** (equivalent to **4:00 PM SGT**)
+- `/subscribe` calls `POST /application/digest/subscribe`
+- `/unsubscribe` calls `POST /application/digest/unsubscribe`
+- Digest send flow:
+   1. Load active subscribers via `GET /application/digest/subscriptions`
+   2. Fetch recent biased articles via `GET /application/digest/recent-biased?hours=24`
+   3. Send top entries to each subscribed chat
+
+**Subscription Prerequisites:**
+- `TELEBOT_TOKEN` configured in root `.env`
+- `APPLICATION_URL` points to running application service (`http://application:8010` in Docker)
+- `WEB_APP_URL` configured for full result links
+- `TINYURL_API_TOKEN` for short links in digest/messages
+
 **Features:**
 - Submit article URLs for instant analysis
-- Get complete results: sentiment, emotion, propaganda, fact-checking
+- Get complete results: sentiment, emotion, propaganda, fact-checking, political-bias and omission-bias
 - Receive formatted summaries with percentages
 - Direct links to detailed web reports
+- Daily subscription digest for recently biased articles
 
 ## 📚 API Documentation
 
@@ -452,8 +490,6 @@ Each service exposes its API documentation at the `/docs` endpoint:
 | ✅ **Fact-Check** | http://localhost:8016/docs | Verify claims and fact-check |
 | 🧠 **Analyzer** | http://localhost:8017/docs | Topic analysis, clustering, and dashboard support |
 | 🏛️ **Bias Engine** | http://localhost:9000/docs | Political bias model endpoints |
-
-> Note: `telebot` and `redis` do not expose Swagger `/docs` endpoints.
 
 ### 📖 How to Use API Documentation
 
@@ -525,7 +561,7 @@ python backend/database/generate_quiz.py
 - Automatically saves questions to Supabase database
 - Provides detailed progress output with success/failure tracking
 
-```
+
 
 **Quiz Categories:**
 
@@ -537,7 +573,6 @@ python backend/database/generate_quiz.py
 | 📢 **Propaganda** | Propaganda techniques (bandwagon, authority) | Recognize manipulation |
 | 👤 **Personality** | News consumption habits | 4-option personality assessment |
 
-```
 
 ## Testing
 
