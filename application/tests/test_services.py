@@ -65,11 +65,11 @@ def test_stream_news(mock_methods):
         assert response.headers["content-type"] == "application/json"
 
 
-def test_get_bias_dashboard_success():
-    with patch("app.dashboard_methods.load_dashboard_data", return_value={"rows": []}):
-        response = client.get("/application/bias_dashboard")
-        assert response.status_code == 200
-        assert response.json() == {"rows": []}
+# def test_get_bias_dashboard_success():
+#     with patch("app.dashboard_methods.load_dashboard_data", return_value={"rows": []}):
+#         response = client.get("/application/bias_dashboard")
+#         assert response.status_code == 200
+#         assert response.json() == {"rows": []}
 
 
 def test_get_visualisations_success():

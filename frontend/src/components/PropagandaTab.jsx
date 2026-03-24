@@ -51,7 +51,7 @@ function _deriveTechniques(formattedResult) {
     if (!grouped[tag]) {
       grouped[tag] = {
         technique:   tag,
-        description: TECHNIQUE_DESCRIPTIONS[tag] ?? "An influence technique was detected.",
+        description: TECHNIQUE_DESCRIPTIONS[tag] ?? "An Propaganda technique was detected.",
         phrases:     [],
       };
     }
@@ -133,11 +133,11 @@ const PropagandaTab = ({ propScore, articleContent }) => {
       <div className={`rounded-xl border-2 p-5 bg-white ${styles.border}`}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Influence Score</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Propaganda Score</p>
             <p className={`text-3xl font-bold mt-0.5 ${styles.text}`}>{score.toFixed(1)}%</p>
           </div>
           <span className={`text-sm font-bold px-3 py-1 rounded-full border ${styles.badge}`}>
-            {severity} Influence
+            {severity} Propaganda
           </span>
         </div>
 
@@ -145,8 +145,8 @@ const PropagandaTab = ({ propScore, articleContent }) => {
           <div className={`${styles.bar} h-3 rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
         <div className="flex justify-between mt-1 text-xs text-gray-400">
-          <span>0% — No influence</span>
-          <span>100% — Strong influence</span>
+          <span>0% — No Propaganda</span>
+          <span>100% — Strong Propaganda</span>
         </div>
 
         <p className="text-sm text-gray-500 mt-3 border-t pt-3">
@@ -178,7 +178,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
       {techniques.length === 0 ? (
         <div className="flex flex-col items-center py-10 text-gray-400 space-y-2">
           <span className="text-5xl">✅</span>
-          <p className="font-semibold text-gray-600 text-lg">No influence techniques detected</p>
+          <p className="font-semibold text-gray-600 text-lg">No Propaganda techniques detected</p>
           <p className="text-sm text-center text-gray-400 max-w-sm">
             The article appears to use clear, factual language without recognised persuasion techniques.
           </p>
@@ -187,7 +187,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
         <div>
           <p className="text-sm font-semibold text-gray-600 mb-1">Detected Techniques</p>
           <p className="text-xs text-gray-400 mb-3">
-            {techniques.length} influence technique{techniques.length !== 1 ? "s" : ""} found —
+            {techniques.length} Propaganda technique{techniques.length !== 1 ? "s" : ""} found —
             click any to expand
           </p>
 
