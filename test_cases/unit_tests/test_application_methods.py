@@ -1,6 +1,7 @@
 import importlib
 import sys
 from types import SimpleNamespace
+from werkzeug.exceptions import BadRequest
 
 import pytest
 
@@ -75,11 +76,11 @@ def test_extract_news_aborts_for_invalid_url(monkeypatch):
 
     monkeypatch.setattr(methods.requests, 'get', fake_get)
 
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(BadRequest) as exc:
         methods.extract_news('not-a-url')
 
-    assert getattr(exc.value, 'code', None) == 400
-    assert getattr(exc.value, 'description', None) == 'Invalid URL format'
+    assert exc.value.code == 400
+    assert exc.value.description == 'Invalid URL format'
 
 
 def test_get_sentiment_samples_long_text_and_persists_result(monkeypatch):

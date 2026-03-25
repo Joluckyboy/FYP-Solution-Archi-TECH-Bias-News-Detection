@@ -185,7 +185,7 @@ const FullCoveragePage = () => {
                                 {enrichmentLoading && <Skeleton className="h-4 w-20 inline-block" />}
                             </div>
                             <p className="text-sm text-slate-500 mb-3">
-                                Explore how differently the Left, Center and Right would cover the same piece of news. For perspective(s) lacking in coverage, our AI Analyser will predict how the story would be covered!
+                                Explore how differently the Left, Center and Right would cover the same piece of news.
                             </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">

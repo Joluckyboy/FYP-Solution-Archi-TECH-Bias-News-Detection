@@ -212,7 +212,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
           </MetricBlock>
 
           {/* Propaganda */}
-          <MetricBlock label="Influence Language Score">
+          <MetricBlock label="Propaganda Language Score">
             {prop != null ? (
               <div>
                 <div className="flex items-center justify-between mb-1">

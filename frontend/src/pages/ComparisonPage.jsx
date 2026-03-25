@@ -263,7 +263,7 @@ const ROWS = [
   { label: "Topics Covered & Omitted",  Cell: TopicsCell    },
   { label: "Sentiment Tone",            Cell: SentimentCell },
   { label: "Dominant Emotion",          Cell: EmotionCell   },
-  { label: "Influence Language Score",  Cell: PropCell      },
+  { label: "Propaganda Score",          Cell: PropCell      },
   { label: "Fact-Check Summary",        Cell: FactCell      },
   { label: "Article Summary",           Cell: SummaryCell   },
 ];

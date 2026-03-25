@@ -66,13 +66,13 @@ const MediaBiasChart = ({ articles, metrics }) => {
             </p>
 
             {/* Pie Chart */}
-            <div className="w-full h-52 flex-shrink-0">
+            <div className="w-full h-64 flex-shrink-0 mt-4 mb-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={chartData}
                             cx="50%"
-                            cy="50%"
+                            cy="45%"
                             outerRadius={88}
                             dataKey="value"
                             labelLine={false}
@@ -139,9 +139,11 @@ const MediaBiasChart = ({ articles, metrics }) => {
                             <div className="flex flex-wrap justify-center gap-2">
                                 {sources.map((s, i) => {
                                     let pillClass = "bg-slate-100 border-slate-200 text-slate-700";
-                                    if (s.bias.includes("left")) pillClass = "bg-blue-100 border-blue-200 text-blue-800";
-                                    else if (s.bias.includes("right")) pillClass = "bg-red-100 border-red-200 text-red-800";
-                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-00 text-purple-800";
+                                    if (s.bias.includes("leaning left") || s.bias.includes("leaning_left") || s.bias.includes("leaning-left")) pillClass = "bg-blue-100 border-blue-200 text-blue-600";
+                                    else if (s.bias.includes("left")) pillClass = "bg-blue-200 border-blue-300 text-blue-800";
+                                    else if (s.bias.includes("leaning right") || s.bias.includes("leaning_right") || s.bias.includes("leaning-right")) pillClass = "bg-red-100 border-red-200 text-red-600";
+                                    else if (s.bias.includes("right")) pillClass = "bg-red-200 border-red-300 text-red-800";
+                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-200 text-purple-800";
                                     return (
                                         <div key={i}
                                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${pillClass}`}
