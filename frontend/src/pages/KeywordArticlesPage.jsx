@@ -5,6 +5,7 @@ import get_api from "@/config/config";
 import { ArrowLeft, Search } from 'lucide-react';  
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import ArticleCard from '@/components/full-coverage/ArticleCard';
 
@@ -13,7 +14,7 @@ const KeywordArticlesPage = () => {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [copiedIdx, setCopiedIdx] = useState(null);
 
