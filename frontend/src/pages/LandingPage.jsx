@@ -150,7 +150,7 @@ const LandingPage = () => {
   return (
     <div className="w-full mt-6 sm:mt-12 mb-12 flex flex-col items-center px-4 sm:px-0">
       {/* Header Text */}
-      <div className="text-center mx-4 sm:m-12 mt-16 sm:mt-48 slide-in-right">
+      <div className="text-center mx-4 sm:mx-12 mt-8 sm:mt-16 sm:mb-8 slide-in-right">
         <h1 className="checkmate-gradient pb-4 sm:pb-8 text-3xl sm:text-5xl">
           Your Move Against Misinformation
         </h1>
@@ -277,6 +277,9 @@ const LandingPage = () => {
 
       <div className="mx-4 sm:ml-12 sm:mr-12 w-[calc(100%-2rem)] sm:w-auto">
 
+        {/* Guide to Political Bias Labels */}
+        <BiasLabelGuide />
+
         {/* Latest Topics Card */}
         <div className="mb-12">
           <Card className="w-full h-[400px] sm:h-[600px] flex flex-col">
@@ -330,9 +333,6 @@ const LandingPage = () => {
         {/* Visualisations */}
         <div className="grid grid-cols-1 gap-8 mb-12">
 
-          {/* Guide to Political Bias Labels */}
-          <BiasLabelGuide />
-
           {/* Outlet Bias */}
           <Card className="flex flex-col">
             <CardHeader className="flex-none">
@@ -343,26 +343,24 @@ const LandingPage = () => {
             <CardContent className="flex-1 p-0 bg-transparent flex flex-col">
               <TopicOutletBias />
             </CardContent>
-            <CardFooter className="px-4 sm:px-8 pt-4 from-gray-50 to-blue-50 flex items-center flex-none">
-              <p className="text-xs sm:text-base text-gray-600 italic">
+            <CardFooter className="px-4 sm:px-8 pt-3 from-gray-50 to-blue-50 flex items-center flex-none">
+              <p className="pt-4 text-xs sm:text-base font-semibold italic">
                 Ratings reflect outlet perspective only, not accuracy or credibility.
+                <br />
+                As such, we strongly encourage you to read outlets across the political spectrum to gain multiple perspectives.
               </p>
             </CardFooter>
           </Card>
         </div>
 
         {/* Trending Keywords */}
-        <div className="pb-12">
-          <Card className="w-full min-h-[250px] sm:min-h-[300px]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">Trending Keywords</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 overflow-auto">
+        <div>
+          <Card className="w-full min-h-[200px] sm:min-h-[300px]">
+            <CardContent className="p-0">
               <TrendingKeywords />
             </CardContent>
           </Card>
         </div>
-
       </div>
     </div>
   );
