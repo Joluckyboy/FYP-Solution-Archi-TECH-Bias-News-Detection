@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const Header = () => {
 	return (
-		<div className="flex justify-between items-center h-16 px-4 shadow-md sticky top-0 z-50 bg-white">
+		<div className="flex justify-between items-center h-20 px-4 shadow-md sticky top-0 z-50 bg-white">
 			<Link to="/" className="m-2 pl-4 flex items-center">
 				<img src="/checkmate.svg" alt="checkmatelogo" />
 				<h2 className="ml-2 checkmate-gradient text-lg">CheckMate</h2>
@@ -17,14 +17,16 @@ const Header = () => {
         </Link> */}
 
         <Link to="/games">
-          <div className="m-2">
-            <img src="/game.svg" alt="gamelogo" className="w-9 h-9"/>
+          <div className="m-2 flex flex-col items-center group">
+            <img src="/game.svg" alt="gamelogo" className="w-9 h-9 group-hover:scale-105 transition-transform"/>
+            <span className="text-xs font-medium checkmate-gradient mt-1 group-hover:text-gray-900">Games</span>
           </div>
         </Link>
 
         <Link to="/how-it-works">
-          <div className="m-2">
-            <img src="/how-it-works.svg" alt="howitworkslogo" className="w-9 h-9"/>
+          <div className="m-2 flex flex-col items-center group">
+            <img src="/how-it-works.svg" alt="howitworkslogo" className="w-9 h-9 group-hover:scale-105 transition-transform"/>
+            <span className="text-xs font-medium checkmate-gradient mt-1 group-hover:text-gray-900">FAQ</span>
           </div>
         </Link>
 

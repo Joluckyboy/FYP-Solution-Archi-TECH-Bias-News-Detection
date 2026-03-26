@@ -217,10 +217,8 @@ const BiasLabelGuide = () => {
 
       {/* CardFooter */}
       <CardFooter className="px-4 sm:px-8">
-        <p className="text-sm sm:text-base text-gray-600 italic leading-relaxed">
-          A Center outlet may leave out valid perspectives or arguments from the left or right.
-          <br />
-          As such, we strongly encourage you to read outlets across the political spectrum to gain multiple perspectives.
+        <p className="text-sm sm:text-base font-semibold italic leading-relaxed">
+          There is no news that is completely unbiased. We provide a range of perspectives on today's news to help you decide!
         </p>
       </CardFooter>
 

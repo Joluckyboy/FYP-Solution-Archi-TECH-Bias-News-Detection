@@ -6,6 +6,7 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 import ArticleCard from '@/components/full-coverage/ArticleCard';
 
 const KeywordArticlesPage = () => {
@@ -13,7 +14,8 @@ const KeywordArticlesPage = () => {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [copiedIdx, setCopiedIdx] = useState(null);
 
   const handleCopy = (url, idx) => {
@@ -24,10 +26,11 @@ const KeywordArticlesPage = () => {
   };
 
   useEffect(() => {
-    const fetchArticles = async () => {
+    const fetchArticles = async (kw) => {
       try {
+        setLoading(true);
         const api = await get_api();
-        const res = await axios.get(`${api}/application/articles/keyword/${keyword}`);
+        const res = await axios.get(`${api}/application/articles/keyword/${kw}`);
         setArticles(res.data.articles);
       } catch (err) {
         console.error(err);
@@ -35,7 +38,7 @@ const KeywordArticlesPage = () => {
         setLoading(false);
       }
     };
-    if (keyword) fetchArticles();
+    if (keyword) fetchArticles(decodeURIComponent(keyword));
   }, [keyword]);
 
   useEffect(() => {
@@ -50,6 +53,14 @@ const KeywordArticlesPage = () => {
     return () => clearTimeout(timer);
   }, [keyword]);
 
+  const handleNewSearch = (e) => {
+    e.preventDefault();
+    const trimmed = searchKeyword.trim();
+    if (trimmed) {
+      navigate(`/keywords/${encodeURIComponent(trimmed)}`, { replace: true });
+    }
+  };
+
   const filteredArticles = articles.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.summary.toLowerCase().includes(searchQuery.toLowerCase())
@@ -57,18 +68,9 @@ const KeywordArticlesPage = () => {
 
   if (loading) {
     return (
-        <div className="container mx-auto p-6 space-y-8">
-            <div className="flex bg-white p-4 items-center gap-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-6 w-32" />
-            </div>
-            <Skeleton className="h-[200px] w-full" />
-            <div className="grid grid-cols-3 gap-4">
-                <Skeleton className="h-[300px]" />
-                <Skeleton className="h-[300px]" />
-                <Skeleton className="h-[300px]" />
-            </div>
-        </div>
+      <div className="flex justify-center items-center py-20">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
     );
 }  
 
@@ -83,7 +85,16 @@ const KeywordArticlesPage = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => navigate('/')}  
+                onClick={() => {
+                  navigate('/', { replace: true });
+                  setTimeout(() => {
+                    const footer = document.getElementById('page-footer');
+                    footer?.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'end' 
+                    });
+                  }, 1500);
+                }}
                 className="h-8 w-8 p-0 hover:bg-slate-100"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -99,17 +110,20 @@ const KeywordArticlesPage = () => {
             </div>
 
             {/* Right: Search Bar */}
-            <div className="flex-1 max-w-md w-full lg:w-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search for articles"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 h-10 w-full"
-                />
+            <form onSubmit={handleNewSearch} className="mb-6">
+              <div className="flex-1 max-w-md w-full lg:w-auto">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search new keyword..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="pl-10 pr-4 h-10 w-full"
+                    enterKeyHint="search"
+                  />
+                </div>
               </div>
-            </div>
+            </form>
           </div>
         </div>
 
@@ -141,8 +155,8 @@ const KeywordArticlesPage = () => {
                 </h3>
                 <p className="text-sm">
                 {searchQuery 
-                  ? `No articles match ${searchQuery}, please try something else!` 
-                  : `No articles match ${decodeURIComponent(keyword)}</span>".`
+                  ? `We can’t find any results related to "${decodeURIComponent(keyword)}" and "${searchQuery}"!` 
+                  : `We can’t find any relevant articles for "${decodeURIComponent(keyword)}". Please try again by refining your keyword(s)!`
                 }
                 </p>
               </div>
