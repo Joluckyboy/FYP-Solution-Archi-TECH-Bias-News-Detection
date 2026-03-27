@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ArticleCard from './ArticleCard';
 import FramingAnalysisPanel from './FramingAnalysisPanel';
@@ -8,7 +7,9 @@ import FramingAnalysisPanel from './FramingAnalysisPanel';
 const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
     const [filter, setFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
-    const [showCount, setShowCount] = useState(5);
+    const [showAll, setShowAll] = useState(false);
+
+    const INITIAL_COUNT = 5;
 
     const filteredArticles = articles.filter(a => {
         const b = (a.political_bias || a.bias || "").toLowerCase();
@@ -20,6 +21,9 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
         if (filter === "center") return b.includes("center");
         return true;
     });
+
+    const visibleArticles = showAll ? filteredArticles : filteredArticles.slice(0, INITIAL_COUNT);
+    const hiddenCount = filteredArticles.length - INITIAL_COUNT;
 
     return (
         <div>
@@ -62,7 +66,7 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
 
             {/* Article list */}
             <div className="space-y-4">
-                {filteredArticles.slice(0, showCount).map((article, idx) => (
+                {visibleArticles.map((article, idx) => (
                     <ArticleCard
                         key={idx}
                         article={article}
@@ -78,15 +82,16 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
                     </div>
                 )}
 
-                {filteredArticles.length > showCount && (
-                    <div className="pt-4 flex justify-center">
-                        <Button
-                            variant="outline"
-                            className="bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 w-full md:w-auto px-8 py-2 rounded-full font-medium transition-colors shadow-sm"
-                            onClick={() => setShowCount(prev => prev + 10)}
+                {hiddenCount > 0 && (
+                    <div className="mt-4 flex justify-center">
+                        <button
+                            onClick={() => setShowAll(v => !v)}
+                            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-indigo-200"
                         >
-                            Show More Articles ({filteredArticles.length - showCount} remaining)
-                        </Button>
+                            {showAll
+                                ? <><ChevronUp className="h-4 w-4" /> Show less</>
+                                : <><ChevronDown className="h-4 w-4" /> Show {hiddenCount} more article{hiddenCount !== 1 ? "s" : ""}</>}
+                        </button>
                     </div>
                 )}
             </div>
