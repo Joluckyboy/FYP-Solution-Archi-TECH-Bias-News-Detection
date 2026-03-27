@@ -12,7 +12,6 @@ import ClusterSummary from "@/components/full-coverage/ClusterSummary";
 import MediaBiasChart from "@/components/full-coverage/MediaBiasChart";
 import FeaturedCoverageGrid from "@/components/full-coverage/FeaturedCoverageGrid";
 import ArticleListSection from "@/components/full-coverage/ArticleListSection";
-import CoverageTimeline from "@/components/full-coverage/CoverageTimeline";
 
 const FullCoveragePage = () => {
     const { topicId } = useParams();
@@ -230,11 +229,6 @@ const FullCoveragePage = () => {
                     featuredCenter={featuredCenter}
                     featuredRight={featuredRight}
                 />
-
-                {/* Coverage Timeline */}
-                <div className="grid grid-cols-1 gap-8 mb-12">
-                    <CoverageTimeline articles={articles} />
-                </div>
 
                 {/* Article list */}
                 <ArticleListSection

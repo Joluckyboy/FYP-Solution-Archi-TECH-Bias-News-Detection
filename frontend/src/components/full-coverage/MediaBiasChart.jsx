@@ -114,10 +114,10 @@ const MediaBiasChart = ({ articles, metrics }) => {
                 </ResponsiveContainer>
             </div>
 
-            {/* Polarization Analysis */}
+            {/* Polarisation Analysis */}
             <div className="mt-4 pt-4 border-t border-slate-100 w-full">
                 <h4 className="font-semibold text-slate-700 mb-1 text-center">
-                    Polarization Analysis
+                    Polarisation Analysis
                 </h4>
                 {(() => {
                     const uniqueSources = {};
