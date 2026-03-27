@@ -129,7 +129,24 @@ const MediaBiasChart = ({ articles, metrics }) => {
                             };
                         }
                     });
-                    const sources = Object.values(uniqueSources);
+
+                    const BIAS_RANK = {
+                        "left": 0,
+                        "leaning left": 1, "leaning-left": 1, "leaning_left": 1,
+                        "center": 2,
+                        "leaning right": 3, "leaning-right": 3, "leaning_right": 3,
+                        "right": 4,
+                    };
+                    const getBiasRank = (bias) => {
+                        for (const [key, rank] of Object.entries(BIAS_RANK)) {
+                            if (bias.includes(key)) return rank;
+                        }
+                        return 2; // default to center
+                    };
+
+                    const sources = Object.values(uniqueSources).sort(
+                        (a, b) => getBiasRank(a.bias) - getBiasRank(b.bias)
+                    );
                     return (
                         <div className="flex flex-col items-center">
                             <p className="text-sm text-slate-500 mb-3">
