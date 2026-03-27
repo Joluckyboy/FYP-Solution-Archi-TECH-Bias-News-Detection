@@ -30,8 +30,8 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
             {/* Controls */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-6">
                 <div className="flex items-baseline gap-6 mb-4 md:mb-0">
-                    <h2 className="text-2xl font-bold text-slate-800">{articles.length} Articles</h2>
-                    <div className="flex gap-4 text-sm font-medium">
+                    <h2 className="text-3xl font-bold text-slate-800">{articles.length} Articles</h2>
+                    <div className="flex gap-4 text-base font-medium">
                         {["left", "center", "right"].map(f => {
                             const count = articles.filter(a => (a.political_bias || a.bias || "").toLowerCase().includes(f)).length;
                             const activeColor = f === "left" ? "text-blue-600" : f === "center" ? "text-purple-500" : "text-red-700";
@@ -50,7 +50,7 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
                 <div className="flex items-center gap-2 w-full md:w-auto">
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input placeholder="Search articles..." className="pl-9 bg-white"
+                        <Input placeholder="Search articles..." className="pl-9 bg-white text-base"
                             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
                 </div>
@@ -77,7 +77,7 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
                 ))}
 
                 {filteredArticles.length === 0 && (
-                    <div className="text-center py-12 text-slate-500">
+                    <div className="text-center py-12 text-base text-slate-500">
                         No articles found matching your criteria.
                     </div>
                 )}
@@ -86,7 +86,7 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
                     <div className="mt-4 flex justify-center">
                         <button
                             onClick={() => setShowAll(v => !v)}
-                            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-indigo-200"
+                            className="flex items-center gap-1.5 text-base font-medium text-slate-500 hover:text-indigo-600 transition-colors px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-indigo-200"
                         >
                             {showAll
                                 ? <><ChevronUp className="h-4 w-4" /> Show less</>
