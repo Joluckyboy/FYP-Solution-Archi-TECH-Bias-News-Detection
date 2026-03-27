@@ -80,7 +80,7 @@ export default function TopicOutletBias() {
     outlets.sort((a, b) => a.outlet.localeCompare(b.outlet));
 
   return (
-    <div className="flex flex-col sm:px-6 gap-4 sm:gap-6">
+    <div className="flex flex-col px-4 sm:px-6 gap-4 sm:gap-6">
 
       {/* Header */}
       <div className="flex flex-row items-start justify-between gap-4 flex-wrap">
@@ -107,7 +107,7 @@ export default function TopicOutletBias() {
       </div>
 
       {/* Content grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4 items-start">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 items-start">
         {BUCKET_ORDER.map((bucket) => {
           const outlets = getSortedOutlets(biasGroups[bucket] || []);
           const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
@@ -120,10 +120,10 @@ export default function TopicOutletBias() {
 
               {/* Label Box */}
               <div className={`w-full h-16 sm:h-24 p-2 sm:p-4 rounded-xl border shadow-sm flex flex-col items-center justify-center text-center ${BUCKET_COLORS[bucket]}`}>
-                <div className="text-sm sm:text-2xl font-black tracking-wide leading-tight">
+                <div className="text-sm sm:text-xl font-black tracking-wide leading-tight">
                   {BUCKET_LABELS[bucket]}
                 </div>
-                <div className="text-xs sm:text-sm font-mono text-gray-600 mt-0.5 sm:mt-1">
+                <div className="text-sm sm:text-base font-bold text-gray-600 mt-0.5 sm:mt-1">
                   {percentage}%
                 </div>
               </div>

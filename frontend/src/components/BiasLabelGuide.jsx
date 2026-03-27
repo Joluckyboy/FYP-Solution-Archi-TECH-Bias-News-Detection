@@ -18,6 +18,14 @@ const progressBarColors = {
   right: "bg-red-200"
 };
 
+const activeColors = {
+  left: "bg-blue-400",
+  "lean-left": "bg-blue-300",
+  center: "bg-gray-400",
+  "lean-right": "bg-red-300",
+  right: "bg-red-400"
+};
+
 const slides = [
   {
     id: "left",
@@ -115,34 +123,14 @@ const BiasLabelGuide = () => {
         <div className={`flex flex-col rounded-lg p-4 sm:p-6 ${bucketColors[slides[currentSlide].color]}`}>
 
           {/* Navigation & Title */}
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
-              {showLeftChevron ? (
-                <button onClick={goPrev} className="p-2 flex items-center justify-center" aria-label="Previous slide">
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-              ) : (
-                <div className="invisible" aria-hidden="true" />
-              )}
-            </div>
-
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center flex-1">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 text-center py-2">
               {slides[currentSlide].title}
             </h3>
-
-            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
-              {showRightChevron ? (
-                <button onClick={goNext} className="p-2 flex items-center justify-center" aria-label="Next slide">
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              ) : (
-                <div className="invisible" aria-hidden="true" />
-              )}
-            </div>
           </div>
 
           {/* Content */}
-          <div className="flex flex-col gap-4 px-2 sm:px-6 mb-5">
+          <div className="flex flex-col gap-4 px-2 sm:px-6 mb-5 min-h-[220px] sm:min-h-[260px]">
 
             {/* Explanation box */}
             <div className="bg-white/60 rounded-xl p-4 sm:p-6 border-2 border-white/50 shadow-lg">
@@ -157,7 +145,7 @@ const BiasLabelGuide = () => {
               />
             </div>
 
-            {/* Examples */}
+            {/* Examples — flex-1 so it fills remaining height, enabling vertical centering */}
             {slides[currentSlide].examplesIntro && slides[currentSlide].examples.length > 0 ? (
               <div className="px-2">
                 <h4 className="font-medium mb-3 text-gray-800 text-sm sm:text-base leading-relaxed">
@@ -176,40 +164,73 @@ const BiasLabelGuide = () => {
                 </ul>
               </div>
             ) : slides[currentSlide].id === "center" ? (
-              <p className="px-2 text-sm sm:text-base text-center font-bold leading-relaxed italic">
-                {slides[currentSlide].centerNote}
-              </p>
+              <div className="flex-1 flex items-center justify-center px-2">
+                <p className="text-sm sm:text-base text-center font-semibold leading-relaxed italic">
+                  {slides[currentSlide].centerNote}
+                </p>
+              </div>
             ) : null}
 
           </div>
 
-          {/* Progress Circles */}
-          <div className="flex w-full justify-center gap-3 pt-6">
-            {slides.map((slide, i) => {
-              const isActive = i === currentSlide;
-              const shortLabel =
-                slide.id === 'left' ? 'L' :
-                  slide.id === 'lean-left' ? 'LL' :
-                    slide.id === 'center' ? 'C' :
-                      slide.id === 'lean-right' ? 'LR' : 'R';
-              return (
-                <button
-                  key={i}
-                  onClick={() => goToSlide(i)}
-                  className={`w-11 h-11 flex items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 flex-shrink-0 ${isActive
-                      ? "bg-black text-white shadow-lg scale-110"
-                      : `${progressBarColors[slide.color]} text-black hover:brightness-95`
-                    }`}
-                  role="tab"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goToSlide(i); }}
-                  aria-label={`Go to ${slide.title} slide`}
-                  aria-selected={isActive}
-                >
-                  {shortLabel}
+          {/* Progress bar with flanking chevrons */}
+          <div className="flex w-full justify-center items-center gap-2.5 pt-2">
+
+            {/* Left chevron */}
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              {showLeftChevron ? (
+                <button onClick={goPrev} className="p-2 flex items-center justify-center" aria-label="Previous slide">
+                  <ChevronLeft className="h-6 w-6" />
                 </button>
-              );
-            })}
+              ) : (
+                <div className="invisible" aria-hidden="true" />
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2.5 w-[55%]">
+              {slides.map((slide, i) => {
+                const isActive = i === currentSlide;
+                const shortLabel =
+                  slide.id === 'left' ? 'L' :
+                  slide.id === 'lean-left' ? 'LL' :
+                  slide.id === 'center' ? 'C' :
+                  slide.id === 'lean-right' ? 'LR' : 'R';
+                return (
+                  <button
+                    key={i}
+                    onClick={() => goToSlide(i)}
+                    className={`flex-1 py-1 rounded-full sm:rounded-lg text-sm sm:text-base font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400
+                      aspect-square sm:aspect-auto
+                      ${isActive
+                        ? `${activeColors[slide.color]} text-white shadow-md scale-105`
+                        : `${progressBarColors[slide.color]} text-black hover:brightness-95`
+                      }`}
+                    role="tab"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') goToSlide(i); }}
+                    aria-label={`Go to ${slide.title} slide`}
+                    aria-selected={isActive}
+                  >
+                    {/* Full label on sm+, short label and circle style on xs */}
+                    <span className="hidden sm:inline">{slide.title}</span>
+                    <span className="inline sm:hidden">{shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right chevron */}
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              {showRightChevron ? (
+                <button onClick={goNext} className="p-2 flex items-center justify-center" aria-label="Next slide">
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              ) : (
+                <div className="invisible" aria-hidden="true" />
+              )}
+            </div>
+
           </div>
 
         </div>
