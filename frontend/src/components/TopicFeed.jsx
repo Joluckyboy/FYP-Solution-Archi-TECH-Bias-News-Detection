@@ -16,6 +16,7 @@ const TopicFeed = ({
     loading: loadingProp = null,
     error: errorProp = null,
     selectedTopic = null,
+    searchQuery = "",
 }) => {
     const [topicsInternal, setTopicsInternal] = useState([]);
     const [loadingInternal, setLoadingInternal] = useState(true);
@@ -43,9 +44,15 @@ const TopicFeed = ({
         fetchTopics();
     }, [isManaged]);
 
-    const filteredTopics = selectedTopic
+    let filteredTopics = selectedTopic
         ? topics.filter(t => t.topicName === selectedTopic)
         : topics;
+
+    if (searchQuery) {
+        filteredTopics = filteredTopics.filter(t => 
+            (t.title || "").toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }
 
     if (loading) {
         return (
