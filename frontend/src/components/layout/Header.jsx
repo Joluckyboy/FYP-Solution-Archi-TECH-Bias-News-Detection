@@ -26,7 +26,7 @@ const Header = () => {
         <Link to="/how-it-works">
           <div className="m-2 flex flex-col items-center group">
             <img src="/how-it-works.svg" alt="howitworkslogo" className="w-9 h-9 group-hover:scale-105 transition-transform"/>
-            <span className="text-xs font-medium checkmate-gradient mt-1 group-hover:text-gray-900">FAQ</span>
+            <span className="text-xs font-medium checkmate-gradient mt-1 group-hover:text-gray-900">Learn More</span>
           </div>
         </Link>
 
