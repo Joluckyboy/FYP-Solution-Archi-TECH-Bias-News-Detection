@@ -368,8 +368,18 @@ async def send_digest(context: ContextTypes.DEFAULT_TYPE) -> None:
             rating_display = rating.replace("-", " ").title()
             emoji = bias_emoji.get(rating, "\U0001F3DB\ufe0f")
             summary = article.get("summarise_result", "")
-            # Take first sentence of summary
-            first_sentence = summary.split(".")[0] + "." if summary else "No summary available."
+            # Take first sentence of summary, stripping newlines first
+            # Use regex to split on sentence-ending periods (not list numbers like "1.")
+            if summary:
+                import re
+                flat_summary = summary.replace("\n", " ").strip()
+                match = re.search(r'(?<!\d)\.(?:\s|$)', flat_summary)
+                if match:
+                    first_sentence = flat_summary[:match.end()].strip()
+                else:
+                    first_sentence = flat_summary
+            else:
+                first_sentence = "No summary available."
             if len(first_sentence) > 120:
                 first_sentence = first_sentence[:117] + "..."
 
