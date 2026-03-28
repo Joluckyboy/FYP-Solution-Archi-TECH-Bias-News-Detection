@@ -70,7 +70,7 @@ export function findSentenceInContent(needle, haystack) {
   if (idx !== -1) return normRangeToOrig(haystack, nH, idx, idx + nN.length);
 
   // 2. Strip outer punctuation/quotes
-  const stripped = nN.replace(/^[\s"'\-–—.!?,;:()\[\]]+|[\s"'\-–—.!?,;:()\[\]]+$/g, "");
+  const stripped = nN.replace(/^[\s"'\-–—.!?,;:()]+|[\s"'\-–—.!?,;:()]+$/g, "");
   if (stripped.length > 10 && stripped !== nN) {
     idx = nH.indexOf(stripped);
     if (idx !== -1) return normRangeToOrig(haystack, nH, idx, idx + stripped.length);
@@ -119,7 +119,7 @@ export function findBestMatch(needle, haystack) {
   if (idx !== -1) return normRangeToOrig(haystack, nH, idx, idx + nN.length);
 
   // 2. Strip punctuation and retry
-  const stripped = nN.replace(/^[\s"'"\-–—.!?,;:()\[\]]+|[\s"'"\-–—.!?,;:()\[\]]+$/g, "");
+  const stripped = nN.replace(/^[\s"'\-–—.!?,;:()]+|[\s"'\-–—.!?,;:()]+$/g, "");
   if (stripped.length > 15 && stripped !== nN) {
     idx = nH.indexOf(stripped);
     if (idx !== -1) return normRangeToOrig(haystack, nH, idx, idx + stripped.length);

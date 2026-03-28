@@ -75,7 +75,7 @@ function Donut({ score, color, track, size = 180 }) {
 }
 
 // ─── Tooltip ─────────────────────────────────────────────────────────────────
-function CalcTooltip({ trust, verdict }) {
+function CalcTooltip({ trust }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   const show = () => {
@@ -253,7 +253,7 @@ const TrustSnapshot = ({ data, apiUrl }) => {
               </div>
               <span className="text-xl" style={{ fontWeight: 700, color: "#111827", letterSpacing: -0.3 }}>Trust Score</span>
             </div>
-            <CalcTooltip trust={trust} verdict={verdict} />
+            <CalcTooltip trust={trust} />
           </div>
 
           <div className="relative" style={{ width: 180, height: 180 }}>

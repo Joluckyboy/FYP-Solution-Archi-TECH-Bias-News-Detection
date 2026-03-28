@@ -188,9 +188,9 @@ function ArticleBody({ content, mode, propagandaResult, factcheckMatches, sentim
       return { key: pi, parts };
     });
   }, [content, propagandaResult]);
+  const plainParas = useMemo(() => splitToParagraphs(content), [content]);
   if (!content) return <p className="text-gray-400 italic text-sm">Article content unavailable.</p>;
   const segments   = mode === "propaganda" ? propagandaSegments : mode === "sentiment" ? sentimentSegments : factcheckSegments;
-  const plainParas = useMemo(() => splitToParagraphs(content), [content]);
   return (
     <div className="space-y-4">
       {(segments ?? plainParas.map((text, key) => ({ key, parts: [{ text }] }))).map(({ key, parts }) => (
@@ -224,11 +224,9 @@ function LegendPill({ label, bg, color, border, def, count }) {
 }
 
 // ─── Article Modal ────────────────────────────────────────────────────────────
-function ArticleModal({ open, onClose, content, mode, propagandaResult, factcheckMatches, sentimentMatches, factcheckResult, sentimentResult }) {
+function ArticleModal({ open, onClose, content, mode, propagandaResult, factcheckMatches, sentimentMatches }) {
   const techniqueKeys = useMemo(() => { if (!propagandaResult?.formatted_result?.length) return []; return [...new Set(propagandaResult.formatted_result.map(i => (Array.isArray(i) ? i[0] : i.technique)).filter(Boolean))]; }, [propagandaResult]);
   const legendItems = getLegendItems(techniqueKeys);
-  const factCounts = useMemo(() => { const f = Array.isArray(factcheckResult) ? factcheckResult : []; return { factual: f.filter(x => (x.correctness ?? "").toLowerCase() === "factual").length, unclear: f.filter(x => (x.correctness ?? "").toLowerCase() === "cannot be determined").length, unfactual: f.filter(x => (x.correctness ?? "").toLowerCase() === "unfactual").length }; }, [factcheckResult]);
-  const sentCounts = useMemo(() => { const s = sentimentResult?.sentence_sentiments ?? []; return { positive: s.filter(x => x.label?.toLowerCase() === "positive").length, negative: s.filter(x => x.label?.toLowerCase() === "negative").length, neutral: s.filter(x => x.label?.toLowerCase() === "neutral").length }; }, [sentimentResult]);
   const modeLabel = mode === "factcheck" ? "✅ Fact-Check" : mode === "sentiment" ? "😐 Sentiment" : "🔴 Propaganda";
   if (!open) return null;
   return createPortal(
