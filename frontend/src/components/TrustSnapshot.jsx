@@ -173,12 +173,12 @@ function SummaryContent({ text, dotColor = "bg-violet-400" }) {
           ul: ({ children }) => <ul className="space-y-2.5">{children}</ul>,
           ol: ({ children }) => <ol className="space-y-2.5">{children}</ol>,
           li: ({ children }) => (
-            <li className="flex items-start gap-2.5 leading-relaxed text-sm">
+            <li className="flex items-start gap-2.5 leading-relaxed text-md">
               <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 8, width: 6, height: 6 }} />
               <span>{children}</span>
             </li>
           ),
-          p: ({ children }) => <p className="leading-relaxed mb-2.5 text-sm">{children}</p>,
+          p: ({ children }) => <p className="leading-relaxed mb-2.5 text-md">{children}</p>,
           strong: ({ children }) => <span style={{ fontWeight: 600, color: "#111827" }}>{children}</span>,
         }}
       >
@@ -197,7 +197,7 @@ function SummaryContent({ text, dotColor = "bg-violet-400" }) {
   return (
     <ul className="space-y-2">
       {sentences.map((s, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-sm">
+        <li key={i} className="flex items-start gap-2.5 text-md">
           <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 7, width: 6, height: 6 }} />
           <span style={{ color: "#374151", lineHeight: 1.6 }}>{s}</span>
         </li>
