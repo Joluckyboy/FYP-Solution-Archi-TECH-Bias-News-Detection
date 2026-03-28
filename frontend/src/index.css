@@ -215,3 +215,20 @@ a:hover {
 		opacity: 1;
 	}
 }
+
+@media (max-width: 767px) {
+  div[role="tablist"] {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  div[role="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
+  div[role="tablist"] > button {
+    flex-shrink: 0 !important;
+  }
+}
