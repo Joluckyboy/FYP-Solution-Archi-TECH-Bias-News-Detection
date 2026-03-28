@@ -162,7 +162,7 @@ function ModeToggle({ mode, setMode, hasPropaganda, hasSentiment, hasFactcheck }
   );
 }
 
-function Legend({ mode, legendItems, hasPropaganda, hasSentiment, hasFactcheck, factcheckResult, sentimentResult }) {
+function Legend({ mode, legendItems, hasPropaganda, hasSentiment, hasFactcheck, factcheckResult}) {
   if (mode === "propaganda" && hasPropaganda) return (
     <div className="flex flex-wrap gap-1.5 mt-2">
       {legendItems.map(item => <LegendPill key={item.label} label={item.label} bg={item.bg} color={item.color} border={item.bg} def={item.def} />)}
