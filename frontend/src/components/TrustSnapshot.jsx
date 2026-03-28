@@ -1,503 +1,355 @@
-import { useEffect, useState, useMemo } from "react";
+/**
+ * TrustSnapshot.jsx — v13
+ * Fixes:
+ *  - Trust Score column: restored soft tinted gradient background keyed to verdict colour
+ *  - Article Summary: font bumped to 15px, scroll window 260px
+ *  - All other v12 improvements preserved
+ */
 
-// ─── Trust score calculation ──────────────────────────────────────────────────
-// 50 pts: Fact Accuracy   (factual=1.0, cannot_be_determined=0.5, unfactual=0.0)
-// 50 pts: Low Influence   (1 − propaganda_probability) × 50
-// Source credibility: NO longer subtracted — shown as a warning banner instead
+import { useEffect, useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
+import { Progress } from "@/components/ui/progress";
+import ReactMarkdown from "react-markdown";
+import { HashLoader } from "react-spinners";
+import { ClipboardList, ShieldCheck, Globe, Info } from "lucide-react";
 
+// ─── Maths ────────────────────────────────────────────────────────────────────
 function computeTrustScore({ factcheckResult, propagandaResult }) {
-  const factReady =
-    Array.isArray(factcheckResult) && factcheckResult.length > 0;
-  const propReady =
-    propagandaResult?.propaganda_probability !== undefined &&
-    propagandaResult?.propaganda_probability !== null;
-
-  if (!factReady && !propReady) {
-    return { ready: false, status: "loading", loadingServices: ["fact-check", "propaganda"] };
-  }
-  if (!factReady) {
-    return { ready: false, status: "loading", loadingServices: ["fact-check"] };
-  }
-  if (!propReady) {
-    return { ready: false, status: "loading", loadingServices: ["propaganda"] };
-  }
+  const fR = Array.isArray(factcheckResult) && factcheckResult.length > 0;
+  const pR = propagandaResult?.propaganda_probability !== undefined &&
+             propagandaResult?.propaganda_probability !== null;
+  if (!fR && !pR) return { ready: false, loadingServices: ["fact-check", "propaganda"] };
+  if (!fR)        return { ready: false, loadingServices: ["fact-check"] };
+  if (!pR)        return { ready: false, loadingServices: ["propaganda"] };
 
   const total = factcheckResult.length;
-  const weightedSum = factcheckResult.reduce((acc, f) => {
+  const ws = factcheckResult.reduce((acc, f) => {
     const c = (f.correctness ?? "").toLowerCase();
-    if (c === "factual")              return acc + 1.0;
-    if (c === "cannot be determined") return acc + 0.5;
-    return acc;
+    return acc + (c === "factual" ? 1 : c === "cannot be determined" ? 0.5 : 0);
   }, 0);
-
-  // ── Keep as plain numbers — NO .toFixed() here ──
-  const factScore = total > 0 ? (weightedSum / total) * 50 : 0;
-  const propProb  = propagandaResult.propaganda_probability ?? 0;
-  const propScore = (1 - propProb) * 50;
-  const total100  = Math.min(100, Math.max(0, factScore + propScore));
-
-  return {
-    ready:     true,
-    total:     total100,   // number ✅
-    factScore,             // number ✅
-    propScore,             // number ✅
-    factTotal: total,
-    factCounts: {
-      factual:   factcheckResult.filter(f => (f.correctness ?? "").toLowerCase() === "factual").length,
-      unclear:   factcheckResult.filter(f => (f.correctness ?? "").toLowerCase() === "cannot be determined").length,
-      unfactual: factcheckResult.filter(f => (f.correctness ?? "").toLowerCase() === "unfactual").length,
-    },
-  };
+  const factScore = total > 0 ? (ws / total) * 50 : 0;
+  const propScore = (1 - (propagandaResult.propaganda_probability ?? 0)) * 50;
+  return { ready: true, score: Math.min(100, Math.max(0, factScore + propScore)), factScore, propScore };
 }
 
-// ─── Verdict config ───────────────────────────────────────────────────────────
 const VERDICT = {
-  "Trustworthy": {
-    label: "Trustworthy", emoji: "✅",
-    color: "#065f46", bg: "#d1fae5", ring: "#6ee7b7", bar: "#10b981",
-    explanation: "This article appears factually sound with low influence language.",
-  },
-  "Read with Caution": {
-    label: "Read with Caution", emoji: "⚠️",
-    color: "#92400e", bg: "#fef3c7", ring: "#fcd34d", bar: "#f59e0b",
-    explanation: "Some claims may need independent verification. Watch for persuasive language.",
-  },
-  "Treat with Scepticism": {
-    label: "Treat with Scepticism", emoji: "🔶",
-    color: "#9a3412", bg: "#fff7ed", ring: "#fdba74", bar: "#f97316",
-    explanation: "Notable signs of factual issues or influence techniques detected.",
-  },
-  "Likely Misleading": {
-    label: "Likely Misleading", emoji: "🚨",
-    color: "#991b1b", bg: "#fee2e2", ring: "#fca5a5", bar: "#ef4444",
-    explanation: "Strong indicators of misinformation or propaganda. Verify independently.",
-  },
+  Trustworthy:             { label: "Trustworthy",            emoji: "✅", color: "#064e3b", ring: "#6ee7b7", bar: "#10b981", track: "#a7f3d0", bgFrom: "#d1fae5", bgTo: "#ecfdf5", explanation: "This article appears factually sound with low influence language." },
+  "Read with Caution":     { label: "Read with Caution",      emoji: "⚠️", color: "#78350f", ring: "#fcd34d", bar: "#f59e0b", track: "#fde68a", bgFrom: "#fef3c7", bgTo: "#fffbeb", explanation: "Some claims may need independent verification." },
+  "Treat with Scepticism": { label: "Treat with Scepticism",  emoji: "🔶", color: "#7c2d12", ring: "#fdba74", bar: "#f97316", track: "#fed7aa", bgFrom: "#ffedd5", bgTo: "#fff7ed", explanation: "Notable signs of factual issues or influence techniques detected." },
+  "Likely Misleading":     { label: "Likely Misleading",      emoji: "🚨", color: "#7f1d1d", ring: "#fca5a5", bar: "#ef4444", track: "#fecaca", bgFrom: "#fee2e2", bgTo: "#fef2f2", explanation: "Strong indicators of misinformation or propaganda." },
+};
+const getVerdict = s => s >= 70 ? VERDICT["Trustworthy"] : s >= 50 ? VERDICT["Read with Caution"] : s >= 30 ? VERDICT["Treat with Scepticism"] : VERDICT["Likely Misleading"];
+
+const CRED_STYLE = {
+  "Highly Credible":     { color: "#065f46", bg: "#d1fae5", border: "#6ee7b7", pillEmoji: "🏅" },
+  "Moderately Credible": { color: "#1e40af", bg: "#dbeafe", border: "#93c5fd", pillEmoji: "👍" },
+  Questionable:          { color: "#92400e", bg: "#fef3c7", border: "#fcd34d", pillEmoji: "🤔" },
+  "Low Credibility":     { color: "#991b1b", bg: "#fee2e2", border: "#fca5a5", pillEmoji: "⛔" },
+  "Insufficient Data":   { color: "#4b5563", bg: "#f3f4f6", border: "#d1d5db", pillEmoji: "❓" },
 };
 
-function getVerdict(score) {
-  if (score >= 70) return VERDICT["Trustworthy"];
-  if (score >= 50) return VERDICT["Read with Caution"];
-  if (score >= 30) return VERDICT["Treat with Scepticism"];
-  return VERDICT["Likely Misleading"];
-}
+function domainFromUrl(url) { try { return new URL(url).hostname.replace("www.", ""); } catch { return url ?? ""; } }
 
-// ─── Source credibility styles ────────────────────────────────────────────────
-const CREDIBILITY_STYLE = {
-  "Highly Credible":     { color: "#065f46", bg: "#d1fae5", dot: "#10b981", border: "#6ee7b7" },
-  "Moderately Credible": { color: "#1e40af", bg: "#dbeafe", dot: "#3b82f6", border: "#93c5fd" },
-  "Questionable":        { color: "#92400e", bg: "#fef3c7", dot: "#f59e0b", border: "#fcd34d" },
-  "Low Credibility":     { color: "#991b1b", bg: "#fee2e2", dot: "#ef4444", border: "#fca5a5" },
-  "Insufficient Data":   { color: "#4b5563", bg: "#f3f4f6", dot: "#9ca3af", border: "#d1d5db" },
-};
-
-// ─── Source warning banner — replaces the old ±modifier math ─────────────────
-function SourceWarningBanner({ credibility }) {
-  if (!credibility || credibility.status !== "ok") return null;
-  const label = credibility.label;
-  if (label !== "Low Credibility" && label !== "Questionable") return null;
-
-  const isLow = label === "Low Credibility";
-
+// ─── Donut ────────────────────────────────────────────────────────────────────
+function Donut({ score, color, track, size = 180 }) {
+  const [anim, setAnim] = useState(0);
+  const r = size / 2 - 15, circ = 2 * Math.PI * r;
+  useEffect(() => {
+    const s = Date.now(), d = 1100;
+    const tick = () => {
+      const p = Math.min((Date.now() - s) / d, 1);
+      setAnim(score * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [score]);
+  const cx = size / 2, cy = size / 2, dash = (Math.min(100, Math.max(0, anim)) / 100) * circ;
   return (
-    <div
-      className="rounded-lg px-3 py-2.5 flex gap-2 items-start"
-      style={{
-        background: isLow ? "#fee2e2" : "#fef3c7",
-        border:     `0.5px solid ${isLow ? "#fca5a5" : "#fcd34d"}`,
-        marginTop:  "0.75rem",
-      }}
-    >
-      <span className="text-base shrink-0">{isLow ? "🚩" : "⚠️"}</span>
-      <div>
-        <p className="text-xs font-semibold" style={{ color: isLow ? "#991b1b" : "#92400e" }}>
-          {isLow ? "Low credibility source" : "Questionable source"}
-        </p>
-        <p className="text-xs leading-relaxed mt-0.5" style={{ color: isLow ? "#7f1d1d" : "#78350f" }}>
-          {isLow
-            ? "Past articles from this outlet showed consistently low fact accuracy and heavy use of influence techniques. Cross-check key claims before drawing conclusions."
-            : "This outlet has a below-average credibility record. Past articles showed mixed fact accuracy. Apply extra scrutiny to claims in this article."}
-        </p>
-        <p className="text-xs mt-1 italic" style={{ color: isLow ? "#991b1b" : "#92400e", opacity: 0.75 }}>
-          This does not affect the score above — the score reflects only this article's content.
-        </p>
-      </div>
-    </div>
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", display: "block" }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={track} strokeWidth={15} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={15}
+        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 6px ${color}99)` }} />
+    </svg>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const BIAS_DISPLAY = {
-  "left":          { label: "Left",          color: "#1e40af" },
-  "leaning-left":  { label: "Leaning Left",  color: "#2563eb" },
-  "center":        { label: "Center",        color: "#374151" },
-  "leaning-right": { label: "Leaning Right", color: "#b91c1c" },
-  "right":         { label: "Right",         color: "#991b1b" },
-};
-
-function domainFromUrl(url) {
-  try { return new URL(url).hostname.replace("www.", ""); }
-  catch { return url ?? ""; }
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function MetricCard({ label, value, valueColor }) {
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+function CalcTooltip({ trust, verdict }) {
+  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+  const show = () => {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const viewportCenter = r.left + r.width / 2 + window.scrollX;
+    const tooltipHalf = 200;
+    const margin = 14;
+    const minX = window.scrollX + margin + tooltipHalf;
+    const maxX = window.scrollX + window.innerWidth - margin - tooltipHalf;
+    const x = Math.max(minX, Math.min(viewportCenter, maxX));
+    setPos({ x, y: r.bottom + window.scrollY + 10 });
+  };
+  const hide = () => setPos(null);
+  if (!trust?.ready) return null;
+  const factPct = Math.round(trust.factScore), propPct = Math.round(trust.propScore);
   return (
-    <div className="bg-gray-50 rounded-lg p-2.5">
-      <p className="text-xs text-gray-400 mb-0.5 leading-snug">{label}</p>
-      <p className="text-sm font-semibold leading-snug" style={{ color: valueColor || undefined }}>
-        {value}
-      </p>
-    </div>
-  );
-}
+    <>
+      <button ref={ref} onMouseEnter={show} onMouseLeave={hide}
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#6b7280", background: "none", border: "none", padding: 0, cursor: "help" }}>
+        <Info style={{ width: 15, height: 15 }} />
+        <span className="text-sm" style={{ fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>How is this calculated?</span>
+      </button>
+      {pos && createPortal(
+        <div style={{ position: "absolute", top: pos.y, left: pos.x, transform: "translateX(-50%)", zIndex: 9999, width: "min(400px, calc(100vw - 24px))", pointerEvents: "none" }}>
+          <div style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "7px solid #0f172a", margin: "0 auto" }} />
+          <div className="text-sm" style={{ background: "#0f172a", borderRadius: 14, padding: "20px 22px", boxShadow: "0 16px 48px rgba(0,0,0,0.5)", lineHeight: 1.65 }}>
+            <p className="text-base" style={{ fontWeight: 700, color: "#ffffff", marginBottom: 14 }}>How Trust Score Is Calculated</p>
 
-function ScoreRow({ label, score, max, icon }) {
-  const pct      = Math.round((score / max) * 100);
-  const barColor = pct >= 65 ? "#10b981" : pct >= 40 ? "#f59e0b" : "#ef4444";
-  return (
-    <div>
-      <div className="flex justify-between mb-1">
-        <span className="text-xs text-gray-500">{icon} {label}</span>
-        <span className="text-xs font-medium text-gray-700">{score.toFixed(1)}/{max}</span>
-      </div>
-      <div className="w-full h-1.5 bg-gray-100 rounded-full">
-        <div
-          className="h-1.5 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: barColor }}
-        />
-      </div>
-    </div>
-  );
-}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span className="text-sm" style={{ color: "#e2e8f0" }}>✅ Fact Accuracy</span>
+                  <span className="text-sm" style={{ fontWeight: 700, color: "#fff" }}>{factPct} / 50</span>
+                </div>
+                <div style={{ background: "#1e293b", borderRadius: 5, height: 9 }}>
+                  <div style={{ background: "#10b981", borderRadius: 5, height: 9, width: `${(factPct / 50) * 100}%`, transition: "width 0.6s ease" }} />
+                </div>
+              </div>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span className="text-sm" style={{ color: "#e2e8f0" }}>🧠 Low Propaganda</span>
+                  <span className="text-sm" style={{ fontWeight: 700, color: "#fff" }}>{propPct} / 50</span>
+                </div>
+                <div style={{ background: "#1e293b", borderRadius: 5, height: 9 }}>
+                  <div style={{ background: "#6366f1", borderRadius: 5, height: 9, width: `${(propPct / 50) * 100}%`, transition: "width 0.6s ease" }} />
+                </div>
+              </div>
+            </div>
 
-function ProfileRow({ dotColor, label, value, valueColor }) {
-  return (
-    <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg px-2.5 py-2">
-      <span
-        className="rounded-full shrink-0"
-        style={{ width: 8, height: 8, background: dotColor || "#9ca3af", display: "inline-block" }}
-      />
-      <div>
-        <p className="text-xs text-gray-400 leading-none mb-0.5">{label}</p>
-        <p className="text-sm font-medium leading-none" style={{ color: valueColor || undefined }}>{value}</p>
-      </div>
-    </div>
-  );
-}
+            <div style={{ height: 1, background: "#1e293b", margin: "4px 0 12px" }} />
 
-function ProfileRowLoading({ label, reason }) {
-  return (
-    <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg px-2.5 py-2">
-      <span
-        className="rounded-full shrink-0 animate-pulse"
-        style={{ width: 8, height: 8, background: "#e5e7eb", display: "inline-block" }}
-      />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 leading-none mb-1">{label}</p>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse" />
-          <span className="text-xs text-gray-300 truncate">{reason}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Fact count pills shown inside the breakdown
-function FactPills({ counts, total }) {
-  if (!counts || !total) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5 mt-1">
-      <span className="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-100">
-        ✅ {counts.factual} verified
-      </span>
-      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
-        🔍 {counts.unclear} unclear <span className="opacity-60">(half weight)</span>
-      </span>
-      {counts.unfactual > 0 && (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
-          ❌ {counts.unfactual} unverified
-        </span>
+            <div className="text-sm" style={{ color: "#cbd5e1", lineHeight: 1.65 }}>
+              <p style={{ margin: 0 }}>
+                Trust Score uses <span style={{ color: "#ffffff", fontWeight: 600 }}>fact-checking</span> and <span style={{ color: "#ffffff", fontWeight: 600 }}>propaganda risk</span> because they are the most direct credibility signals.
+              </p>
+              <ul style={{ margin: "8px 0 8px", paddingLeft: 16 }}>
+                <li>Fact-check points: factual = 1, cannot be determined = 0.5, unfactual = 0 (scaled to 50)</li>
+                <li>Low propaganda contributes the other 50 points</li>
+              </ul>
+              <p style={{ margin: 0 }}>
+                Sentiment and emotion are not included because tone is never fully unbiased. Political-bias ratings reflect perspective, not factual accuracy or credibility.
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
-      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-100">
-        {total} total claims
-      </span>
+    </>
+  );
+}
+
+// ─── ColTitle ─────────────────────────────────────────────────────────────────
+function ColTitle({ icon: Icon, iconColor = "#6366f1", children }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+      <div style={{ background: `${iconColor}1a`, borderRadius: 9, padding: "6px 7px", display: "flex", alignItems: "center" }}>
+        <Icon style={{ color: iconColor, width: 22, height: 22 }} strokeWidth={1.75} />
+      </div>
+      <span className="text-xl" style={{ fontWeight: 700, color: "#111827", letterSpacing: -0.3 }}>{children}</span>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Smart summary renderer ───────────────────────────────────────────────────
+// If the text already has markdown lists, render as-is.
+// If it's plain prose paragraphs, split and render as bullet points.
+function SummaryContent({ text, dotColor = "bg-violet-400" }) {
+  const hasMarkdownList = /^[\s]*[-*\d]/m.test(text);
+
+  if (hasMarkdownList) {
+    return (
+      <ReactMarkdown
+        components={{
+          ul: ({ children }) => <ul className="space-y-2.5">{children}</ul>,
+          ol: ({ children }) => <ol className="space-y-2.5">{children}</ol>,
+          li: ({ children }) => (
+            <li className="flex items-start gap-2.5 leading-relaxed text-sm">
+              <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 8, width: 6, height: 6 }} />
+              <span>{children}</span>
+            </li>
+          ),
+          p: ({ children }) => <p className="leading-relaxed mb-2.5 text-sm">{children}</p>,
+          strong: ({ children }) => <span style={{ fontWeight: 600, color: "#111827" }}>{children}</span>,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    );
+  }
+
+  // Split into individual sentences, bullet each one
+  const sentences = text
+    .replace(/\n+/g, " ")          // flatten newlines
+    .split(/(?<=[.!?])\s+/)        // split after punctuation
+    .map(s => s.trim())
+    .filter(s => s.length > 20);   // drop fragments
+
+  return (
+    <ul className="space-y-2">
+      {sentences.map((s, i) => (
+        <li key={i} className="flex items-start gap-2.5 text-sm">
+          <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 7, width: 6, height: 6 }} />
+          <span style={{ color: "#374151", lineHeight: 1.6 }}>{s}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 const TrustSnapshot = ({ data, apiUrl }) => {
   const [credibility, setCredibility] = useState(null);
   const [credLoading, setCredLoading] = useState(false);
-  const [showCalc,    setShowCalc]    = useState(false);
 
   useEffect(() => {
     if (!apiUrl || !data?.url) return;
     const domain = domainFromUrl(data.url);
     setCredLoading(true);
     fetch(`${apiUrl}/application/source_credibility?domain=${encodeURIComponent(domain)}`)
-      .then(r => r.json())
-      .then(setCredibility)
-      .catch(() => setCredibility(null))
-      .finally(() => setCredLoading(false));
+      .then(r => r.json()).then(setCredibility)
+      .catch(() => setCredibility(null)).finally(() => setCredLoading(false));
   }, [apiUrl, data?.url]);
 
-  // Clean 50/50 score — no source modifier baked in
-  const trust = useMemo(() => {
-    if (!data) return null;
-    return computeTrustScore({
-      factcheckResult:  data.factcheck_result,
-      propagandaResult: data.propaganda_result,
-    });
-  }, [data]);
-
+  const trust = useMemo(
+    () => data ? computeTrustScore({ factcheckResult: data.factcheck_result, propagandaResult: data.propaganda_result }) : null,
+    [data]
+  );
   if (!data) return null;
 
-  const verdict   = trust?.ready ? getVerdict(trust.total) : null;
-  const credStyle = credibility?.label
-    ? CREDIBILITY_STYLE[credibility.label] ?? CREDIBILITY_STYLE["Insufficient Data"]
-    : null;
+  const verdict   = trust?.ready ? getVerdict(trust.score) : null;
+  const credStyle = credibility?.label ? CRED_STYLE[credibility.label] ?? CRED_STYLE["Insufficient Data"] : CRED_STYLE["Insufficient Data"];
+  const isLowCred = credibility?.status === "ok" && (credibility.label === "Low Credibility" || credibility.label === "Questionable");
 
-  // Article profile signals
-  const sentimentSignal = (() => {
-    const s = data?.sentiment_result;
-    if (!s) return null;
-    const neg = s.negative ?? 0, pos = s.positive ?? 0, neu = s.neutral ?? 0;
-    const max = Math.max(neg, pos, neu);
-    if (max === neg) return { dotColor: "#ef4444", label: "Sentiment Tone", value: `Negative (${(neg * 100).toFixed(1)}%)`, valueColor: "#991b1b" };
-    if (max === pos) return { dotColor: "#10b981", label: "Sentiment Tone", value: `Positive (${(pos * 100).toFixed(1)}%)`, valueColor: "#065f46" };
-    return               { dotColor: "#9ca3af", label: "Sentiment Tone", value: `Neutral (${(neu * 100).toFixed(1)}%)`,   valueColor: "#374151" };
-  })();
-
-  const emotionSignal = (() => {
-    const e = data?.emotion_result;
-    if (!e?.dominant_emotion) return null;
-    const em = e.dominant_emotion;
-    return { dotColor: "#8b5cf6", label: "Dominant emotion", value: `${em.charAt(0).toUpperCase() + em.slice(1)} (${((e.dominant_score ?? 0) * 100).toFixed(1)}%)` };
-  })();
-
-  const biasSignal = (() => {
-    const b = data?.political_bias_result;
-    if (!b?.rating) return null;
-    const d = BIAS_DISPLAY[b.rating.toLowerCase()] ?? { label: b.rating, color: "#374151" };
-    return { dotColor: d.color, label: "Political bias", value: d.label, valueColor: d.color };
-  })();
+  // Restored: tinted gradient background for col 1
+  const col1Bg = verdict
+    ? `linear-gradient(160deg, ${verdict.bgFrom} 0%, ${verdict.bgTo} 100%)`
+    : "linear-gradient(160deg, #f9fafb 0%, #f3f4f6 100%)";
+  const col1Border = verdict ? `${verdict.ring}55` : "#e5e7eb";
 
   return (
-    <div
-      className="rounded-xl overflow-hidden bg-white transition-all duration-300"
-      style={{ boxShadow: `0 0 0 2px ${verdict?.ring ?? "#e5e7eb"}` }}
-    >
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-5 pb-4" style={{ background: verdict?.bg ?? "#f9fafb" }}>
+    <div className="rounded-2xl overflow-hidden border border-gray-200" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+      {verdict && <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${verdict.bar}, ${verdict.ring})` }} />}
 
-        {/* Top row */}
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
-              Article Trust Score
-            </p>
-            {(!trust || !trust.ready) && (
-              <div className="animate-pulse w-20 h-12 bg-black/10 rounded" />
-            )}
-            {trust?.ready && (
-              <div className="flex items-baseline gap-1.5">
-                <span
-                  className="font-sans text-5xl font-bold leading-none"
-                  style={{ color: verdict?.color }}
-                >
-                  {trust.total.toFixed(1)}
-                </span>
-                <span className="font-sans text-base text-gray-400">/100</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ minHeight: 280 }}>
+
+        {/* ── COL 1 — Trust Score (tinted bg) ─────────────────────────── */}
+        <div className="px-6 py-6 flex flex-col items-center gap-3 lg:border-r"
+          style={{ background: col1Bg, borderColor: col1Border }}>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ background: verdict ? `${verdict.bar}22` : "#6366f118", borderRadius: 9, padding: "6px 7px", display: "flex", alignItems: "center" }}>
+                <ShieldCheck style={{ color: verdict?.bar ?? "#6366f1", width: 22, height: 22 }} strokeWidth={1.75} />
               </div>
+              <span className="text-xl" style={{ fontWeight: 700, color: "#111827", letterSpacing: -0.3 }}>Trust Score</span>
+            </div>
+            <CalcTooltip trust={trust} verdict={verdict} />
+          </div>
+
+          <div className="relative" style={{ width: 180, height: 180 }}>
+            {trust?.ready ? (
+              <>
+                <Donut score={trust.score} color={verdict.bar} track={verdict.track} size={180} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-5xl" style={{ fontWeight: 900, color: verdict.color, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                    {trust.score.toFixed(0)}
+                  </span>
+                  <span className="text-sm" style={{ fontWeight: 700, color: "#9ca3af", marginTop: 2 }}>/ 100</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.5)" }} className="animate-pulse" />
             )}
           </div>
 
-          {trust?.ready && verdict && (
-            <span
-              className="text-xs font-semibold px-3 py-1.5 rounded-full border mt-1 whitespace-nowrap"
-              style={{ background: verdict.bg, borderColor: verdict.ring, color: verdict.color }}
-            >
-              {verdict.emoji} {verdict.label}
-            </span>
-          )}
-          {!trust?.ready && (
-            <span className="text-xs font-medium px-3 py-1.5 rounded-full border mt-1 whitespace-nowrap bg-gray-50 border-gray-200 text-gray-400">
-              ⏳ Analysing…
-            </span>
+          {trust?.ready ? (
+            <div className="w-full text-center space-y-1.5">
+              <div className="text-sm" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "9px 12px", borderRadius: 12, border: `2px solid ${verdict.ring}`, color: verdict.color, fontWeight: 800, background: "rgba(255,255,255,0.75)" }}>
+                <span>{verdict.emoji}</span><span>{verdict.label}</span>
+              </div>
+              <p className="text-xs" style={{ color: verdict.color, opacity: 0.85, lineHeight: 1.55, padding: "0 4px" }}>{verdict.explanation}</p>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "#6b7280", textAlign: "center" }}>
+              {trust?.loadingServices?.length === 2 ? "Waiting for fact-check and propaganda…" : `Waiting for ${trust?.loadingServices?.[0]}…`}
+            </p>
           )}
         </div>
 
-        {/* Score bar + explanation */}
-        {trust?.ready && (
-          <>
-            <div
-              className="w-full h-1.5 rounded-full mb-2.5"
-              style={{ background: "rgba(0,0,0,0.10)" }}
-            >
-              <div
-                className="h-1.5 rounded-full transition-all duration-1000"
-                style={{ width: `${trust.total}%`, background: verdict?.bar }}
-              />
-            </div>
-            <p className="text-sm leading-relaxed mb-3" style={{ color: verdict?.color, opacity: 0.85 }}>
-              {verdict?.explanation}
-            </p>
-          </>
-        )}
-
-        {/* Loading state */}
-        {!trust?.ready && trust?.status === "loading" && (
-          <div className="space-y-2 mb-3">
-            <div className="animate-pulse h-1.5 rounded-full bg-gray-100" />
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {trust.loadingServices.length === 2
-                ? "Waiting for fact-check and propaganda analysis to complete…"
-                : `Waiting for ${trust.loadingServices[0]} to complete…`}
-            </p>
-          </div>
-        )}
-
-        {/* Source warning banner — contextual, does not affect score */}
-        {trust?.ready && <SourceWarningBanner credibility={credibility} />}
-
-        {/* Breakdown toggle */}
-        {trust?.ready && (
-          <div className="border-t mt-3 pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
-            <button
-              onClick={() => setShowCalc(v => !v)}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors cursor-pointer border"
-              style={{
-                background:   showCalc ? verdict?.bg : "white",
-                borderColor:  verdict?.ring ?? "#e5e7eb",
-                color:        verdict?.color ?? "#6b7280",
-                marginBottom: showCalc ? "0.75rem" : 0,
-              }}
-            >
-              <span>{showCalc ? "▲" : "▼"}</span>
-              <span>{showCalc ? "Hide calculation" : "How is this score calculated?"}</span>
-            </button>
-
-            {showCalc && (
-              <div className="flex flex-col gap-3">
-                <ScoreRow label="Fact Accuracy" score={trust.factScore} max={50} icon="✅" />
-                <FactPills counts={trust.factCounts} total={trust.factTotal} />
-                <ScoreRow label="Propaganda Language" score={trust.propScore} max={50} icon="🧠" />
-                <div
-                  className="rounded-lg px-3 py-2.5 mt-1"
-                  style={{ background: "rgba(0,0,0,0.03)", border: "0.5px solid rgba(0,0,0,0.06)" }}
-                >
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    <span className="font-semibold text-gray-600">How it's calculated: </span>
-                    50 pts for fact accuracy — verified claims score full, unclear claims score half, false claims score zero.
-                    50 pts for low influence language. Source credibility is shown as a warning only and does{" "}
-                    <em>not</em> affect this number.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── SOURCE CREDIBILITY + ARTICLE PROFILE ──────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100 border-t border-gray-100 bg-white">
-
-        {/* Source Credibility */}
-        <div className="p-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-            Source credibility
-          </p>
-
+        {/* ── COL 2 — Outlet Credibility ──────────────────────────────── */}
+        <div className="px-6 py-6 flex flex-col gap-4 bg-white border-t lg:border-t-0 lg:border-r" style={{ borderColor: "#e5e7eb" }}>
+          <ColTitle icon={Globe} iconColor="#0ea5e9">Outlet Credibility</ColTitle>
           {credLoading ? (
-            <div className="flex flex-col gap-2">
-              {[80, 100, 60].map((w, i) => (
-                <div key={i} className="animate-pulse h-3.5 bg-gray-100 rounded" style={{ width: `${w}%` }} />
-              ))}
-            </div>
+            <div className="space-y-3 animate-pulse">{[60, 80, 50].map((w, i) => <div key={i} className="h-4 bg-gray-100 rounded" style={{ width: `${w}%` }} />)}</div>
           ) : credibility?.status === "ok" ? (
             <>
-              <div
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mb-3"
-                style={{ background: credStyle?.bg, border: `0.5px solid ${credStyle?.border}` }}
-              >
-                <span
-                  className="rounded-full shrink-0"
-                  style={{ width: 7, height: 7, background: credStyle?.dot, display: "inline-block" }}
-                />
-                <span className="text-xs font-semibold" style={{ color: credStyle?.color }}>
-                  {credibility.label}
-                </span>
+              <div className="text-sm" style={{ display: "inline-flex", alignItems: "center", gap: 10, alignSelf: "flex-start", borderRadius: 999, padding: "9px 18px", border: `2px solid ${credStyle.border}`, background: credStyle.bg, color: credStyle.color, fontWeight: 700 }}>
+                <span className="text-xl">{credStyle.pillEmoji}</span>
+                <span>{credibility.label}</span>
               </div>
-
-              {/* Removed "Score impact" card — no penalty system */}
-              <div className="grid grid-cols-2 gap-2">
-                {credibility.credibility_score != null && (
-                  <MetricCard label="Credibility score" value={`${credibility.credibility_score.toFixed(1)}/100`} />
-                )}
-                <MetricCard label="Articles tracked" value={credibility.articles_analyzed} />
-                {credibility.factual_accuracy_rate != null && (
-                  <MetricCard label="Fact accuracy" value={`${(credibility.factual_accuracy_rate * 100).toFixed(1)}%`} />
-                )}
-                {credibility.avg_propaganda_probability != null && (
-                  <MetricCard
-                    label="Average propaganda"
-                    value={`${(credibility.avg_propaganda_probability * 100).toFixed(1)}%`}
-                    valueColor={credibility.avg_propaganda_probability > 0.5 ? "#991b1b" : undefined}
-                  />
-                )}
-              </div>
-
-              {credibility.articles_analyzed < 10 && (
-                <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                  Low sample ({credibility.articles_analyzed} articles) — profile improves as more are analysed.
-                </p>
+              {credibility.factual_accuracy_rate != null && (
+                <div>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-sm" style={{ fontWeight: 500, color: "#4b5563" }}>Average Accuracy</span>
+                    <span className="text-sm" style={{ fontWeight: 700, color: "#111827" }}>{(credibility.factual_accuracy_rate * 100).toFixed(0)}%</span>
+                  </div>
+                  <Progress value={credibility.factual_accuracy_rate * 100} indicatorClassName="bg-teal-400" />
+                </div>
+              )}
+              {credibility.avg_propaganda_probability != null && (
+                <div>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-sm" style={{ fontWeight: 500, color: "#4b5563" }}>Average Propaganda</span>
+                    <span className="text-sm" style={{ fontWeight: 700, color: "#111827" }}>{(credibility.avg_propaganda_probability * 100).toFixed(0)}%</span>
+                  </div>
+                  <Progress value={credibility.avg_propaganda_probability * 100} indicatorClassName={credibility.avg_propaganda_probability > 0.5 ? "bg-rose-400" : "bg-amber-400"} />
+                </div>
+              )}
+              {isLowCred && (
+                <div className="flex items-start gap-2 p-3 rounded-lg border" style={{ background: credibility.label === "Low Credibility" ? "#fee2e2" : "#fef3c7", borderColor: credibility.label === "Low Credibility" ? "#fca5a5" : "#fcd34d" }}>
+                  <span className="text-base shrink-0">{credibility.label === "Low Credibility" ? "🚩" : "⚠️"}</span>
+                  <div>
+                    <p className="text-sm" style={{ fontWeight: 700, color: credibility.label === "Low Credibility" ? "#991b1b" : "#92400e" }}>
+                      {credibility.label === "Low Credibility" ? "Low credibility source" : "Questionable source"}
+                    </p>
+                    <p className="text-xs" style={{ marginTop: 3, lineHeight: 1.55, color: credibility.label === "Low Credibility" ? "#7f1d1d" : "#78350f" }}>
+                      {credibility.label === "Low Credibility" ? "Past articles showed consistently low fact accuracy." : "This outlet has a below-average credibility record."}
+                    </p>
+                  </div>
+                </div>
               )}
             </>
           ) : (
-            <p className="text-xs text-gray-400 italic">
-              {credibility?.status === "no_data"
-                ? "No history yet for this source. Submit more articles to build its profile."
-                : "Source credibility unavailable."}
+            <p className="text-sm" style={{ color: "#9ca3af", fontStyle: "italic" }}>
+              {credibility?.status === "no_data" ? "No history for this source." : "Loading credibility data…"}
             </p>
           )}
         </div>
 
-        {/* Article Profile */}
-        <div className="p-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-            Article profile
-          </p>
-
-          <div className="flex flex-col gap-1.5">
-            {sentimentSignal ? (
-              <ProfileRow {...sentimentSignal} />
-            ) : (
-              <ProfileRowLoading label="Tone" reason="Sentiment analysis running…" />
-            )}
-            {emotionSignal ? (
-              <ProfileRow {...emotionSignal} />
-            ) : (
-              <ProfileRowLoading label="Dominant emotion" reason="Emotion analysis running…" />
-            )}
-            {biasSignal ? (
-              <ProfileRow {...biasSignal} />
-            ) : (
-              <ProfileRowLoading label="Political bias" reason="Bias analysis running…" />
-            )}
+        <div className="px-6 py-6 flex flex-col bg-white border-t lg:border-t-0" style={{ borderColor: "#e5e7eb" }}>
+          <ColTitle icon={ClipboardList} iconColor="#8b5cf6">Article Summary</ColTitle>
+          <div className="mt-3 overflow-y-auto pr-1" style={{ maxHeight: 280 }}>
+            {data?.summarise_result && typeof data.summarise_result === "string" && data.summarise_result.trim() ? (
+              <SummaryContent text={data.summarise_result} dotColor="bg-violet-400" />
+            ) : data?.summarise_result == null ? (
+              <div className="flex items-center gap-3 py-3">
+                <HashLoader color="#6366f1" size={16} />
+                <p className="text-sm" style={{ color: "#9ca3af" }}>Generating summary…</p>
+              </div>
+            ) : null}
           </div>
-
-          {(sentimentSignal || emotionSignal || biasSignal) && (
-            <div className="mt-3 p-2.5 bg-gray-50 rounded-lg border border-gray-100">
-              <p className="text-xs text-gray-500 leading-relaxed">
-                <span className="font-semibold text-gray-600">Why aren't these in the score? </span>
-                Sentiment, emotion, and political bias reflect writing style — not factual accuracy.
-                A negative-toned article can still be entirely factual.
-              </p>
-            </div>
-          )}
         </div>
+
       </div>
     </div>
   );

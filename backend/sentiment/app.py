@@ -84,6 +84,8 @@ async def analyze_sentiment(input: TextInput):
 
     # Step 4: Deduplicate results AFTER model runs
     sentence_results = deduplicate_sentences(sentence_results)
+    for s in sentence_results:
+        s['sentence'] = fix_tokenizer_splits(s['sentence'])
 
     total_scored = len(sentence_results)
     sentiment_dict = {
@@ -98,6 +100,17 @@ async def analyze_sentiment(input: TextInput):
         "sentence_sentiments": sentence_results,
     }
 
+def fix_tokenizer_splits(text: str) -> str:
+    """Fix common RoBERTa tokenizer artifacts in reconstructed sentences."""
+    # Fix split proper nouns and place names
+    fixes = [
+        (r'La\s+Guardia', 'LaGuardia'),
+        (r'Mc\s+([A-Z])', r'Mc\1'),  # McDonald's etc
+        (r'O\s+\'\s+([A-Z])', r"O'\1"),  # O'Brien etc
+    ]
+    for pattern, replacement in fixes:
+        text = re.sub(pattern, replacement, text)
+    return text
 
 if __name__ == '__main__':
     import uvicorn

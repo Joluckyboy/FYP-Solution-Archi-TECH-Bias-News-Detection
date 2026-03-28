@@ -136,7 +136,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
   return (
     <div className="flex flex-col h-full">
       <div
-        className="text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full self-start mb-3"
+        className="text-md font-bold uppercase tracking-widest px-3 py-1.5 rounded-full self-start mb-3"
         style={tagStyle}
       >
         {label}
@@ -151,7 +151,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
             className="h-4 w-4 rounded-full flex-shrink-0"
             onError={(e) => { e.target.style.display = "none"; }}
           />
-          <span className="text-xs font-semibold text-slate-500">{data?.source || domain}</span>
+          <span className="text-sm font-semibold text-slate-500">{data?.source || domain}</span>
         </div>
         <a
           href={data?.url}
@@ -259,7 +259,7 @@ function ArticleColumn({ label, data, isAnalysed, loading, loadingMessage }) {
           {/* Article summary */}
           {(data?.summarise_result || data?.summary) && (
             <MetricBlock label="Summary">
-              <p className="text-xs text-slate-600 leading-relaxed line-clamp-4">
+              <p className="text-md md:text-lg font-semibold leading-relaxed text-slate-800 line-clamp-4">
                 {data?.summarise_result || data?.summary}
               </p>
             </MetricBlock>
