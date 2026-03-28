@@ -92,7 +92,7 @@ a {
 	white-space: normal; /* Allows text to wrap */
 	display: inline;
 	max-width: 100%; /* Prevents overflow */
-	font-size: 12px; /* size of text */
+	font-size: inherit;
 	font-weight: 500;
 	color: #646cff;
 	text-decoration: inherit;

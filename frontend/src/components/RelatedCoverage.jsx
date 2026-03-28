@@ -87,9 +87,9 @@ function RelatedArticleCard({ article, analysedArticle }) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 min-w-0">
             <SourceFavicon source={article.source} />
-            <span className="text-sm font-semibold text-slate-700 truncate">{article.source}</span>
+            <span className="text-md font-semibold text-slate-700 truncate">{article.source}</span>
           </div>
-          <span className={`flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${bias.bg} ${bias.text} ${bias.border}`}>
+          <span className={`flex-shrink-0 text-sm font-semibold px-2 py-0.5 rounded-full border ${bias.bg} ${bias.text} ${bias.border}`}>
             {bias.label}
           </span>
         </div>
@@ -97,7 +97,7 @@ function RelatedArticleCard({ article, analysedArticle }) {
         {/* Title */}
         <a
           href={article.url} target="_blank" rel="noopener noreferrer"
-          className="block text-sm font-medium text-slate-800 leading-snug mb-2 hover:text-indigo-600 transition-colors line-clamp-3"
+          className="block text-md font-medium text-slate-800 leading-snug mb-2 hover:text-indigo-600 transition-colors line-clamp-3"
         >
           {article.title}
           <ExternalLink className="inline ml-1 h-3 w-3 opacity-40" />
@@ -105,17 +105,17 @@ function RelatedArticleCard({ article, analysedArticle }) {
 
         {/* Summary */}
         {article.summary && (
-          <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-relaxed">{article.summary}</p>
+          <p className="text-sm text-slate-500 line-clamp-2 mb-3 leading-relaxed">{article.summary}</p>
         )}
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          {date ? <span className="text-xs text-slate-400">{date}</span> : <span />}
+          {date ? <span className="text-sm text-slate-400">{date}</span> : <span />}
           <button
             onClick={handleCompare}
             disabled={busy}
             className={`
-              flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg
+              flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg
               transition-all duration-150 border
               ${busy
                 ? "bg-indigo-100 text-indigo-400 border-indigo-200 cursor-not-allowed"
@@ -212,7 +212,7 @@ const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl,hideHeader = fals
           <div>
             <h2 className="text-xl font-bold text-slate-800 leading-tight">Related Coverage</h2>
             {!loading && matched && (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-md text-slate-400 mt-0.5">
                 Same story, different outlets — click <strong>Compare</strong> for a side-by-side analysis
               </p>
             )}
@@ -227,8 +227,8 @@ const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl,hideHeader = fals
       {!loading && !matched && (
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
           <Newspaper className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm font-medium text-slate-500">No related coverage found</p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-md font-medium text-slate-500">No related coverage found</p>
+          <p className="text-md text-slate-400 mt-1">
             {reason || "This article doesn't closely match any story in our database."}
           </p>
         </div>
@@ -239,8 +239,8 @@ const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl,hideHeader = fals
         <>
           {clusterTitle && (
             <div className="mb-4 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg inline-flex items-center gap-2">
-              <span className="text-xs text-indigo-500 font-semibold uppercase tracking-wider">Matched story</span>
-              <span className="text-sm text-indigo-800 font-medium">{clusterTitle}</span>
+              <span className="text-md text-indigo-500 font-semibold uppercase tracking-wider">Matched story</span>
+              <span className="text-md text-indigo-800 font-medium">{clusterTitle}</span>
             </div>
           )}
 
@@ -259,7 +259,7 @@ const RelatedCoverage = ({ articleUrl, analysedArticle, apiUrl,hideHeader = fals
             <div className="mt-4 flex justify-center">
               <button
                 onClick={() => setShowAll(v => !v)}
-                className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-indigo-200"
+                className="flex items-center gap-1.5 text-md font-medium text-slate-500 hover:text-indigo-600 transition-colors px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-indigo-200"
               >
                 {showAll
                   ? <><ChevronUp className="h-4 w-4" /> Show less</>
