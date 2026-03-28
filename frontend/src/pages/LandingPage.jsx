@@ -6,9 +6,11 @@ import BiasLabelGuide from "@/components/BiasLabelGuide";
 import TrendingKeywords from "@/components/TrendingKeywords";
 import TopicOutletBias from "@/components/TopicOutletBias";
 import TopicFeed from "@/components/TopicFeed";
+import { Search } from "lucide-react";
 
 import { CustomInput } from "@/components/ui/custom-input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -35,6 +37,7 @@ const LandingPage = () => {
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsError, setTopicsError] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     get_analyzer().then((analyzerUrl) => {
@@ -104,6 +107,14 @@ const LandingPage = () => {
 
   const handleInputChange = (event) => {
     setArticleURL(event.target.value);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      navigate(`/keywords/${encodeURIComponent(trimmed)}`);
+    }
   };
 
   const handleButtonClick = () => {
@@ -284,8 +295,28 @@ const LandingPage = () => {
         <div className="mb-12">
           <Card className="w-full h-[400px] sm:h-[600px] flex flex-col">
             <CardHeader className="px-4 sm:px-6">
-              <div className="flex flex-col gap-3">
-                <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">News Clusters — Find all the Latest News here!</CardTitle>
+              <div className="flex flex-col gap-4">
+                {/* Header Row: Title & Search */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">
+                    News Clusters — Find all the Latest News here!
+                  </CardTitle>
+                  
+                  {/* Search Bar */}
+                  <form onSubmit={handleSearchSubmit} className="flex-shrink-0">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search articles..."
+                        className="h-9 pl-8 w-48 sm:w-52 pr-3 text-sm"
+                        enterKeyHint="search"
+                      />
+                    </div>
+                  </form>
+                </div>
+                
                 {/* Filter pills */}
                 {(() => {
                   const cats = [...new Set(topics.map(t => t.topicName).filter(Boolean))].sort();
@@ -325,6 +356,7 @@ const LandingPage = () => {
                 loading={topicsLoading}
                 error={topicsError}
                 selectedTopic={selectedTopic}
+                searchQuery={searchQuery}
               />
             </CardContent>
           </Card>

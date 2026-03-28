@@ -35,21 +35,21 @@ const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
             </div>
 
             <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-lg text-slate-900 hover:text-blue-600 cursor-pointer leading-tight"
+                <h3 className="font-semibold text-xl text-slate-900 hover:text-blue-600 cursor-pointer leading-tight"
                     onClick={() => window.open(article.url, '_blank')}>
                     {article.title}
                 </h3>
 
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="font-medium text-slate-700 text-sm">{article.source}</span>
+                    <span className="font-medium text-slate-700 text-base">{article.source}</span>
                     <span className="text-slate-300">•</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] uppercase ${biasLabel.color}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs uppercase ${biasLabel.color}`}>
                         {biasLabel.label}
                     </span>
                 </div>
 
                 {article.summary && (
-                    <p className="text-slate-600 mt-2 text-sm line-clamp-2">{article.summary}</p>
+                    <p className="text-slate-600 mt-2 text-base line-clamp-2">{article.summary}</p>
                 )}
             </div>
 
