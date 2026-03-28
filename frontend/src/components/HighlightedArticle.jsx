@@ -169,8 +169,6 @@ function Legend({ mode, legendItems, hasPropaganda, hasSentiment, hasFactcheck, 
     </div>
   );
   if (mode === "sentiment" && hasSentiment) {
-    const sents = sentimentResult?.sentence_sentiments ?? [];
-    const counts = { positive: sents.filter(s => s.label?.toLowerCase() === "positive").length, negative: sents.filter(s => s.label?.toLowerCase() === "negative").length, neutral: sents.filter(s => s.label?.toLowerCase() === "neutral").length };
     return (
       <div className="flex flex-wrap gap-1.5 mt-2 items-center">
         {["positive","negative","neutral"].map(key => (
@@ -244,10 +242,11 @@ const HighlightedArticle = ({ content, propagandaResult, sentimentResult, factch
 
   useEffect(() => { if (mode === "factcheck" && !hasFactcheck) { if (hasSentiment) setMode("sentiment"); else if (hasPropaganda) setMode("propaganda"); } }, [hasFactcheck, hasSentiment, hasPropaganda, mode]);
 
+  const plainParas = useMemo(() => (content ? splitToParagraphs(content) : []), [content]);
+
   if (!content) return <p className="text-gray-400 italic">Article content unavailable.</p>;
 
-  const segments   = mode === "propaganda" ? propagandaSegments : mode === "sentiment" ? sentimentSegments : factcheckSegments;
-  const plainParas = useMemo(() => splitToParagraphs(content), [content]);
+  const segments = mode === "propaganda" ? propagandaSegments : mode === "sentiment" ? sentimentSegments : factcheckSegments;
 
   return (
     <div>
