@@ -37,7 +37,7 @@ ConfigUpdater==3.2
 connexion==2.14.2
 cron-descriptor==1.4.5
 croniter==6.0.0
-cryptography==46.0.5
+cryptography==46.0.6
 cssselect==1.2.0
 defusedxml==0.7.1
 Deprecated==1.2.18
