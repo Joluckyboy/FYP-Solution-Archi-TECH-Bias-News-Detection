@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { cleanPhrase as _cleanPhrase, findPhraseInContent as _findContext } from "@/utils/propagandaHighlight";
-import { getHighlightStyle } from "@/utils/highlightPropaganda";
+import { getHighlightStyle } from "@/utils/highlightUtils";
 
 const SEVERITY_STYLES = {
   Low:      { bar: "bg-green-400",  badge: "bg-green-100 text-green-700 border-green-300",  border: "border-green-400",  text: "text-green-700"  },
@@ -74,21 +74,21 @@ function PhraseWithContext({ rawPhrase, articleContent, index, technique }) {
 
   if (!ctx) return (
     <div className="bg-gray-50 border-l-4 border-gray-300 rounded-r-lg px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Detected phrase</p>
-      <p className="text-sm text-gray-700 italic">"{_cleanPhrase(rawPhrase)}"</p>
+      <p className="text-md font-semibold uppercase tracking-wide text-gray-400 mb-1">Detected phrase</p>
+      <p className="text-md text-gray-700 italic">"{_cleanPhrase(rawPhrase)}"</p>
     </div>
   );
 
   if (!ctx.found) return (
     <div className="bg-gray-50 border-l-4 border-gray-300 rounded-r-lg px-3 py-2 space-y-1">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Detected phrase</p>
-      <p className="text-sm text-gray-700 italic">"{ctx.cleanPhrase}"</p>
+      <p className="text-md font-semibold uppercase tracking-wide text-gray-400">Detected phrase</p>
+      <p className="text-md text-gray-700 italic">"{ctx.cleanPhrase}"</p>
     </div>
   );
 
   return (
     <div className="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg px-3 py-2.5 space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
         Instance {index + 1} — in context
       </p>
       <p className="text-sm text-gray-700 leading-relaxed">
@@ -133,10 +133,10 @@ const PropagandaTab = ({ propScore, articleContent }) => {
       <div className={`rounded-xl border-2 p-5 bg-white ${styles.border}`}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Propaganda Score</p>
+            <p className="text-md font-semibold uppercase tracking-widest text-gray-400">Propaganda Score</p>
             <p className={`text-3xl font-bold mt-0.5 ${styles.text}`}>{score.toFixed(1)}%</p>
           </div>
-          <span className={`text-sm font-bold px-3 py-1 rounded-full border ${styles.badge}`}>
+          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${styles.badge}`}>
             {severity} Propaganda
           </span>
         </div>
@@ -144,7 +144,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
         <div className="w-full bg-gray-100 rounded-full h-3">
           <div className={`${styles.bar} h-3 rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-400">
+        <div className="flex justify-between mt-1 text-sm text-gray-400">
           <span>0% — No Propaganda</span>
           <span>100% — Strong Propaganda</span>
         </div>
@@ -156,7 +156,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
         </p>
 
         {coverage !== null && (
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-sm text-gray-400 mt-1">
             Influence language detected in approximately {coverage}% of the article's content.
           </p>
         )}
@@ -164,7 +164,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
         {score >= 60 && (
           <div className="mt-3 flex items-start gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded-lg">
             <span className="text-sm shrink-0">💬</span>
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <p className="text-sm text-gray-500 leading-relaxed">
               <strong>Note:</strong> Quoted speech from people interviewed can raise this score
               even when the journalist's own language is neutral. Check the highlighted
               instances below to see whether the techniques appear in quotes or in the
@@ -185,8 +185,8 @@ const PropagandaTab = ({ propScore, articleContent }) => {
         </div>
       ) : (
         <div>
-          <p className="text-sm font-semibold text-gray-600 mb-1">Detected Techniques</p>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-md font-semibold text-gray-600 mb-1">Detected Techniques</p>
+          <p className="text-sm text-gray-400 mb-3">
             {techniques.length} Propaganda technique{techniques.length !== 1 ? "s" : ""} found —
             click any to expand
           </p>
@@ -232,17 +232,17 @@ const PropagandaTab = ({ propScore, articleContent }) => {
                   {isOpen && (
                     <div className="px-4 py-4 bg-white space-y-4 border-t border-blue-100">
                       <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">What is this?</p>
+                        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">What is this?</p>
                         <p className="text-sm text-gray-700">{t.description}</p>
                       </div>
 
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
                             Found in this article
                           </p>
                           {articleContent && (
-                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                            <span className="text-sm bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
                               highlighted in context
                             </span>
                           )}
@@ -261,7 +261,7 @@ const PropagandaTab = ({ propScore, articleContent }) => {
                       </div>
 
                       <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-400 italic">
+                        <p className="text-sm text-gray-400 italic">
                           💡 Ask yourself: does knowing this technique is present change how you read this content?
                         </p>
                       </div>

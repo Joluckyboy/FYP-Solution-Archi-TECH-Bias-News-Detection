@@ -124,7 +124,7 @@ async def rate_bias(
                 )
                 client = Perplexity(api_key=pkey)
                 completion = client.chat.completions.create(
-                    model="sonar-pro",
+                    model="sonar",
                     messages=[
                         {"role": "system", "content": prompts.sys_prompt},
                         {"role": "user", "content": user_prompt},
@@ -213,7 +213,7 @@ async def get_topics(
                 )
                 client = Perplexity(api_key=pkey)
                 completion = client.chat.completions.create(
-                    model="sonar-pro",
+                    model="sonar",
                     messages=[
                         {"role": "system", "content": prompts.topics_sys_prompt},
                         {"role": "user", "content": user_prompt},
