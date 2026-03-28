@@ -441,18 +441,20 @@ const ResultsPage = () => {
 
       {/* ── Analysis Tabs ────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full slide-in-right">
-        <TabsList className="hidden md:grid w-full grid-cols-5 gap-1 shadow mb-4">
-          <TabsTrigger value="facts">Facts</TabsTrigger>
-          <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
-          <TabsTrigger value="emotion">Emotion</TabsTrigger>
-          <TabsTrigger value="propaganda">Propaganda</TabsTrigger>
-          <TabsTrigger value="bias">Bias</TabsTrigger>
-        </TabsList>
-        <TabsList className="flex md:hidden w-full overflow-x-auto flex-nowrap gap-1 h-auto px-1 shadow mb-4">
-          {["facts","sentiment","emotion","propaganda","bias"].map(v => (
-            <TabsTrigger key={v} value={v} className="shrink-0 capitalize">{v}</TabsTrigger>
-          ))}
-        </TabsList>
+       <TabsList className="hidden md:grid w-full grid-cols-5 gap-1 shadow mb-4">
+        <TabsTrigger value="facts">Facts</TabsTrigger>
+        <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
+        <TabsTrigger value="emotion">Emotion</TabsTrigger>
+        <TabsTrigger value="propaganda">Propaganda</TabsTrigger>
+        <TabsTrigger value="bias">Bias</TabsTrigger>
+      </TabsList>
+      <TabsList className="flex md:hidden w-full shadow mb-4">
+        <TabsTrigger value="facts">Facts</TabsTrigger>
+        <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
+        <TabsTrigger value="emotion">Emotion</TabsTrigger>
+        <TabsTrigger value="propaganda">Propaganda</TabsTrigger>
+        <TabsTrigger value="bias">Bias</TabsTrigger>
+      </TabsList>
 
         {/* ══ FACTS ══ */}
         <TabsContent value="facts">
