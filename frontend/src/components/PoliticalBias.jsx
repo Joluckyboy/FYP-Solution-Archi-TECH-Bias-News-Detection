@@ -41,7 +41,7 @@ const PoliticalBias = ({ politicalBiasResult }) => {
                 key={label}
                 className={`flex-1 text-center py-2 px-1 rounded-md text-sm font-medium transition-all ${
                   isActive
-                    ? `bg-blue-600 text-white shadow-md scale-105 ring-2 ring-offset-1 ring-blue-400`
+                    ? `bg-white text-black shadow-md scale-105 ring-2 ring-offset-1 ring-black`
                     : 'bg-gray-100 text-gray-300'
                 }`}
               >
