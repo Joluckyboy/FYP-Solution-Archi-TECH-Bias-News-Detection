@@ -5,7 +5,7 @@ python-multipart
 beautifulsoup4==4.12.3
 lxml-html-clean==0.4.4
 newspaper3k==0.2.8
-nltk==3.9.3
+nltk==3.9.4
 selenium
 requests
 APScheduler==3.10.4
