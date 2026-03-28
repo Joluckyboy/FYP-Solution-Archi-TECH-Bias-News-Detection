@@ -260,7 +260,7 @@ const EmotionTab = ({ emotionResult }) => {
         className="rounded-xl border-2 p-5"
         style={{ borderColor: domColor, background: domColor + "15" }}
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+        <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-3">
           Overall Emotional Tone
         </p>
         <div className="flex items-center gap-3 mb-3">
@@ -284,10 +284,10 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 3. How might this article affect you? ────────────────────────── */}
       {readerInsights.length > 0 && (
         <div>
-          <p className="text-sm font-semibold mb-1 text-gray-600">
+          <p className="text-md font-semibold mb-1 text-gray-600">
             How might this article affect you?
           </p>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-sm text-gray-400 mb-3">
             Based on the emotional language detected, here's what to be aware of as a reader.
           </p>
 
@@ -304,12 +304,12 @@ const EmotionTab = ({ emotionResult }) => {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{icon}</span>
-                    <span className="text-xs font-bold uppercase tracking-wide capitalize" style={{ color }}>
+                    <span className="text-md font-bold uppercase tracking-wide capitalize" style={{ color }}>
                       {emotion}
                     </span>
                     {/* Show percentage for non-dominant emotions so user understands scale */}
                     {emotion !== domLower && weighted_avg[emotion] !== undefined && (
-                      <span className="text-[10px] text-gray-400 ml-auto">
+                      <span className="text-sm text-gray-400 ml-auto">
                         {((weighted_avg[emotion] ?? 0) * 100).toFixed(1)}% of article
                       </span>
                     )}
@@ -319,12 +319,12 @@ const EmotionTab = ({ emotionResult }) => {
 
                   {example && emotion !== "neutral" && (
                     <div className="border-l-4 pl-3 py-1" style={{ borderColor: color }}>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-1">
                         Example from this article
                       </p>
-                      <p className="text-xs text-gray-600 italic">"{example.text}"</p>
+                      <p className="text-sm text-gray-600 italic">"{example.text}"</p>
                       {!example.isFull && (
-                        <p className="text-[10px] text-gray-400 mt-1">(section preview)</p>
+                        <p className="text-sm text-gray-400 mt-1">(section preview)</p>
                       )}
                     </div>
                   )}
@@ -338,14 +338,14 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 4. Emotion Breakdown ─────────────────────────────────────────── */}
       {chartData.length > 0 && (
         <div>
-          <p className="text-sm font-semibold mb-1 text-gray-600">Emotion Breakdown</p>
+          <p className="text-md font-semibold mb-1 text-gray-600">Emotion Breakdown</p>
           <div className="flex items-center gap-1.5 mb-3">
-            <p className="text-xs text-gray-400">
+            <p className="text-sm text-gray-400">
               How strongly each emotion appears across the whole article.
             </p>
             <span className="relative group inline-flex items-center shrink-0 cursor-help">
-              <span className="text-[10px] text-gray-500 bg-gray-100 rounded-full w-[16px] h-[16px] inline-flex items-center justify-center border border-gray-300 font-bold select-none">?</span>
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed shadow-lg">
+              <span className="text-sm text-gray-500 bg-gray-100 rounded-full w-[16px] h-[16px] inline-flex items-center justify-center border border-gray-300 font-bold select-none">?</span>
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-sm rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed shadow-lg">
                 These scores don't add up to 100%. Each sentence is scored on all emotions independently — a sentence can be 70% neutral and 24% approving simultaneously. The bars show emotional strength, not proportional slices.
                 <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
               </span>
@@ -353,8 +353,8 @@ const EmotionTab = ({ emotionResult }) => {
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40 }}>
-              <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }}
+              <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 13 }} />
+              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 13 }}
                 tickFormatter={v => v.charAt(0).toUpperCase() + v.slice(1)} />
               <Tooltip
                 content={({ active, payload }) => {
@@ -386,7 +386,7 @@ const EmotionTab = ({ emotionResult }) => {
 
           <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
             <button
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-600 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-md font-medium text-gray-600 transition-colors"
               onClick={() => setGuideOpen(!guideOpen)}
             >
               <span>📘 What do these emotions mean?</span>
@@ -395,7 +395,7 @@ const EmotionTab = ({ emotionResult }) => {
             {guideOpen && (
               <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {EMOTION_GUIDE.map(({ emoji, name, desc }) => (
-                  <div key={name} className="flex items-start gap-2 text-xs text-gray-600">
+                  <div key={name} className="flex items-start gap-2 text-sm text-gray-600">
                     <span className="text-base shrink-0">{emoji}</span>
                     <span><strong>{name}:</strong> {desc}</span>
                   </div>

@@ -100,8 +100,8 @@ function KeyDifference({ left, right }) {
     <div className="flex items-start gap-3 px-5 py-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
       <span className="text-xl shrink-0">💡</span>
       <div>
-        <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">Key Difference</p>
-        <p className="text-sm text-amber-900 leading-relaxed">{text}</p>
+        <p className="text-md font-bold text-amber-700 uppercase tracking-wider mb-1">Key Difference</p>
+        <p className="text-md text-amber-900 leading-relaxed">{text}</p>
       </div>
     </div>
   );
@@ -166,13 +166,16 @@ function TopicsCell({ data, loading }) {
   );
 }
 
+const SENTIMENT_EMOJI = { Positive: "😊", Negative: "😟", Neutral: "😐" };
+
 function SentimentCell({ data, loading }) {
   const sent = dominantSentiment(data?.sentiment_result);
   if (!sent) return <Pending loading={loading} />;
+  const emoji = SENTIMENT_EMOJI[sent.label] ?? "😐";
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <sent.Icon className="h-5 w-5 shrink-0" style={{ color: sent.color }} />
+        <span className="text-3xl">{emoji}</span>
         <span className="text-base font-bold" style={{ color: sent.color }}>
           {sent.label}
           <span className="text-sm font-normal text-slate-400 ml-1.5">({(sent.value*100).toFixed(1)}%)</span>
@@ -197,11 +200,26 @@ function SentimentCell({ data, loading }) {
   );
 }
 
+const EMOTION_EMOJI_MAP = {
+  joy:"😄", love:"❤️", excitement:"🎉", fear:"😨", anger:"😡",
+  sadness:"😢", neutral:"😐", optimism:"🌟", curiosity:"🤔",
+  approval:"👍", disapproval:"👎", disappointment:"😞", annoyance:"😤",
+  confusion:"😕", admiration:"🤩", surprise:"😮", caring:"🤗",
+  relief:"😌", realization:"💡", pride:"🦁", grief:"😭",
+  remorse:"😔", embarrassment:"😳", nervousness:"😰",
+};
+
 function EmotionCell({ data, loading }) {
   const e = dominantEmotion(data?.emotion_result);
-  return e
-    ? <p className="text-lg font-bold text-slate-700">{e}</p>
-    : <Pending loading={loading} />;
+  if (!e) return <Pending loading={loading} />;
+  const emotionKey = (data?.emotion_result?.dominant_emotion || "").toLowerCase();
+  const emoji = EMOTION_EMOJI_MAP[emotionKey] ?? "🎭";
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-3xl">{emoji}</span>
+      <p className="text-lg font-bold text-slate-700">{e}</p>
+    </div>
+  );
 }
 
 function PropCell({ data, loading }) {
@@ -237,21 +255,54 @@ function FactCell({ data, loading }) {
   );
 }
 
+function SummaryContent({ text }) {
+  const hasMarkdownList = /^[\s]*[-*\d]/m.test(text);
+
+  if (hasMarkdownList) {
+    return (
+      <ReactMarkdown
+        components={{
+          ul: ({ children }) => <ul className="space-y-2">{children}</ul>,
+          ol: ({ children }) => <ol className="space-y-2">{children}</ol>,
+          li: ({ children }) => (
+            <li className="flex items-start gap-2 text-sm text-slate-600">
+              <span className="shrink-0 mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400" />
+              <span className="leading-relaxed">{children}</span>
+            </li>
+          ),
+          p: ({ children }) => <p className="text-sm text-slate-600 leading-relaxed mb-1.5">{children}</p>,
+          strong: ({ children }) => <span className="font-semibold text-slate-800">{children}</span>,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    );
+  }
+
+  // Split into individual sentences regardless of newlines
+  const sentences = text
+    .replace(/\n+/g, " ")             // flatten all newlines to space
+    .split(/(?<=[.!?])\s+/)           // split after every sentence-ending punctuation
+    .map(s => s.trim())
+    .filter(s => s.length > 20);      // drop tiny fragments
+
+  return (
+    <ul className="space-y-2">
+      {sentences.map((s, i) => (
+        <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+          <span className="shrink-0 mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400" />
+          <span className="leading-relaxed">{s}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SummaryCell({ data, loading }) {
   if (!data?.summarise_result) return <Pending loading={loading} />;
   return (
     <div className="max-h-64 overflow-y-auto pr-1">
-      <ReactMarkdown
-        components={{
-          ul:     ({ children }) => <ul className="list-disc ml-4 space-y-1.5 text-sm text-slate-600">{children}</ul>,
-          ol:     ({ children }) => <ol className="list-decimal ml-4 space-y-1.5 text-sm text-slate-600">{children}</ol>,
-          li:     ({ children }) => <li className="leading-relaxed">{children}</li>,
-          p:      ({ children }) => <p className="text-sm text-slate-600 leading-relaxed mb-1.5">{children}</p>,
-          strong: ({ children }) => <span className="font-semibold text-slate-800">{children}</span>,
-        }}
-      >
-        {data.summarise_result}
-      </ReactMarkdown>
+      <SummaryContent text={data.summarise_result} dotColor="bg-slate-400" />
     </div>
   );
 }
@@ -293,7 +344,7 @@ function ComparisonTable({ left, right, isLoading, lDomain, rDomain, lNewsId, rN
               onError={(e)=>{e.target.style.display="none";}} />
             <span className="text-sm text-slate-400 font-medium">{left?.source||lDomain}</span>
           </div>
-          <p className="text-base font-bold text-slate-800 leading-snug mb-3">{left?.title}</p>
+          <p className="text-md font-bold text-slate-800 leading-snug mb-3">{left?.title}</p>
           <div className="flex flex-wrap items-center gap-2">
             <a href={left?.url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50">
@@ -323,7 +374,7 @@ function ComparisonTable({ left, right, isLoading, lDomain, rDomain, lNewsId, rN
               onError={(e)=>{e.target.style.display="none";}} />
             <span className="text-sm text-slate-400 font-medium">{relatedMeta?.source||rDomain}</span>
           </div>
-          <p className="text-base font-bold text-slate-800 leading-snug mb-3">{relatedMeta?.title}</p>
+          <p className="text-md font-bold text-slate-800 leading-snug mb-3">{relatedMeta?.title}</p>
           <div className="flex flex-wrap items-center gap-2">
             <a href={relatedMeta?.url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50">
@@ -359,9 +410,9 @@ function ComparisonTable({ left, right, isLoading, lDomain, rDomain, lNewsId, rN
                 ...(isLast ? { borderBottom: `4px solid ${L_BORDER}` } : {}),
               }}>
               {/* Mobile-only: show "This Article" label above the metric */}
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1 md:hidden"
+              <p className="text-xs font-bold uppercase tracking-widest mb-1 md:hidden"
                 style={{ color: L_COLOR }}>This Article</p>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{label}</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">{label}</p>
               <Cell data={left} loading={false} />
             </div>
 
@@ -372,9 +423,9 @@ function ComparisonTable({ left, right, isLoading, lDomain, rDomain, lNewsId, rN
                 ...(isLast ? { borderBottom: `4px solid ${R_BORDER}` } : {}),
               }}>
               {/* Mobile-only: show "Related Article" label above the metric */}
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1 md:hidden"
+              <p className="text-xs font-bold uppercase tracking-widest mb-1 md:hidden"
                 style={{ color: R_COLOR }}>Related Article</p>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{label}</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">{label}</p>
               <Cell data={right} loading={isLoading} />
             </div>
           </div>
@@ -475,7 +526,7 @@ const ComparisonPage = () => {
 
       {/* Sticky subnav — plain full-width div, NOT inside app-container,
           so it aligns flush with the app navbar above */}
-      <div className="sticky top-16 z-20 bg-white border-b border-slate-200 shadow-sm">
+      <div className="sticky top-20 z-20 bg-white border-b border-slate-200 shadow-sm">
         <div className="w-full px-4 py-2.5 flex items-center justify-between gap-2">
           <button onClick={()=>navigate(-1)}
             className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors shrink-0">
@@ -484,7 +535,7 @@ const ComparisonPage = () => {
           </button>
           <div className="flex items-center gap-1.5 min-w-0">
             <GitCompareArrows className="h-4 w-4 text-indigo-500 shrink-0" />
-            <span className="text-sm font-bold text-slate-700 truncate">Article Comparison</span>
+            <span className="text-md font-bold text-slate-700 truncate">Article Comparison</span>
             {isLoading && (
               <span className="flex items-center gap-1 text-xs text-indigo-400 shrink-0">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -493,7 +544,7 @@ const ComparisonPage = () => {
             )}
             {loadingStage==="done" && (
               /* Always show on mobile too — but keep it compact */
-              <span className="text-xs text-green-600 font-semibold shrink-0">
+              <span className="text-sm text-green-600 font-semibold shrink-0">
                 ✓ <span className="hidden sm:inline">Both ready</span>
               </span>
             )}

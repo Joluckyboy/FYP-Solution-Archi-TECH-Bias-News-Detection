@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Eye, ChevronDown } from "lucide-react";
 
 const COVERAGE_DESCRIPTIONS = {
-    left: "Left-leaning outlets tend to frame headlines around systemic issues, policy impacts, and community effects. High passive voice may indicate focus on victims or structures rather than individual actors.",
+    left: "Left-leaning outlets tend to frame headlines around systemic issues, policy impacts, and community effects. High passive voice may indicate focus on victims or structures.",
     center: "Centrist outlets typically aim for neutral framing. Balanced active/passive voice and fewer charged keywords suggest an effort to report facts without ideological emphasis.",
     right: "Right-leaning outlets often emphasise individual responsibility and government accountability. High active voice may reflect a direct, attribution-focused writing style.",
 };
@@ -16,11 +16,11 @@ const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {
     }
 
     return (
-        <div className="mt-6 rounded-xl border border-slate-200 bg-gray-200 shadow-sm overflow-hidden mb-12">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-gray-200 shadow-sm mb-12 hover:border-blue-400 transition-colors">
             {/* Accordion Header — always visible */}
             <button
                 onClick={() => setIsOpen(prev => !prev)}
-                className="w-full px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 text-left hover:bg-slate-50 transition-colors"
+                className={`w-full px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 text-left hover:bg-slate-50 transition-colors focus:outline-none ${isOpen ? 'rounded-t-xl' : 'rounded-xl'}`}
             >
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -54,7 +54,7 @@ const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {
                     transition: "max-height 0.4s ease, opacity 0.3s ease",
                 }}
             >
-                <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white">
+                <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white rounded-b-xl overflow-hidden">
                     {[
                         { key: "left", label: "Left Coverage", headerClass: "text-blue-700 bg-blue-50", badgeClass: "bg-blue-100 text-blue-800", barColor: "bg-blue-500" },
                         { key: "center", label: "Center Coverage", headerClass: "text-purple-600 bg-purple-50", badgeClass: "bg-purple-200 text-purple-700", barColor: "bg-purple-400" },
