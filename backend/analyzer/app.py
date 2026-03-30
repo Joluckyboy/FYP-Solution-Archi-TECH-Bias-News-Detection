@@ -13,6 +13,7 @@ from .helpers import (
     SCRAPED_DATA_PATH,
     extract_keywords,
     fetch_topics_data,
+    bust_topics_cache,
     _safe_read_csv,
     find_cluster_id_by_title,
     filter_related,
@@ -48,6 +49,15 @@ def _resolve_writable_scraped_data_path() -> str:
 async def lifespan(app: FastAPI):
     print("Analyzer starting (lazy model loading).")
     s3_sync.ensure_scraped_csv()
+
+    # Pre-warm topics cache on startup so the first request is instant
+    print("Pre-warming topics cache...")
+    topics, err = fetch_topics_data()
+    if err:
+        print(f"Pre-warm failed: {err}")
+    else:
+        print(f"Pre-warm complete: {len(topics)} topics cached.")
+
     yield
 
 
@@ -255,10 +265,8 @@ def cluster_and_save():
     except Exception as e:
         return JSONResponse({"error": f"S3 upload failed: {e}"}, status_code=500)
 
-    # ── 5. Bust in-memory topics cache ────────────────────────────────────────
-    _dh._topics_cache = None
-    _dh._topics_cache_time = 0.0
-    _dh._topics_cache_csv_mtime = 0.0
+    # ── 5. Bust topics cache (memory + Redis) ──────────────────────────────────
+    bust_topics_cache()
 
     print(f"[cluster] Done. {len(topics)} clusters from {len(df)} articles.")
     return {"status": "ok", "articles": len(df), "clusters": len(topics)}

@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..core import s3_sync
 from ..core.services import get_topic_service
+from ..core.redis_cache import get_cached, set_cached, delete_cached
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -184,71 +185,102 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+_REDIS_TOPICS_KEY = "analyzer:topics"
+_REDIS_TOPICS_TTL = 21600  # 6 hours — covers EC2 uptime window (12pm-6pm)
+
+
 def fetch_topics_data() -> tuple[list | None, str | None]:
     """
     Returns (topics, error_string).
-    Priority: semantic clustering → CSV topic-column fallback.
+    Cache priority: in-memory → Redis → rebuild from CSV.
     """
+    global _topics_cache, _topics_cache_time, _topics_cache_csv_mtime
+
+    now = _time.time()
+
+    # ── 1. In-memory cache (fastest) ──────────────────────────────────────
+    try:
+        csv_mtime = os.path.getmtime(SCRAPED_DATA_PATH) if os.path.exists(SCRAPED_DATA_PATH) else 0.0
+    except OSError:
+        csv_mtime = 0.0
+
+    mem_fresh = (
+        _topics_cache is not None
+        and (now - _topics_cache_time) < _TOPICS_CACHE_TTL
+        and csv_mtime == _topics_cache_csv_mtime
+    )
+    if mem_fresh:
+        print("Returning in-memory cached topics.")
+        return _topics_cache, None
+
+    # ── 2. Redis cache (survives restarts) ────────────────────────────────
+    redis_data = get_cached(_REDIS_TOPICS_KEY)
+    if redis_data is not None:
+        print("Returning Redis cached topics.")
+        _topics_cache = redis_data
+        _topics_cache_time = now
+        _topics_cache_csv_mtime = csv_mtime
+        return redis_data, None
+
+    # ── 3. Rebuild from CSV ───────────────────────────────────────────────
     s3_sync.ensure_scraped_csv()
     df = _safe_read_csv(SCRAPED_DATA_PATH)
 
     if df is None or len(df) == 0:
         return None, f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}."
 
-    global _topics_cache, _topics_cache_time, _topics_cache_csv_mtime
-
-    now = _time.time()
+    # Refresh mtime after potential S3 download
     try:
         csv_mtime = os.path.getmtime(SCRAPED_DATA_PATH)
     except OSError:
         csv_mtime = 0.0
 
-    cache_fresh = (
-        _topics_cache is not None
-        and (now - _topics_cache_time) < _TOPICS_CACHE_TTL
-        and csv_mtime == _topics_cache_csv_mtime
-    )
-    if cache_fresh:
-        print("Returning cached topics.")
-        return _topics_cache, None
+    topics = None
 
     if "cluster_id" in df.columns and df["cluster_id"].notna().any():
         print(f"Building topics from cluster_id ({len(df)} rows)...")
         try:
-            topics = _build_topics_from_cluster_id(df)  # ← new function (Change 2)
-            _topics_cache = topics
-            _topics_cache_time = now
-            _topics_cache_csv_mtime = csv_mtime
-            return topics, None
+            topics = _build_topics_from_cluster_id(df)
         except Exception as e:
             print(f"cluster_id grouping failed: {e}")
             traceback.print_exc()
 
-    print(f"Running TopicClusteredService on {len(df)} rows...")
-    try:
-        topics = get_topic_service().cluster_articles(df)
-        _topics_cache = topics
-        _topics_cache_time = now
-        _topics_cache_csv_mtime = csv_mtime
-        return topics, None
-    except Exception as e:
-        print(f"TopicClusteredService failed: {e}")
-        traceback.print_exc()
+    if topics is None:
+        print(f"Running TopicClusteredService on {len(df)} rows...")
+        try:
+            topics = get_topic_service().cluster_articles(df)
+            # Write cluster_id back to local CSV so future rebuilds use the fast path
+            _backfill_cluster_ids(df, topics)
+        except Exception as e:
+            print(f"TopicClusteredService failed: {e}")
+            traceback.print_exc()
 
-    if "topic" in df.columns:
-        print(
-            f"Falling back to CSV topic grouping: {SCRAPED_DATA_PATH} ({len(df)} rows)"
+    if topics is None and "topic" in df.columns:
+        print(f"Falling back to CSV topic grouping: {SCRAPED_DATA_PATH} ({len(df)} rows)")
+        topics = _build_topics_from_scraped_csv(df)
+
+    if topics is None:
+        return None, (
+            f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}. "
+            "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
         )
-        fallback = _build_topics_from_scraped_csv(df)
-        _topics_cache = fallback
-        _topics_cache_time = now
-        _topics_cache_csv_mtime = csv_mtime
-        return fallback, None
 
-    return None, (
-        f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}. "
-        "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
-    )
+    # Populate both caches
+    _topics_cache = topics
+    _topics_cache_time = now
+    _topics_cache_csv_mtime = csv_mtime
+    set_cached(_REDIS_TOPICS_KEY, topics, ttl=_REDIS_TOPICS_TTL)
+
+    return topics, None
+
+
+def bust_topics_cache():
+    """Clear both in-memory and Redis topic caches (called after /dashboard/cluster)."""
+    global _topics_cache, _topics_cache_time
+    _topics_cache = None
+    _topics_cache_time = 0.0
+    delete_cached(_REDIS_TOPICS_KEY)
+    print("Topics cache busted (memory + Redis).")
 
 
 # ---------------------------------------------------------------------------
@@ -444,6 +476,29 @@ def _compute_silent_outlets(group: pd.DataFrame) -> dict:
         "center_silent": center_vol == 0
         and (left_vol >= threshold or right_vol >= threshold),
     }
+
+
+# ---------------------------------------------------------------------------
+# Backfill cluster_id into local CSV after on-demand S-BERT clustering
+# ---------------------------------------------------------------------------
+
+
+def _backfill_cluster_ids(df: pd.DataFrame, topics: list[dict]) -> None:
+    """Write cluster_id back into the local CSV so future cache misses use the fast path."""
+    try:
+        cluster_map: dict[str, str] = {}
+        for topic in topics:
+            cid = str(topic.get("id", ""))
+            for article in topic.get("articles", []):
+                title = article.get("title", "")
+                if title:
+                    cluster_map[title] = cid
+
+        df["cluster_id"] = df["title"].map(cluster_map).fillna("unclustered")
+        df.to_csv(SCRAPED_DATA_PATH, index=False)
+        print(f"[backfill] Wrote cluster_id to local CSV ({len(cluster_map)} mapped).")
+    except Exception as e:
+        print(f"[backfill] Failed to write cluster_id to CSV: {e}")
 
 
 # ---------------------------------------------------------------------------
