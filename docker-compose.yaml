@@ -69,6 +69,7 @@ services:
       - SCRAPER_DATA_DIR=/app/data
       - TRANSFORMERS_OFFLINE=1
       - HF_HUB_OFFLINE=1
+      - REDIS_URL=redis://redis:6379
     env_file:
       - ./backend/.env
     restart: always

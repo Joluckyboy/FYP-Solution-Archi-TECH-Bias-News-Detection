@@ -6,6 +6,7 @@ Re-exports for data_helpers.
 
 from .data_helpers import (
     fetch_topics_data,
+    bust_topics_cache,
     extract_keywords,
     _safe_read_csv,
     DEFAULT_BIAS_DISTRIBUTION,
@@ -19,6 +20,7 @@ from .related_helpers import (
 
 __all__ = [
     "fetch_topics_data",
+    "bust_topics_cache",
     "extract_keywords",
     "_safe_read_csv",
     "DEFAULT_BIAS_DISTRIBUTION",
