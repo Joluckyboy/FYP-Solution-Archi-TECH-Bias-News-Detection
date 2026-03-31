@@ -13,3 +13,4 @@ boto3
 langdetect==1.0.9
 pytesseract
 Pillow
+yt-dlp

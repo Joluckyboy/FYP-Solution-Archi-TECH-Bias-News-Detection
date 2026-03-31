@@ -205,10 +205,53 @@ def scrape_generic_article(url, skip_age_check=False):
         body = article.text
         headline = article.title
         
-        if not body or len(body.strip()) < 100:
-            logger.warning(f"newspaper3k insufficient content: {url}")
-            return None
-        
+        is_video_page = '/video/' in url or '/videos/' in url
+        min_length = 30 if is_video_page else 100
+
+        if not body or len(body.strip()) < min_length:
+            # For video pages, try to extract description from BeautifulSoup as fallback
+            if is_video_page:
+                try:
+                    import requests as _requests
+                    from bs4 import BeautifulSoup as bs
+                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                    res = _requests.get(url, headers=headers, timeout=10)
+                    soup = bs(res.content, "html.parser")
+
+                    # Try og:description first (most reliable for video pages)
+                    og_desc = soup.find("meta", property="og:description")
+                    if og_desc and og_desc.get("content"):
+                        body = og_desc["content"].strip()
+
+                    # Then try all <p> tags
+                    if not body or len(body) < 30:
+                        paras = [p.get_text(strip=True) for p in soup.find_all("p") if len(p.get_text(strip=True)) > 20]
+                        body = " ".join(paras)
+
+                    # Try the page title + description as last resort
+                    if not body or len(body) < 30:
+                        og_title = soup.find("meta", property="og:title")
+                        if og_title and og_title.get("content"):
+                            body = og_title["content"].strip()
+
+                    if not body or len(body) < 10:
+                        logger.warning(f"Video page: could not extract any content from {url}")
+                        return None
+
+                    logger.info(f"Video page fallback extraction: {len(body)} chars from {url}")
+
+                    # Re-extract headline for video pages if newspaper3k missed it
+                    if not headline or headline == url:
+                        og_title = soup.find("meta", property="og:title")
+                        headline = og_title["content"].strip() if og_title and og_title.get("content") else headline
+
+                except Exception as e:
+                    logger.warning(f"Video page fallback failed for {url}: {e}")
+                    return None
+            else:
+                logger.warning(f"newspaper3k insufficient content: {url}")
+                return None
+                
         body = clean_boilerplate(body, preserve_paragraphs=True)
         
         if not is_english_text(body):

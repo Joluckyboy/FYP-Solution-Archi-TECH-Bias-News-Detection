@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
+import { isNonNewsDomain, isYouTubeUrl } from "@/utils/newsURLClassifier";
 import get_api, { get_analyzer } from "@/config/config";
 import BiasLabelGuide from "@/components/BiasLabelGuide";
 import TrendingKeywords from "@/components/TrendingKeywords";
@@ -30,6 +31,8 @@ const LandingPage = () => {
   const [articleURL, setArticleURL] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState(false);
+  const [nonNewsError, setNonNewsError] = useState(false);
+  const [youtubeError, setYoutubeError] = useState(false); // ← ADD
   const [forceReanalyze] = useState(false);
 
   // ── Topics state (lifted here so filter pills can share it) ──────────────
@@ -118,44 +121,42 @@ const LandingPage = () => {
   };
 
   const handleButtonClick = () => {
-    console.log(`Button was clicked: ${articleURL}`);
-    if (!articleURL) {
-      setError(true);
-      return;
-    }
+    setError(false);
+    setNonNewsError(false);
+    setYoutubeError(false); // ← ADD
 
-    const new_query = async () => {
-      try {
-        // Notify background script that analysis is starting (for badge update)
-        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
-          chrome.runtime.sendMessage({ action: "analysisStarted" });
-        }
+    if (!articleURL) { setError(true); return; }
+    if (isNonNewsDomain(articleURL)) { setNonNewsError(true); return; }
 
-        // "url": articleURL in body (not params)
-        // let res = await axios.get(`${API_URL}/application/new_query`);
-        let res = await axios.post(`${API_URL}/application/new_query`, {
-          url: articleURL,
-          force: forceReanalyze,
-        });
-        let data = res.data;
-
-        // setData(apiData);
-        console.log("landing page API fetch successful:", data);
-
-        navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
-      } catch (error) {
-        console.error("API fetch failed, using fallback JSON:", error);
-        setError(true);
-        // Clear badge on error
-        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
-          chrome.runtime.sendMessage({ action: "clearBadge" });
-        }
-      }
-    };
-
-    // Redirect to the results page with the article URL in body (not params)
-    // history.push("/results", { articleURL });
     new_query();
+  };
+
+  const new_query = async () => {
+    try {
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage({ action: "analysisStarted" });
+      }
+      let res = await axios.post(`${API_URL}/application/new_query`, {
+        url: articleURL,
+        force: forceReanalyze,
+      });
+      let data = res.data;
+      navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
+    } catch (error) {
+      console.error("API fetch failed:", error);
+
+      // ── YouTube-specific error ──────────────────────────────────────────
+      if (isYouTubeUrl(articleURL)) {
+        setYoutubeError(true);
+      } else {
+        setError(true);
+      }
+      // ───────────────────────────────────────────────────────────────────
+
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage({ action: "clearBadge" });
+      }
+    }
   };
 
   return (
@@ -166,7 +167,8 @@ const LandingPage = () => {
           Your Move Against Misinformation
         </h1>
         <h2 className="text-lg sm:text-2xl">
-          Analyse any article for emotions, sentiment, and facts.
+          Analyse any news article, news website video, or YouTube news video for 
+          emotions, sentiment, facts, propaganda, and political bias.
         </h2>
       </div>
 
@@ -178,25 +180,49 @@ const LandingPage = () => {
             value={articleURL}
             onChange={handleInputChange}
           />
+          <p className="text-s text-slate-400 text-center mt-2">
+            Supports news articles, video pages (CNN, NBC News, Today.com, Fox News…), and YouTube 
+            channels from CNA, BBC, Reuters, and more
+          </p>
           <br />
           <div className="flex justify-center items-center w-full mt-4 mb-8 sm:mb-16">
             <Button onClick={handleButtonClick} className="bg-blue-700">
               Analyse Now
             </Button>
           </div>
-          {error ? (
+          {youtubeError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Unsupported YouTube Channel</AlertTitle>
+              <AlertDescription>
+                Only YouTube videos from news channels are supported (e.g. CNA, 
+                BBC News, Reuters, NBC News). Please submit a video from a 
+                recognised news organisation.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {nonNewsError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Not a News Article</AlertTitle>
+              <AlertDescription>
+                This URL doesn't appear to be a news source. CheckMate supports
+                news articles, news outlet video pages, and YouTube videos from
+                news channels (e.g. CNA, BBC, Reuters).
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
-                Something went wrong. Please try again.
-                <br />
-                Ensure that the input is not empty or that you are using a valid
-                URL.
+                Something went wrong. Please try again. Ensure that the input
+                is not empty or that you are using a valid URL.
               </AlertDescription>
             </Alert>
-          ) : (
-            <></>
           )}
         </div>
       </div>

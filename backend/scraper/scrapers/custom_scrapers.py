@@ -6,7 +6,7 @@ import requests
 import logging
 from bs4 import BeautifulSoup as bs
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from utils.text_processing import clean_boilerplate, is_english_text, smart_truncate
 from utils.topic_classifier import derive_topic_from_metadata
 
@@ -15,6 +15,24 @@ logger = logging.getLogger(__name__)
 # CRITICAL: Only scrape articles from last 7 days
 MAX_ARTICLE_AGE_DAYS = 7
 
+KNOWN_NEWS_YOUTUBE_CHANNELS = {
+    "@CNA": "Channel NewsAsia",
+    "@ChannelNewsAsia": "Channel NewsAsia",
+    "@straits_times": "The Straits Times",
+    "@StraitsTimes": "The Straits Times",
+    "@TODAYonline": "TODAY Online",
+    "@mothership": "Mothership",
+    "@CNN": "CNN",
+    "@NBCNews": "NBC News",
+    "@FoxNews": "Fox News",
+    "@BBCNews": "BBC News",
+    "@reuters": "Reuters",
+    "@AP": "Associated Press",
+    "@NPR": "NPR",
+    "@ABCNews": "ABC News",
+    "@CBSNews": "CBS News",
+    "@MSNBC": "MSNBC",
+}
 
 def retrieve_straits_urls(specified_length: int | None):
     """Retrieve Straits Times article URLs"""
@@ -403,3 +421,192 @@ def scrape_fox_news(url, skip_age_check=False):
     except Exception as e:
         logger.error(f"Fox News scraping error for {url}: {e}")
         return None
+
+def scrape_video_with_ytdlp(url: str, skip_age_check: bool = False) -> dict | None:
+    """
+    Extract video info + captions from news video pages using yt-dlp.
+    Supports: CNN, NBC News, Today.com, Fox News, and 1000+ other sites.
+    No API key needed. Falls back to og:description if no captions found.
+    """
+    try:
+        import yt_dlp
+        import re
+
+        ydl_opts = {
+            'skip_download': True,
+            'writesubtitles': True,
+            'writeautomaticsub': True,
+            'subtitleslangs': ['en', 'en-US'],
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+
+        if not info:
+            return None
+
+        # ── For YouTube URLs, reject non-news channels ──────────────────
+        parsed_netloc = urlparse(url).netloc.lower()
+        if 'youtube' in parsed_netloc or 'youtu.be' in parsed_netloc:
+            if not _is_news_youtube_url(url, info):
+                uploader = info.get('uploader', 'Unknown')
+                logger.info(
+                    f"yt-dlp: skipping non-news YouTube channel '{uploader}' for {url}"
+                )
+                return None  # ← reject non-news YouTube videos entirely
+
+        title = (info.get('title') or '').strip().replace('\n', ' ')
+        description = (info.get('description') or '').strip()
+        upload_date = info.get('upload_date')   # YYYYMMDD
+        thumbnail = info.get('thumbnail', '')
+
+        # --- Age filter ---
+        if upload_date and not skip_age_check:
+            try:
+                from datetime import datetime
+                date_obj = datetime.strptime(upload_date, '%Y%m%d')
+                if (datetime.now() - date_obj).days > MAX_ARTICLE_AGE_DAYS:
+                    logger.debug(f"yt-dlp: skipping old video ({upload_date}): {url}")
+                    return None
+            except Exception:
+                pass
+
+        publish_date = None
+        if upload_date:
+            try:
+                from datetime import datetime
+                publish_date = datetime.strptime(upload_date, '%Y%m%d').strftime('%Y-%m-%d')
+            except Exception:
+                pass
+
+        # --- Try to get subtitle/caption text ---
+        transcript_text = ''
+        subtitles = info.get('subtitles') or {}
+        auto_caps = info.get('automatic_captions') or {}
+
+        # Prefer manual subtitles, fall back to auto-captions
+        sub_formats = subtitles.get('en') or subtitles.get('en-US') or \
+                      auto_caps.get('en') or auto_caps.get('en-US') or []
+
+        for fmt in sub_formats:
+            ext = fmt.get('ext', '')
+            sub_url = fmt.get('url', '')
+            if not sub_url:
+                continue
+            try:
+                sub_resp = requests.get(sub_url, timeout=10)
+                raw = sub_resp.text
+
+                if ext == 'vtt':
+                    lines = raw.split('\n')
+                    seen_lines = set()  # ← add this
+                    clean = []
+                    for l in lines:
+                        stripped = re.sub(r'<[^>]+>', '', l).strip()
+                        # Skip VTT metadata lines
+                        if not stripped:
+                            continue
+                        if stripped.startswith('WEBVTT'):
+                            continue
+                        if re.match(r'^\d{2}:\d{2}', stripped):
+                            continue
+                        if '-->' in stripped:
+                            continue
+                        if re.match(r'^\d+$', stripped):
+                            continue
+                        # ← Dedup overlapping caption lines
+                        if stripped in seen_lines:
+                            continue
+                        seen_lines.add(stripped)
+                        clean.append(stripped)
+                    transcript_text = ' '.join(clean)
+                elif ext == 'json3':
+                    import json as _json
+                    data = _json.loads(raw)
+                    events = data.get('events', [])
+                    segs = []
+                    for ev in events:
+                        for seg in ev.get('segs', []):
+                            t = seg.get('utf8', '').strip()
+                            if t and t != '\n':
+                                segs.append(t)
+                    transcript_text = ' '.join(segs)
+                elif ext in ('srv1', 'srv2', 'srv3'):
+                    # Strip XML tags
+                    transcript_text = re.sub(r'<[^>]+>', ' ', raw)
+                    transcript_text = re.sub(r'\s+', ' ', transcript_text).strip()
+
+                if len(transcript_text) > 50:
+                    break   # got a good transcript, stop trying formats
+            except Exception as e:
+                logger.debug(f"yt-dlp subtitle fetch failed ({ext}): {e}")
+                continue
+
+        # --- Body: prefer transcript, fall back to description ---
+        body = transcript_text if len(transcript_text) > 100 else description
+
+        if not body or len(body.strip()) < 20:
+            logger.warning(f"yt-dlp: no usable content for {url}")
+            return None
+
+        from utils.text_processing import smart_truncate
+        from utils.topic_classifier import derive_topic_from_metadata
+
+        topic = derive_topic_from_metadata(url=url, text=f"{title} {body}")
+
+        logger.info(
+            f"yt-dlp scraped '{title[:50]}' | "
+            f"transcript={len(transcript_text)} chars | "
+            f"desc={len(description)} chars"
+        )
+
+        return {
+            'headline': title,
+            'body': body,
+            'summary': smart_truncate(body.replace('\n', ' '), 300),
+            'publish_date': publish_date,
+            'image_url': thumbnail,
+            'topic': topic,
+            'uploader': info.get('uploader', ''),        # e.g. "CNA"
+            'uploader_url': info.get('uploader_url', ''), # e.g. "https://www.youtube.com/@CNA"
+        }
+
+    except Exception as e:
+        logger.error(f"yt-dlp failed for {url}: {e}")
+        return None
+
+
+def _is_video_url(url: str) -> bool:
+    """Detect video pages from any news outlet."""
+    video_signals = [
+        '/video/', '/videos/', '/video-', '-video/',
+        'digvid', 'vrtc', '/watch/', '/clip/',
+    ]
+    path = urlparse(url).path.lower()
+    return any(s in path for s in video_signals)
+
+def _is_news_youtube_url(url: str, info: dict = None) -> bool:
+    """
+    Check if a YouTube URL belongs to a known news channel.
+    Uses yt-dlp info dict if available (has uploader_url),
+    otherwise falls back to True to allow scraping and let
+    the uploader check filter it post-extraction.
+    """
+    if info:
+        uploader_url = info.get('uploader_url', '') or ''
+        uploader = info.get('uploader', '') or ''
+        channel = info.get('channel', '') or ''
+        
+        # Check if any known news channel matches
+        for handle in KNOWN_NEWS_YOUTUBE_CHANNELS:
+            handle_clean = handle.lstrip('@').lower()
+            if (handle_clean in uploader_url.lower() or 
+                handle_clean in uploader.lower() or
+                handle_clean in channel.lower()):
+                return True
+        return False
+    
+    # No info yet — allow and check after extraction
+    return True
