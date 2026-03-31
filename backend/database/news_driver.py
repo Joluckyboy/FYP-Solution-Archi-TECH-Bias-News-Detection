@@ -124,6 +124,15 @@ def read_document_by_url(url):
         print(f"Error reading document by URL: {e}")
         return None
 
+def update_uploader_by_url(url: str, uploader: str):
+    """Update the uploader field for a news document by URL."""
+    try:
+        supabase.table("news_data").update({
+            "uploader": uploader
+        }).eq("url", url).execute()
+    except Exception as e:
+        print(f"Error updating uploader by URL: {e}")
+
 # Update
 def update_documents(filter_data, update_data):
     """Update news documents matching filters."""
@@ -241,26 +250,33 @@ def update_political_bias_by_url(url, update_data):
         print(f"Error updating political bias by URL: {e}")
 
 def read_documents_by_domain(domain):
-    """Read all news documents whose URL matches the given domain.
-
-    Matches ://domain/ and ://www.domain/ to avoid false positives
-    from substring matches (e.g. 'news' matching every news site).
-    """
     try:
         cols = "url,title,sentiment_result,propaganda_result,factcheck_result"
-        # Match exact domain: ://domain/ (with or without www.)
-        result_exact = supabase.table("news_data").select(
-            cols
-        ).ilike("url", f"%://{domain}/%").execute()
 
-        result_www = supabase.table("news_data").select(
-            cols
-        ).ilike("url", f"%://www.{domain}/%").execute()
+        # Match: cnn.com/...
+        result_exact = supabase.table("news_data").select(cols).ilike(
+            "url", f"%://{domain}/%"
+        ).execute()
+
+        # Match: www.cnn.com/...
+        result_www = supabase.table("news_data").select(cols).ilike(
+            "url", f"%://www.{domain}/%"
+        ).execute()
+
+        # Match: edition.cnn.com/..., lite.cnn.com/... (any subdomain)  ← ADD THIS
+        result_sub = supabase.table("news_data").select(cols).ilike(
+            "url", f"%://%.{domain}/%"
+        ).execute()
 
         # Deduplicate by URL
         seen = set()
         combined = []
-        for article in (result_exact.data or []) + (result_www.data or []):
+        all_results = (
+            (result_exact.data or []) +
+            (result_www.data or []) +
+            (result_sub.data or [])         # ← ADD THIS
+        )
+        for article in all_results:
             if article["url"] not in seen:
                 seen.add(article["url"])
                 combined.append(article)
@@ -269,7 +285,6 @@ def read_documents_by_domain(domain):
     except Exception as e:
         print(f"Error reading documents by domain: {e}")
         return []
-
 
 # Delete
 def delete_documents(filter_data):

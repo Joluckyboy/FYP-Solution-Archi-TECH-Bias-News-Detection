@@ -212,13 +212,16 @@ const TrustSnapshot = ({ data, apiUrl }) => {
   const [credLoading, setCredLoading] = useState(false);
 
   useEffect(() => {
-    if (!apiUrl || !data?.url) return;
-    const domain = domainFromUrl(data.url);
-    setCredLoading(true);
-    fetch(`${apiUrl}/application/source_credibility?domain=${encodeURIComponent(domain)}`)
-      .then(r => r.json()).then(setCredibility)
-      .catch(() => setCredibility(null)).finally(() => setCredLoading(false));
-  }, [apiUrl, data?.url]);
+      if (!apiUrl || !data?.url) return;
+      const domain = domainFromUrl(data.url);
+      const uploader = data?.uploader || "";
+      const params = new URLSearchParams({ domain });
+      if (uploader) params.set("video_uploader", uploader);
+      setCredLoading(true);
+      fetch(`${apiUrl}/application/source_credibility?${params.toString()}`)
+        .then(r => r.json()).then(setCredibility)
+        .catch(() => setCredibility(null)).finally(() => setCredLoading(false));
+  }, [apiUrl, data?.url, data?.uploader]);
 
   const trust = useMemo(
     () => data ? computeTrustScore({ factcheckResult: data.factcheck_result, propagandaResult: data.propaganda_result }) : null,

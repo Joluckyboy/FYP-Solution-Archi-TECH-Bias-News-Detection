@@ -14,6 +14,7 @@ class FactCheckItem(BaseModel):
 class NewsItem(URLItem):
     title: Optional[str] = None
     content: Optional[str] = None
+    uploader: Optional[str] = None        # ← add this line
     sentiment_result: Optional[Dict[str, Any]] = None
     emotion_result: Optional[Dict[str, Any]] = None
     propaganda_result: Optional[Dict[str, Any]] = None

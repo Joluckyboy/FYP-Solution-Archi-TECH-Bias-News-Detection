@@ -387,7 +387,8 @@ const ResultsPage = () => {
   );
 
   const domain = (() => { try { return new URL(data.url).hostname.replace("www.", ""); } catch { return data.url; } })();
-  const sourceLabel = data?.source || domain;
+  const sourceLabel = data?.uploader || data?.source || domain;
+
   const faviconUrl = domain
     ? `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=64`
     : null;

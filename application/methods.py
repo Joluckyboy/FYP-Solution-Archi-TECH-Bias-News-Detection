@@ -161,10 +161,10 @@ def get_news_by_id (news_id):
 
     return news
 
-def create_news (url, title, content):
+def create_news (url, title, content, uploader: str = ""):
     
     query_url = vars.database_url + "/database/"
-    data = {"url": url, "title": title, "content": content}
+    data = {"url": url, "title": title, "content": content, "uploader": uploader}
 
     response = requests.post(query_url, json=data)
     news = response.json()

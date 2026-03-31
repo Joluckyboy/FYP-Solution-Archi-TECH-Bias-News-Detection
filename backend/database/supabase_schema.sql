@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS news_data (
     propaganda_result JSONB,
     factcheck_result JSONB,
     summarise_result TEXT,
+    uploader TEXT,
     data_summary JSONB,
     political_bias_result JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),

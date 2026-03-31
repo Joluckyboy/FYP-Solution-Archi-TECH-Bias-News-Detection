@@ -81,21 +81,24 @@ def check_url_exists(data: NewsItem):
         }
     }
 })
+
 def create_news(data: NewsItem):
     # Check if URL already exists
     if news_methods.check_url_exists(data.url):
-        # return 201 and the existing document
         news = news_methods.read_document_by_url(data.url)
+        # If uploader now provided but wasn't saved before, update it
+        if data.uploader and not news.get("uploader"):
+            news_methods.update_uploader_by_url(data.url, data.uploader)
         return JSONResponse(status_code=201, content=news)
 
     news_data = {
         "url": data.url,
         "title": data.title,
-        "content": data.content
+        "content": data.content,
+        "uploader": data.uploader or "",   # ← add this line
     }
     news_id = news_methods.create_document(news_data)
     return JSONResponse(status_code=200, content={"id": news_id})
-
 
 @app.get("/database/getAll/", responses={
     200: {
@@ -225,7 +228,7 @@ def update_news_data_summary_by_url(data: NewsItem):
 })
 def update_news_factcheck_by_url(data: NewsItem):
     factcheck_result_dicts = [
-        fact.dict() for fact in data.factcheck_result] if data.factcheck_result else []
+        fact.model_dump() for fact in data.factcheck_result] if data.factcheck_result else []
 
     news_methods.update_factcheck_by_url(data.url, factcheck_result_dicts)
     return JSONResponse(status_code=200, content={"message": "Fact-check result updated successfully"})
