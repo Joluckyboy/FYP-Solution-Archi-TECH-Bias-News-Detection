@@ -163,10 +163,11 @@ def filter_related(cluster_df: pd.DataFrame, source_domain: str, query_title: st
         seen_sources.add(source)
         related.append({c: str(row.get(c, "") or "") for c in available})
 
-    # Sort by bias spectrum
+    from .data_helpers import _normalize_bias_label
+    # Sort by bias spectrum, normalizing labels first
     related.sort(
         key=lambda a: bias_order.get(
-            (a.get("political_bias") or "").lower().strip(), 5
+            _normalize_bias_label(a.get("political_bias") or ""), 5
         )
     )
     return related[:15]

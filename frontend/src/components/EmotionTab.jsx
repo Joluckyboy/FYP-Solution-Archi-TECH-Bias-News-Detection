@@ -43,6 +43,7 @@ const EMOTION_EMOJI = {
   confusion: "😕", admiration: "🤩", surprise: "😮", caring: "🤗",
   relief: "😌", realisation: "💡", pride: "🦁", grief: "😭",
   remorse: "😔", embarrassment: "😳", nervousness: "😰",
+  disgust: "🤢", desire: "✨", gratitude: "🙏", amusement: "😂",
 };
 
 const EMOTION_MEANING = {
@@ -70,6 +71,10 @@ const EMOTION_MEANING = {
   relief:         "This article reflects a sense of tension being resolved.",
   nervousness:    "This article carries an anxious or uneasy tone.",
   pride:          "This article expresses achievement or a sense of identity.",
+  desire:         "This article expresses a want, wish, or longing.",
+  gratitude:      "This article expresses thankfulness or appreciation.",
+  amusement:      "This article finds something funny or entertaining.",
+  embarrassment:  "This article expresses shame or self-consciousness.",
 };
 
 const READER_IMPACT = {
@@ -89,8 +94,21 @@ const READER_IMPACT = {
   admiration:     { icon: "🤩", text: "This article expresses strong admiration — it may be presenting someone in a very favourable light." },
   disgust:        { icon: "🤢", text: "This article contains language designed to provoke strong disgust — a common persuasion technique." },
   realisation:    { icon: "💡", text: "This article presents new information or insight that may shift your understanding of the topic." },
+  grief:          { icon: "😭", text: "This article deals with deep loss. Grief-laden writing can create strong emotional resonance that influences how you process the facts." },
+  remorse:        { icon: "😔", text: "This article expresses regret or guilt. Consider whose remorse is being described and whether it is genuine." },
+  confusion:      { icon: "😕", text: "This article deals with uncertain or conflicting information. Be cautious about drawing firm conclusions." },
+  caring:         { icon: "🤗", text: "This article expresses compassion for others. Empathetic framing can be powerful — check that it is grounded in evidence." },
+  relief:         { icon: "😌", text: "This article frames a situation as resolved. Consider whether the relief is fully warranted." },
+  nervousness:    { icon: "😰", text: "This article carries an anxious tone. Nervousness can be contagious in writing — assess whether the worry is proportionate." },
+  pride:          { icon: "🦁", text: "This article expresses pride or achievement. Pride-based framing can appeal to identity — stay critical of the underlying claims." },
+  desire:         { icon: "✨", text: "This article expresses longing or aspiration. Desire-driven framing can make things seem more appealing than they are." },
+  gratitude:      { icon: "🙏", text: "This article expresses thankfulness. Gratitude framing often presents a favourable view — consider whether other perspectives are missing." },
+  amusement:      { icon: "😂", text: "This article uses humour or levity. Amusing framing can make serious topics feel lighter and may reduce critical scrutiny." },
+  embarrassment:  { icon: "😳", text: "This article involves shame or embarrassment. Such framing can be used to discredit people — evaluate the underlying facts independently." },
+  love:           { icon: "❤️", text: "This article expresses deep affection. Emotionally warm framing can make readers more sympathetic to the subject." },
 };
 
+// ── EXPANDED to all 28 go_emotions labels ─────────────────────────────────────
 const EMOTION_GUIDE = [
   { emoji: "😐", name: "Neutral",        desc: "Reporting facts without taking a side. Common in news articles." },
   { emoji: "👍", name: "Approval",       desc: "Someone in the article is expressing support, praise, or agreement." },
@@ -104,6 +122,22 @@ const EMOTION_GUIDE = [
   { emoji: "😤", name: "Annoyance",      desc: "Mild irritation or frustration, less intense than anger." },
   { emoji: "💡", name: "Realisation",    desc: "A new understanding or discovery is being revealed." },
   { emoji: "🤔", name: "Curiosity",      desc: "The text raises questions or invites deeper thinking." },
+  { emoji: "😕", name: "Confusion",      desc: "Uncertainty or lack of clarity is expressed." },
+  { emoji: "😮", name: "Surprise",       desc: "An unexpected event or revelation is described." },
+  { emoji: "🤩", name: "Admiration",     desc: "Strong positive regard or respect is conveyed." },
+  { emoji: "❤️", name: "Love",           desc: "Warmth, affection, or deep care is expressed." },
+  { emoji: "🤗", name: "Caring",         desc: "Concern for others' wellbeing or welfare." },
+  { emoji: "✨", name: "Desire",         desc: "A want, wish, or longing is expressed." },
+  { emoji: "🎉", name: "Excitement",     desc: "High energy enthusiasm or anticipation." },
+  { emoji: "🙏", name: "Gratitude",      desc: "Thankfulness or appreciation is expressed." },
+  { emoji: "🦁", name: "Pride",          desc: "A sense of achievement or self-worth is conveyed." },
+  { emoji: "😌", name: "Relief",         desc: "Tension resolved — a stressful situation has passed." },
+  { emoji: "😂", name: "Amusement",      desc: "Something is found funny or entertaining." },
+  { emoji: "😭", name: "Grief",          desc: "Deep sorrow, often related to loss." },
+  { emoji: "😔", name: "Remorse",        desc: "Guilt or regret over a past action." },
+  { emoji: "😳", name: "Embarrassment",  desc: "Shame or self-consciousness is expressed." },
+  { emoji: "😰", name: "Nervousness",    desc: "Anxiety or apprehension about something uncertain." },
+  { emoji: "🤢", name: "Disgust",        desc: "Strong aversion or revulsion is expressed." },
 ];
 
 const THRESHOLD = 0.02;
@@ -217,7 +251,7 @@ function _buildReaderInsights(weighted_avg, dominant_emotion) {
   const secondaries = Object.entries(weighted_avg)
     .filter(([k, v]) => k !== domLower && v >= SECONDARY_THRESHOLD && !seen.has(k))
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3); // show up to 3 secondary emotions
+    .slice(0, 3);
 
   for (const [emotion] of secondaries) {
     const impact = READER_IMPACT[emotion];
@@ -253,7 +287,7 @@ const EmotionTab = ({ emotionResult }) => {
   const dominant_emotion = normaliseEmotionKey(rawDominant ?? derived.emotion);
   const dominant_score   = rawScore    ?? derived.score;
   const domLower         = dominant_emotion?.toLowerCase() ?? "neutral";
-  const domColour         = getColour(dominant_emotion);
+  const domColour        = getColour(dominant_emotion);
 
   const chartData = Object.entries(normalisedWeightedAvg)
     .filter(([, v]) => v >= THRESHOLD)
@@ -316,7 +350,7 @@ const EmotionTab = ({ emotionResult }) => {
 
           <div className="flex flex-col gap-3">
             {readerInsights.map(({ emotion, icon, text }) => {
-              const colour   = getColour(emotion);
+              const colour  = getColour(emotion);
               const example = _findExample(emotion, sentence_emotions, section_emotions);
 
               return (
@@ -330,7 +364,6 @@ const EmotionTab = ({ emotionResult }) => {
                     <span className="text-md font-bold uppercase tracking-wide capitalize" style={{ color: colour }}>
                       {emotion}
                     </span>
-                    {/* Show percentage for non-dominant emotions so user understands scale */}
                     {emotion !== domLower && normalisedWeightedAvg[emotion] !== undefined && (
                       <span className="text-sm text-gray-400 ml-auto">
                         {((normalisedWeightedAvg[emotion] ?? 0) * 100).toFixed(1)}% of article
@@ -408,6 +441,7 @@ const EmotionTab = ({ emotionResult }) => {
             </BarChart>
           </ResponsiveContainer>
 
+          {/* ── What do these emotions mean? — now shows all 28 labels ── */}
           <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
             <button
               className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-md font-medium text-gray-600 transition-colors"
