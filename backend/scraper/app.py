@@ -479,45 +479,45 @@ def article_stats():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.get("/scraper/get-article-screenscraper")
-def get_article_screenscraper(url: str = Query(...)):
-    """Screenshot + OCR via Selenium/Tesseract."""
-    try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        from PIL import Image
-        import pytesseract
+# @app.get("/scraper/get-article-screenscraper")
+# def get_article_screenscraper(url: str = Query(...)):
+#     """Screenshot + OCR via Selenium/Tesseract."""
+#     try:
+#         from selenium import webdriver
+#         from selenium.webdriver.chrome.options import Options
+#         from PIL import Image
+#         import pytesseract
 
-        random_uuid = uuid.uuid4()
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("blink-settings=imagesEnabled=false")
-        driver = webdriver.Chrome(options=options)
-        try:
-            driver.get(url)
-            time.sleep(3)
-            page_height = driver.execute_script("return document.body.scrollHeight")
-            driver.set_window_size(1920, page_height)
-            image_name = f"{random_uuid}.png"
-            driver.get_screenshot_as_file(image_name)
-            extracted_text = (
-                pytesseract.image_to_string(Image.open(image_name))
-                .strip()
-                .replace("\n", " ")
-            )
-            try:
-                os.remove(image_name)
-            except Exception:
-                pass
-            return {"body": extracted_text}
-        except Exception as e:
-            return JSONResponse({"error": f"An error occurred: {str(e)}"}, status_code=500)
-        finally:
-            driver.quit()
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+#         random_uuid = uuid.uuid4()
+#         options = Options()
+#         options.add_argument("--headless")
+#         options.add_argument("--disable-gpu")
+#         options.add_argument("--window-size=1920,1080")
+#         options.add_argument("blink-settings=imagesEnabled=false")
+#         driver = webdriver.Chrome(options=options)
+#         try:
+#             driver.get(url)
+#             time.sleep(3)
+#             page_height = driver.execute_script("return document.body.scrollHeight")
+#             driver.set_window_size(1920, page_height)
+#             image_name = f"{random_uuid}.png"
+#             driver.get_screenshot_as_file(image_name)
+#             extracted_text = (
+#                 pytesseract.image_to_string(Image.open(image_name))
+#                 .strip()
+#                 .replace("\n", " ")
+#             )
+#             try:
+#                 os.remove(image_name)
+#             except Exception:
+#                 pass
+#             return {"body": extracted_text}
+#         except Exception as e:
+#             return JSONResponse({"error": f"An error occurred: {str(e)}"}, status_code=500)
+#         finally:
+#             driver.quit()
+#     except Exception as e:
+#         return JSONResponse({"error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":
