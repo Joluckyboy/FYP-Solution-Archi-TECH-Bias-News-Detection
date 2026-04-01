@@ -163,26 +163,36 @@ class TopicClusteredService:
             ].to_dict(orient="records"),
         }
 
+    def _normalize_bias_label(self, bias: str) -> str:
+        b = (bias or "").lower().replace("_", "-").replace(" ", "-").strip()
+        if b in ["left", "lean-left", "leaning-left"]:
+            return "lean-left" if "lean" in b else "left"
+        if b in ["right", "lean-right", "leaning-right"]:
+            return "lean-right" if "lean" in b else "right"
+        if b in ["center", "centre", "neutral", "balanced"]:
+            return "center"
+        return b or "center"
+
     def _calculate_bias_counts(self, group):
         counts = {
             "left": 0,
-            "leaning_left": 0,
+            "lean-left": 0,
             "center": 0,
-            "leaning_right": 0,
+            "lean-right": 0,
             "right": 0,
         }
         for _, row in group.iterrows():
-            b = str(row.get("political_bias", "")).lower()
-            if b == "left":
+            norm = self._normalize_bias_label(row.get("political_bias", ""))
+            if norm == "left":
                 counts["left"] += 1
-            elif b == "right":
+            elif norm == "right":
                 counts["right"] += 1
-            elif b == "center":
+            elif norm == "center":
                 counts["center"] += 1
-            elif "left" in b:
-                counts["leaning_left"] += 1
-            elif "right" in b:
-                counts["leaning_right"] += 1
+            elif norm == "lean-left":
+                counts["lean-left"] += 1
+            elif norm == "lean-right":
+                counts["lean-right"] += 1
             else:
                 counts["center"] += 1
         return counts
@@ -407,7 +417,8 @@ class TopicClusteredService:
             if not title.strip():
                 continue
 
-            bias_val = str(row.get("bias", "center")).lower()
+            bias_val = str(row.get("bias", "center"))
+            norm = self._normalize_bias_label(bias_val)
 
             match_found = False
             for group in groups:
@@ -415,10 +426,16 @@ class TopicClusteredService:
                 if sim > 0.3:
                     group["articles"].append(row)
                     group["source_count"] += 1
-                    if "left" in bias_val:
+                    if norm == "left":
                         group["bias_counts"]["left"] += 1
-                    elif "right" in bias_val:
+                    elif norm == "right":
                         group["bias_counts"]["right"] += 1
+                    elif norm == "center":
+                        group["bias_counts"]["center"] += 1
+                    elif norm == "lean-left":
+                        group["bias_counts"]["lean-left"] += 1
+                    elif norm == "lean-right":
+                        group["bias_counts"]["lean-right"] += 1
                     else:
                         group["bias_counts"]["center"] += 1
                     match_found = True
@@ -431,21 +448,23 @@ class TopicClusteredService:
                     "source_count": 1,
                     "bias_counts": {
                         "left": 0,
-                        "leaning_left": 0,
+                        "lean-left": 0,
                         "center": 0,
-                        "leaning_right": 0,
+                        "lean-right": 0,
                         "right": 0,
                     },
                     "date": str(row.get("date", "")),
                 }
-                if bias_val == "left":
+                if norm == "left":
                     new_group["bias_counts"]["left"] += 1
-                elif bias_val == "leaning-left":
-                    new_group["bias_counts"]["leaning_left"] += 1
-                elif bias_val == "right":
+                elif norm == "right":
                     new_group["bias_counts"]["right"] += 1
-                elif bias_val == "leaning-right":
-                    new_group["bias_counts"]["leaning_right"] += 1
+                elif norm == "center":
+                    new_group["bias_counts"]["center"] += 1
+                elif norm == "lean-left":
+                    new_group["bias_counts"]["lean-left"] += 1
+                elif norm == "lean-right":
+                    new_group["bias_counts"]["lean-right"] += 1
                 else:
                     new_group["bias_counts"]["center"] += 1
                 groups.append(new_group)
@@ -456,9 +475,9 @@ class TopicClusteredService:
             total = group["source_count"]
             distribution = {
                 "left": (group["bias_counts"]["left"] / total) * 100,
-                "leaning_left": (group["bias_counts"]["leaning_left"] / total) * 100,
+                "lean-left": (group["bias_counts"]["lean-left"] / total) * 100,
                 "center": (group["bias_counts"]["center"] / total) * 100,
-                "leaning_right": (group["bias_counts"]["leaning_right"] / total) * 100,
+                "lean-right": (group["bias_counts"]["lean-right"] / total) * 100,
                 "right": (group["bias_counts"]["right"] / total) * 100,
             }
 

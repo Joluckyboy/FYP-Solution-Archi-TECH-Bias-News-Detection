@@ -1,4 +1,5 @@
 import { HashLoader } from 'react-spinners';
+import { normalizeBias } from "@/utils/biasNormalizer";
 
 const PoliticalBias = ({ politicalBiasResult }) => {
   if (!politicalBiasResult || !Object.keys(politicalBiasResult).length) {
@@ -25,8 +26,8 @@ const PoliticalBias = ({ politicalBiasResult }) => {
     );
   }
 
-  const biasLevels = ['Left', 'Leaning left', 'Center', 'Leaning right', 'Right'];
-  const normalizedBias = rating.toLowerCase().trim().replace(/[-_]/g, ' ');
+  const biasLevels = ['Left', 'Lean Left', 'Center', 'Lean Right', 'Right'];
+  const normalizedBias = normalizeBias(rating).replace(/-/g, ' ');
 
   return (
     <div className="space-y-4">

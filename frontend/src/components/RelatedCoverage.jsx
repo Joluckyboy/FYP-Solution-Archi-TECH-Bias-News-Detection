@@ -15,23 +15,20 @@ import {
   ChevronDown, ChevronUp, ExternalLink, Loader2,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizeBias } from "@/utils/biasNormalizer";
 
 // ─── Bias styling ─────────────────────────────────────────────────────────────
 
 const BIAS_STYLE = {
-  left:            { label: "Left",          bg: "bg-blue-100",   text: "text-blue-800",   border: "border-blue-200",   dot: "bg-blue-500"   },
-  "leaning-left":  { label: "Leaning Left",  bg: "bg-blue-50",    text: "text-blue-700",   border: "border-blue-100",   dot: "bg-blue-300"   },
-  "leaning left":  { label: "Leaning Left",  bg: "bg-blue-50",    text: "text-blue-700",   border: "border-blue-100",   dot: "bg-blue-300"   },
-  center:          { label: "Center",        bg: "bg-purple-50",  text: "text-purple-700", border: "border-purple-100", dot: "bg-purple-400" },
-  centre:          { label: "Center",        bg: "bg-purple-50",  text: "text-purple-700", border: "border-purple-100", dot: "bg-purple-400" },
-  neutral:         { label: "Center",        bg: "bg-purple-50",  text: "text-purple-700", border: "border-purple-100", dot: "bg-purple-400" },
-  "leaning-right": { label: "Leaning Right", bg: "bg-red-50",     text: "text-red-700",    border: "border-red-100",    dot: "bg-red-300"    },
-  "leaning right": { label: "Leaning Right", bg: "bg-red-50",     text: "text-red-700",    border: "border-red-100",    dot: "bg-red-300"    },
-  right:           { label: "Right",         bg: "bg-red-100",    text: "text-red-800",    border: "border-red-200",    dot: "bg-red-500"    },
+  left:         { label: "Left",       bg: "bg-blue-100",   text: "text-blue-800",   border: "border-blue-200",   dot: "bg-blue-500"   },
+  "lean-left":  { label: "Lean Left",  bg: "bg-blue-50",    text: "text-blue-700",   border: "border-blue-100",   dot: "bg-blue-300"   },
+  center:       { label: "Center",     bg: "bg-purple-50",  text: "text-purple-700", border: "border-purple-100", dot: "bg-purple-400" },
+  "lean-right": { label: "Lean Right", bg: "bg-red-50",     text: "text-red-700",    border: "border-red-100",    dot: "bg-red-300"    },
+  right:        { label: "Right",      bg: "bg-red-100",    text: "text-red-800",    border: "border-red-200",    dot: "bg-red-500"    },
 };
 
 function getBiasStyle(rawBias) {
-  const key = (rawBias || "").toLowerCase().trim().replace(/_/g, "-");
+  const key = normalizeBias(rawBias);
   return BIAS_STYLE[key] ?? {
     label: rawBias || "Unknown",
     bg: "bg-slate-100", text: "text-slate-600",

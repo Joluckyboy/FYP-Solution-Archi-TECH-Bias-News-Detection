@@ -33,7 +33,7 @@ const LandingPage = () => {
   const [error, setError] = useState(false);
   const [nonNewsError, setNonNewsError] = useState(false);
   const [youtubeError, setYoutubeError] = useState(false); // ← ADD
-  const [forceReanalyze] = useState(false);
+  const [forceReanalyse] = useState(false);
 
   // ── Topics state (lifted here so filter pills can share it) ──────────────
   const [topics, setTopics] = useState([]);
@@ -43,9 +43,9 @@ const LandingPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    get_analyzer().then((analyzerUrl) => {
+    get_analyzer().then((analyserUrl) => {
       axios
-        .get(`${analyzerUrl}/dashboard/topics`)
+        .get(`${analyserUrl}/dashboard/topics`)
         .then((res) => {
           setTopics(res.data.topics || []);
           setTopicsLoading(false);
@@ -138,7 +138,7 @@ const LandingPage = () => {
       }
       let res = await axios.post(`${API_URL}/application/new_query`, {
         url: articleURL,
-        force: forceReanalyze,
+        force: forceReanalyse,
       });
       let data = res.data;
       navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
@@ -236,7 +236,7 @@ const LandingPage = () => {
               { icon: <Gauge size={24} />, title: "Sentiment Analysis", desc: "Find out if the article's sentiment is positive, negative, or neutral." },
               { icon: <SmilePlus size={24} />, title: "Emotion Analysis", desc: "Understand underlying emotions and see if they run high in this article." },
               { icon: <Scale size={24} />, title: "Propaganda Analysis", desc: "Check if the article leans or favours a certain side." },
-              { icon: <Landmark size={24} />, title: "Political Bias", desc: "Analyze the political bias of the article and see what topics are covered or omitted." },
+              { icon: <Landmark size={24} />, title: "Political Bias", desc: "Analyse the political bias of the article and see what topics are covered or omitted." },
             ].map((item, i) => (
               <div key={i} className={`p-4 rounded-lg border bg-white ${i === 4 ? "col-span-2" : ""}`}>
                 <div className="pb-2">{item.icon}</div>
@@ -304,7 +304,7 @@ const LandingPage = () => {
                 </div>
                 <h3 className="font-semibold pb-3">Political Bias</h3>
                 <p className="text-slate-600">
-                  Analyze the political bias of the article and see what topics are covered or omitted.
+                  Analyse the political bias of the article and see what topics are covered or omitted.
                 </p>
               </ResizablePanel>
             </ResizablePanelGroup>

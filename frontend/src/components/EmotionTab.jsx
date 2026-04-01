@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-const EMOTION_COLORS = {
+const EMOTION_COLOURS = {
   joy: "#f59e0b", love: "#ec4899", excitement: "#f97316",
   optimism: "#84cc16", admiration: "#06b6d4", approval: "#22c55e",
   neutral: "#94a3b8", curiosity: "#8b5cf6", surprise: "#14b8a6",
@@ -19,16 +19,29 @@ const EMOTION_COLORS = {
   disgust: "#78716c", disappointment: "#6b7280", annoyance: "#f87171",
   grief: "#1e3a5f", remorse: "#7c3aed", embarrassment: "#db2777",
   nervousness: "#d97706", confusion: "#64748b", disapproval: "#f43f5e",
-  realization: "#0ea5e9", caring: "#10b981", relief: "#a3e635", pride: "#7c3aed",
+  realisation: "#0ea5e9", caring: "#10b981", relief: "#a3e635", pride: "#7c3aed",
 };
-const getColor = (e) => EMOTION_COLORS[(e ?? "neutral").toLowerCase()] ?? "#94a3b8";
+
+const normaliseEmotionKey = (emotion) => {
+  const key = (emotion ?? "neutral").toLowerCase().trim();
+  if (key === "realization") return "realisation";
+  return key;
+};
+
+const getEmotionLabel = (emotion) => {
+  const key = normaliseEmotionKey(emotion);
+  if (key === "realisation") return "Realisation";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+};
+
+const getColour = (e) => EMOTION_COLOURS[normaliseEmotionKey(e)] ?? "#94a3b8";
 
 const EMOTION_EMOJI = {
   joy: "😄", love: "❤️", excitement: "🎉", fear: "😨", anger: "😡",
   sadness: "😢", neutral: "😐", optimism: "🌟", curiosity: "🤔",
   approval: "👍", disapproval: "👎", disappointment: "😞", annoyance: "😤",
   confusion: "😕", admiration: "🤩", surprise: "😮", caring: "🤗",
-  relief: "😌", realization: "💡", pride: "🦁", grief: "😭",
+  relief: "😌", realisation: "💡", pride: "🦁", grief: "😭",
   remorse: "😔", embarrassment: "😳", nervousness: "😰",
 };
 
@@ -53,7 +66,7 @@ const EMOTION_MEANING = {
   remorse:        "This article expresses regret or guilt.",
   confusion:      "This article deals with unclear or conflicting information.",
   caring:         "This article expresses concern and compassion for others.",
-  realization:    "This article reveals new understanding or insight.",
+  realisation:    "This article reveals new understanding or insight.",
   relief:         "This article reflects a sense of tension being resolved.",
   nervousness:    "This article carries an anxious or uneasy tone.",
   pride:          "This article expresses achievement or a sense of identity.",
@@ -75,7 +88,7 @@ const READER_IMPACT = {
   joy:            { icon: "😄", text: "This article has a positive, uplifting tone. Be aware that positive framing can sometimes gloss over complexity." },
   admiration:     { icon: "🤩", text: "This article expresses strong admiration — it may be presenting someone in a very favourable light." },
   disgust:        { icon: "🤢", text: "This article contains language designed to provoke strong disgust — a common persuasion technique." },
-  realization:    { icon: "💡", text: "This article presents new information or insight that may shift your understanding of the topic." },
+  realisation:    { icon: "💡", text: "This article presents new information or insight that may shift your understanding of the topic." },
 };
 
 const EMOTION_GUIDE = [
@@ -89,7 +102,7 @@ const EMOTION_GUIDE = [
   { emoji: "🌟", name: "Optimism",       desc: "Forward-looking with hope or positive expectation." },
   { emoji: "😞", name: "Disappointment", desc: "Expectations were not met — something fell short." },
   { emoji: "😤", name: "Annoyance",      desc: "Mild irritation or frustration, less intense than anger." },
-  { emoji: "💡", name: "Realization",    desc: "A new understanding or discovery is being revealed." },
+  { emoji: "💡", name: "Realisation",    desc: "A new understanding or discovery is being revealed." },
   { emoji: "🤔", name: "Curiosity",      desc: "The text raises questions or invites deeper thinking." },
 ];
 
@@ -161,7 +174,7 @@ function _findExample(emotion, sentence_emotions, section_emotions) {
   if (sentence_emotions?.length) {
     // First try: find a sentence where this emotion is dominant
     const dominant = sentence_emotions
-      .filter(s => s.dominant === emotion)
+      .filter(s => normaliseEmotionKey(s.dominant) === normaliseEmotionKey(emotion))
       .sort((a, b) => b.score - a.score)[0];
     if (dominant?.sentence) return { text: dominant.sentence, isFull: true };
 
@@ -170,11 +183,11 @@ function _findExample(emotion, sentence_emotions, section_emotions) {
     const inTop3 = sentence_emotions
       .filter(s =>
         Array.isArray(s.top_emotions) &&
-        s.top_emotions.some(e => e.label === emotion)
+        s.top_emotions.some(e => normaliseEmotionKey(e.label) === normaliseEmotionKey(emotion))
       )
       .map(s => ({
         sentence: s.sentence,
-        emotionScore: s.top_emotions.find(e => e.label === emotion)?.score ?? 0,
+        emotionScore: s.top_emotions.find(e => normaliseEmotionKey(e.label) === normaliseEmotionKey(emotion))?.score ?? 0,
       }))
       .sort((a, b) => b.emotionScore - a.emotionScore)[0];
     if (inTop3?.sentence) return { text: inTop3.sentence, isFull: true };
@@ -230,20 +243,30 @@ const EmotionTab = ({ emotionResult }) => {
     section_emotions  = [],
   } = emotionResult;
 
-  const derived          = _deriveDominant(weighted_avg);
-  const dominant_emotion = rawDominant ?? derived.emotion;
+  const normalisedWeightedAvg = Object.entries(weighted_avg).reduce((acc, [emotion, score]) => {
+    const key = normaliseEmotionKey(emotion);
+    acc[key] = (acc[key] ?? 0) + (Number(score) || 0);
+    return acc;
+  }, {});
+
+  const derived          = _deriveDominant(normalisedWeightedAvg);
+  const dominant_emotion = normaliseEmotionKey(rawDominant ?? derived.emotion);
   const dominant_score   = rawScore    ?? derived.score;
   const domLower         = dominant_emotion?.toLowerCase() ?? "neutral";
-  const domColor         = getColor(dominant_emotion);
+  const domColour         = getColour(dominant_emotion);
 
-  const chartData = Object.entries(weighted_avg)
+  const chartData = Object.entries(normalisedWeightedAvg)
     .filter(([, v]) => v >= THRESHOLD)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, value]) => ({ name, value: parseFloat((value * 100).toFixed(1)) }));
+    .map(([name, value]) => ({
+      key: name,
+      label: getEmotionLabel(name),
+      value: parseFloat((value * 100).toFixed(1)),
+    }));
 
-  const readerInsights = _buildReaderInsights(weighted_avg, dominant_emotion);
-  const verdict        = _buildVerdict(weighted_avg, dominant_emotion);
+  const readerInsights = _buildReaderInsights(normalisedWeightedAvg, dominant_emotion);
+  const verdict        = _buildVerdict(normalisedWeightedAvg, dominant_emotion);
 
   return (
     <div className="space-y-6">
@@ -258,7 +281,7 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 2. Overall Emotional Tone ─────────────────────────────────────── */}
       <div
         className="rounded-xl border-2 p-5"
-        style={{ borderColor: domColor, background: domColor + "15" }}
+        style={{ borderColor: domColour, background: domColour + "15" }}
       >
         <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-3">
           Overall Emotional Tone
@@ -266,7 +289,7 @@ const EmotionTab = ({ emotionResult }) => {
         <div className="flex items-center gap-3 mb-3">
           <span className="text-4xl">{EMOTION_EMOJI[domLower] ?? "🎭"}</span>
           <div>
-            <p className="text-2xl font-bold capitalize" style={{ color: domColor }}>
+            <p className="text-2xl font-bold capitalize" style={{ color: domColour }}>
               {dominant_emotion}
             </p>
             <p className="text-sm text-gray-400">
@@ -293,24 +316,24 @@ const EmotionTab = ({ emotionResult }) => {
 
           <div className="flex flex-col gap-3">
             {readerInsights.map(({ emotion, icon, text }) => {
-              const color   = getColor(emotion);
+              const colour   = getColour(emotion);
               const example = _findExample(emotion, sentence_emotions, section_emotions);
 
               return (
                 <div
                   key={emotion}
                   className="rounded-xl border-2 p-4"
-                  style={{ borderColor: color + "66", background: color + "0f" }}
+                  style={{ borderColor: colour + "66", background: colour + "0f" }}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{icon}</span>
-                    <span className="text-md font-bold uppercase tracking-wide capitalize" style={{ color }}>
+                    <span className="text-md font-bold uppercase tracking-wide capitalize" style={{ color: colour }}>
                       {emotion}
                     </span>
                     {/* Show percentage for non-dominant emotions so user understands scale */}
-                    {emotion !== domLower && weighted_avg[emotion] !== undefined && (
+                    {emotion !== domLower && normalisedWeightedAvg[emotion] !== undefined && (
                       <span className="text-sm text-gray-400 ml-auto">
-                        {((weighted_avg[emotion] ?? 0) * 100).toFixed(1)}% of article
+                        {((normalisedWeightedAvg[emotion] ?? 0) * 100).toFixed(1)}% of article
                       </span>
                     )}
                   </div>
@@ -318,7 +341,7 @@ const EmotionTab = ({ emotionResult }) => {
                   <p className="text-sm text-gray-700 mb-3">{text}</p>
 
                   {example && emotion !== "neutral" && (
-                    <div className="border-l-4 pl-3 py-1" style={{ borderColor: color }}>
+                    <div className="border-l-4 pl-3 py-1" style={{ borderColor: colour }}>
                       <p className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-1">
                         Example from this article
                       </p>
@@ -354,12 +377,13 @@ const EmotionTab = ({ emotionResult }) => {
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40 }}>
               <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 13 }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 13 }}
-                tickFormatter={v => v.charAt(0).toUpperCase() + v.slice(1)} />
+              <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 13 }}
+                tickFormatter={v => v} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
-                  const { name, value } = payload[0];
+                  const row = payload[0]?.payload;
+                  const value = payload[0]?.value;
                   return (
                     <div style={{
                       background: "white",
@@ -369,7 +393,7 @@ const EmotionTab = ({ emotionResult }) => {
                       fontSize: 12,
                     }}>
                       <p style={{ margin: 0, fontWeight: 500, color: "#374151", textTransform: "capitalize" }}>
-                        {name}
+                        {row?.label}
                       </p>
                       <p style={{ margin: 0, color: "#6b7280" }}>
                         {Number(value).toFixed(1)}%
@@ -379,7 +403,7 @@ const EmotionTab = ({ emotionResult }) => {
                 }}
               />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {chartData.map(e => <Cell key={e.name} fill={getColor(e.name)} />)}
+                {chartData.map(e => <Cell key={e.key} fill={getColour(e.key)} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

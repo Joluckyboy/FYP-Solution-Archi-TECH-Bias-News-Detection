@@ -8,6 +8,25 @@ import vars as vars
 logger = logging.getLogger(__name__)
 
 
+def normalize_bias_label(raw: str) -> str:
+    """Normalise bias labels to canonical values used across the app."""
+    s = str(raw or "").strip().lower().replace("_", "-").replace(" ", "-")
+    if s in ("leaning-left", "lean-left"):
+        return "lean-left"
+    if s in ("leaning-right", "lean-right"):
+        return "lean-right"
+    if s == "centre":
+        return "center"
+    if s in ("left", "center", "right"):
+        return s
+    return s or "unknown"
+
+
+def format_bias_label(raw: str) -> str:
+    """Human-readable bias label from canonical form."""
+    return normalize_bias_label(raw).replace("-", " ").title()
+
+
 def shorten_url(url: str) -> str:
     """Shorten URL using TinyURL API v3"""
     if not vars.tinyurl_token:
@@ -114,7 +133,7 @@ async def source_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     avg_prop = data.get("avg_propaganda_probability", 0)
     accuracy = data.get("factual_accuracy_rate", 0)
     sentiment = data.get("avg_sentiment", {})
-    leaning = data.get("sentiment_leaning", "Unknown")
+    leaning = format_bias_label(data.get("sentiment_leaning", "Unknown"))
     techniques = data.get("top_propaganda_techniques", [])
 
     score_line = f"{score}/100" if score is not None else "N/A"
@@ -197,7 +216,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     factcheck_result = results.get('factcheck_result') if results.get('factcheck_result') else []
     summarise_result = results.get("summarise_result") if results.get("summarise_result") else "No summary available"
     political_bias = results.get('political_bias_result', {}) if results.get('political_bias_result') else {}
-    bias_rating = political_bias.get('rating', 'N/A').replace('-', ' ').title() if political_bias else 'N/A'
+    bias_rating = format_bias_label(political_bias.get('rating', 'N/A')) if political_bias else 'N/A'
 
     # Sort sentiment by score descending
     sentiment_result = dict(
@@ -349,8 +368,8 @@ async def send_digest(context: ContextTypes.DEFAULT_TYPE) -> None:
 
         bias_emoji = {
             "left": "\U0001F7E6",         # blue square
-            "leaning-left": "\U0001F539",  # small blue diamond
-            "leaning-right": "\U0001F538", # small orange diamond
+            "lean-left": "\U0001F539",   # small blue diamond
+            "lean-right": "\U0001F538",  # small orange diamond
             "right": "\U0001F7E5",         # red square
         }
 
@@ -364,8 +383,8 @@ async def send_digest(context: ContextTypes.DEFAULT_TYPE) -> None:
 
         for i, article in enumerate(top_articles, 1):
             title = article.get("title", "Untitled")
-            rating = article.get("bias_rating", "unknown")
-            rating_display = rating.replace("-", " ").title()
+            rating = normalize_bias_label(article.get("bias_rating", "unknown"))
+            rating_display = format_bias_label(rating)
             emoji = bias_emoji.get(rating, "\U0001F3DB\ufe0f")
             summary = article.get("summarise_result", "")
             # Take first sentence of summary, stripping newlines first

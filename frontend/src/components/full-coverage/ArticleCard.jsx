@@ -1,4 +1,5 @@
 import { Copy } from "lucide-react";
+import { normalizeBias, getBiasLabel as getCanonicalBiasLabel } from "@/utils/biasNormalizer";
 
 const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
     const SG_DOMAINS = {
@@ -17,7 +18,15 @@ const ArticleCard = ({ article, idx, copiedIdx, handleCopy }) => {
     };
 
     const getBiasLabel = (rawBias) => {
-        return { label: rawBias || "Unknown", color: "bg-slate-200 text-slate-700" };
+        const normalized = normalizeBias(rawBias);
+        const label = getCanonicalBiasLabel(rawBias);
+
+        if (normalized === "left") return { label, color: "bg-blue-200 text-blue-800" };
+        if (normalized === "lean-left") return { label, color: "bg-blue-100 text-blue-700" };
+        if (normalized === "center") return { label, color: "bg-purple-100 text-purple-800" };
+        if (normalized === "lean-right") return { label, color: "bg-red-100 text-red-700" };
+        if (normalized === "right") return { label, color: "bg-red-200 text-red-800" };
+        return { label, color: "bg-slate-200 text-slate-700" };
     };
 
     const biasLabel = getBiasLabel(article.political_bias || article.bias);

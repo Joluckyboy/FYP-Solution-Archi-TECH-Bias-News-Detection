@@ -4,15 +4,20 @@ import { Loader2 } from "lucide-react";
 import get_api from "@/config/config";
 import axios from "axios";
 
-const BUCKET_ORDER = ['left', 'leaning-left', 'center', 'leaning-right', 'right'];
-const BUCKET_LABELS = { left: 'Left', 'leaning-left': 'Lean Left', center: 'Center', 'leaning-right': 'Lean Right', right: 'Right' };
+const BUCKET_ORDER = ['left', 'lean-left', 'center', 'lean-right', 'right'];
+const BUCKET_LABELS = { left: 'Left', 'lean-left': 'Lean Left', center: 'Center', 'lean-right': 'Lean Right', right: 'Right' };
 
 const BUCKET_COLORS = {
   left: 'bg-blue-200 border-blue-300',
-  'leaning-left': 'bg-blue-100 border-blue-200',
+  'lean-left': 'bg-blue-100 border-blue-200',
   center: 'bg-purple-100 border-purple-200',
-  'leaning-right': 'bg-red-100 border-red-200',
+  'lean-right': 'bg-red-100 border-red-200',
   right: 'bg-red-200 border-red-300',
+};
+
+const LEGACY_BUCKET_KEYS = {
+  'lean-left': ['lean-left', 'leaning-left', 'leaning left'],
+  'lean-right': ['lean-right', 'leaning-right', 'leaning right'],
 };
 
 export default function TopicOutletBias() {
@@ -72,7 +77,12 @@ export default function TopicOutletBias() {
   }
 
   const biasGroups = data.topicOutletBiasGroups?.[selectedTopic] || {};
-  const allOutlets = BUCKET_ORDER.flatMap(bucket => biasGroups[bucket] || []);
+  const getBucketEntries = (bucket) => {
+    const keys = LEGACY_BUCKET_KEYS[bucket] || [bucket];
+    return keys.flatMap((key) => biasGroups[key] || []);
+  };
+
+  const allOutlets = BUCKET_ORDER.flatMap((bucket) => getBucketEntries(bucket));
   const totalOutlets = new Set(allOutlets.map(item => item.outlet)).size;
   const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
 
@@ -109,7 +119,7 @@ export default function TopicOutletBias() {
       {/* Content grid */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 items-start">
         {BUCKET_ORDER.map((bucket) => {
-          const outlets = getSortedOutlets(biasGroups[bucket] || []);
+          const outlets = getSortedOutlets(getBucketEntries(bucket));
           const bucketArticles = outlets.reduce((sum, item) => sum + item.count, 0);
           const percentage = totalArticles > 0
             ? ((bucketArticles / totalArticles) * 100).toFixed(1)

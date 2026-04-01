@@ -6,11 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink, FileSearch, Loader2 } from "lucide-react";
 import get_api from "@/config/config";
+import { getBiasLabel } from "@/utils/biasNormalizer";
 
 const PopupPage = () => {
   const [currentUrl, setCurrentUrl] = useState(null);
   const [isNewsPage, setIsNewsPage] = useState(false);
-  const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [isAnalysed, setIsAnalysed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisData, setAnalysisData] = useState(null);
@@ -35,8 +36,8 @@ const PopupPage = () => {
     return "High";
   };
 
-  // Get propaganda color
-  const getPropagandaColor = (percentage) => {
+  // Get propaganda colour
+  const getPropagandaColour = (percentage) => {
     if (percentage <= 30) return "bg-green-500";
     if (percentage <= 60) return "bg-yellow-500";
     return "bg-red-500";
@@ -64,8 +65,8 @@ const PopupPage = () => {
     return "Extreme";
   };
 
-  // Get sentiment color based on level
-  const getSentimentColor = (sentimentResult) => {
+  // Get sentiment colour based on level
+  const getSentimentColour = (sentimentResult) => {
     if (!sentimentResult) return "bg-gray-500";
     const { neutral = 0 } = sentimentResult;
 
@@ -83,19 +84,12 @@ const PopupPage = () => {
 
   // Political bias helpers
   const biasScale = ["left", "leaning-left", "center", "leaning-right", "right"];
-  const biasLabels = {
-    left: "Left",
-    "leaning-left": "Leaning Left",
-    center: "Center",
-    "leaning-right": "Leaning Right",
-    right: "Right",
-  };
   const getBiasEmoji = (rating) => {
     if (rating === "center") return "⚖️";
     if (rating === "leaning-left" || rating === "leaning-right") return "↔️";
     return "⚠️";
   };
-  const getBiasColor = (rating) => {
+  const getBiasColour = (rating) => {
     if (rating === "center") return "bg-green-500";
     if (rating === "leaning-left" || rating === "leaning-right")
       return "bg-yellow-500";
@@ -479,7 +473,7 @@ const PopupPage = () => {
                     console.log("Found complete cached analysis");
                     setAnalysisData(cached[cacheKey]);
                     setArticleId(cached[cacheKey].id);
-                    setIsAnalyzed(true);
+                    setIsAnalysed(true);
                     setIsLoading(false);
                     // Update badge for cached data
                     if (cached[cacheKey].propaganda_result?.propaganda_probability !== undefined) {
@@ -512,7 +506,7 @@ const PopupPage = () => {
                   // Show UI immediately - don't block on API check
                   setIsLoading(false);
 
-                  // Check API in background for previously analyzed articles
+                  // Check API in background for previously analysed articles
                   fetch(`${apiUrl}/application/new_query`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -524,7 +518,7 @@ const PopupPage = () => {
                         console.log("Found existing analysis from API");
                         setAnalysisData(data);
                         setArticleId(data.id);
-                        setIsAnalyzed(true);
+                        setIsAnalysed(true);
                         // Cache locally for faster access next time
                         chrome.storage.local.set({ [cacheKey]: data });
                         // Update badge
@@ -606,8 +600,8 @@ const PopupPage = () => {
     return null;
   };
 
-  // Handle analyze button click
-  const handleAnalyze = async () => {
+  // Handle analyse button click
+  const handleAnalyse = async () => {
     if (!currentUrl || !API_URL) return;
 
     setIsAnalyzing(true);
@@ -631,7 +625,7 @@ const PopupPage = () => {
         // Check if we have complete analysis results
         if (hasCompleteAnalysis(data)) {
           setAnalysisData(data);
-          setIsAnalyzed(true);
+          setIsAnalysed(true);
           setIsAnalyzing(false);
         } else if (data.id) {
           // Analysis is still processing, poll for results
@@ -640,7 +634,7 @@ const PopupPage = () => {
           if (completeData) {
             data = completeData;
             setAnalysisData(data);
-            setIsAnalyzed(true);
+            setIsAnalysed(true);
           } else {
             console.error("Analysis timed out");
           }
@@ -703,7 +697,7 @@ const PopupPage = () => {
   };
 
   // Render indicator row
-  const IndicatorRow = ({ emoji, label, level, percentage, colorClass }) => (
+  const IndicatorRow = ({ emoji, label, level, percentage, colourClass }) => (
     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
       <span className="text-2xl">{emoji}</span>
       <div className="flex-1">
@@ -715,7 +709,7 @@ const PopupPage = () => {
           <Progress
             value={percentage}
             className="h-2 flex-1"
-            indicatorClassName={colorClass}
+            indicatorClassName={colourClass}
           />
           <span className="text-xs font-semibold w-10 text-right">
             {percentage}%
@@ -728,9 +722,9 @@ const PopupPage = () => {
   // Political Bias indicator row (categorical, not percentage-based)
   const BiasIndicatorRow = ({ rating }) => {
     const idx = biasScale.indexOf(rating);
-    const label = biasLabels[rating] || "Unknown";
+    const label = getBiasLabel(rating);
     const emoji = getBiasEmoji(rating);
-    const dotColor = getBiasColor(rating);
+    const dotColour = getBiasColour(rating);
 
     return (
       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -745,7 +739,7 @@ const PopupPage = () => {
               <div
                 key={level}
                 className={`h-2 flex-1 rounded-full ${
-                  i === idx ? dotColor : "bg-gray-200"
+                  i === idx ? dotColour : "bg-gray-200"
                 }`}
               />
             ))}
@@ -806,26 +800,26 @@ const PopupPage = () => {
               <FileSearch className="w-12 h-12 mx-auto text-gray-400 mb-2" />
               <p className="text-gray-600 font-medium">Not a news article</p>
               <p className="text-xs text-gray-400 mt-1">
-                Navigate to a news article to analyze it
+                Navigate to a news article to analyse it
               </p>
             </div>
           ) : isAnalyzing ? (
             <div className="text-center py-11">
               <Loader2 className="w-12 h-12 mx-auto text-blue-500 mb-3 animate-spin" />
-              <p className="text-gray-600 font-medium">Analyzing...</p>
+              <p className="text-gray-600 font-medium">Analysing...</p>
               <p className="text-xs text-gray-400 mt-1">
                 This might take a few moments
               </p>
             </div>
-          ) : !isAnalyzed ? (
+          ) : !isAnalysed ? (
             <div className="text-center py-6">
               <FileSearch className="w-12 h-12 mx-auto text-blue-500 mb-2" />
-              <p className="text-gray-600 font-medium mb-3">Ready to analyze</p>
+              <p className="text-gray-600 font-medium mb-3">Ready to analyse</p>
               <Button
-                onClick={handleAnalyze}
+                onClick={handleAnalyse}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                Analyze This Page
+                Analyse This Page
               </Button>
             </div>
           ) : (
@@ -850,7 +844,7 @@ const PopupPage = () => {
                   percentage={Math.round(
                     analysisData.propaganda_result.propaganda_probability * 100,
                   )}
-                  colorClass={getPropagandaColor(
+                  colourClass={getPropagandaColour(
                     Math.round(
                       analysisData.propaganda_result.propaganda_probability *
                         100,
@@ -868,7 +862,7 @@ const PopupPage = () => {
                   percentage={getDominantSentimentPercentage(
                     analysisData.sentiment_result,
                   )}
-                  colorClass={getSentimentColor(analysisData.sentiment_result)}
+                  colourClass={getSentimentColour(analysisData.sentiment_result)}
                 />
               )}
 
@@ -906,7 +900,7 @@ const PopupPage = () => {
       <Button
         className="w-full bg-blue-600 hover:bg-blue-700"
         onClick={() => handleOpenFullAnalysis()}
-        disabled={!isAnalyzed}
+        disabled={!isAnalysed}
       >
         <ExternalLink className="w-4 h-4 mr-2" />
         Open Full Analysis
