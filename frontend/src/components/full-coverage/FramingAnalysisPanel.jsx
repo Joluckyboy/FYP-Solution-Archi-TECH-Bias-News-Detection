@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Eye, ChevronDown } from "lucide-react";
 
 const COVERAGE_DESCRIPTIONS = {
-    left: "Left-leaning outlets tend to frame headlines around systemic issues, policy impacts, and community effects. High passive voice may indicate focus on victims or structures.",
+    left: "Left-lean outlets tend to frame headlines around systemic issues, policy impacts, and community effects. High passive voice may indicate focus on victims or structures.",
     center: "Centrist outlets typically aim for neutral framing. Balanced active/passive voice and fewer charged keywords suggest an effort to report facts without ideological emphasis.",
-    right: "Right-leaning outlets often emphasise individual responsibility and government accountability. High active voice may reflect a direct, attribution-focused writing style.",
+    right: "Right-lean outlets often emphasise individual responsibility and government accountability. High active voice may reflect a direct, attribution-focused writing style.",
 };
 
 const FramingAnalysisPanel = ({ framingDiff, linguisticFraming }) => {

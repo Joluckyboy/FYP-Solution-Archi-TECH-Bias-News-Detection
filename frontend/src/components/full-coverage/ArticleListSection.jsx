@@ -3,6 +3,7 @@ import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ArticleCard from './ArticleCard';
 import FramingAnalysisPanel from './FramingAnalysisPanel';
+import { normalizeBias } from "@/utils/biasNormalizer";
 
 const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {}, linguisticFraming = {} }) => {
     const [filter, setFilter] = useState("all");
@@ -12,13 +13,13 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
     const INITIAL_COUNT = 5;
 
     const filteredArticles = articles.filter(a => {
-        const b = (a.political_bias || a.bias || "").toLowerCase();
+        const b = normalizeBias(a.political_bias || a.bias || "");
         const title = (a.title || "").toLowerCase();
         if (searchQuery && !title.includes(searchQuery.toLowerCase())) return false;
         if (filter === "all") return true;
-        if (filter === "left") return b.includes("left");
-        if (filter === "right") return b.includes("right");
-        if (filter === "center") return b.includes("center");
+        if (filter === "left")   return b === "left"  || b === "lean-left";
+        if (filter === "right")  return b === "right" || b === "lean-right";
+        if (filter === "center") return b === "center";
         return true;
     });
 
@@ -33,7 +34,13 @@ const ArticleListSection = ({ articles, copiedIdx, handleCopy, framingDiff = {},
                     <h2 className="text-3xl font-bold text-slate-800">{articles.length} Articles</h2>
                     <div className="flex gap-4 text-base font-medium">
                         {["left", "center", "right"].map(f => {
-                            const count = articles.filter(a => (a.political_bias || a.bias || "").toLowerCase().includes(f)).length;
+                            const count = articles.filter(a => {
+                                const b = normalizeBias(a.political_bias || a.bias || "");
+                                if (f === "left")   return b === "left"  || b === "lean-left";
+                                if (f === "right")  return b === "right" || b === "lean-right";
+                                if (f === "center") return b === "center";
+                                return false;
+                                }).length;
                             const activeColor = f === "left" ? "text-blue-600" : f === "center" ? "text-purple-500" : "text-red-700";
                             return (
                                 <button key={f} onClick={() => setFilter(f)}

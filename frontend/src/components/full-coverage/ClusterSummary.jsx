@@ -93,13 +93,13 @@ const ClusterSummary = ({ topic, enrichmentLoading }) => {
                         {silentOutlets.left_silent && (
                             <div className="flex items-start gap-2.5 p-3 bg-blue-200 border border-blue-300 rounded-lg text-base text-blue-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                <span><strong>Left outlets are silent</strong> — this story has no left-leaning coverage despite significant attention elsewhere.</span>
+                                <span><strong>Left outlets are silent</strong> — this story has no left-lean coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.right_silent && (
                             <div className="flex items-start gap-2.5 p-3 bg-red-200 border border-red-300 rounded-lg text-base text-red-800">
                                 <EyeOff className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                <span><strong>Right outlets are silent</strong> — this story has no right-leaning coverage despite significant attention elsewhere.</span>
+                                <span><strong>Right outlets are silent</strong> — this story has no right-lean coverage despite significant attention elsewhere.</span>
                             </div>
                         )}
                         {silentOutlets.center_silent && (

@@ -27,9 +27,9 @@ SCRAPED_DATA_PATH = os.path.join(SCRAPER_DATA_DIR, "scraped_articles.csv")
 
 DEFAULT_BIAS_DISTRIBUTION: dict[str, int] = {
     "left": 0,
-    "leaning_left": 0,
+    "lean-left": 0,
     "center": 0,
-    "leaning_right": 0,
+    "lean-right": 0,
     "right": 0,
 }
 
@@ -412,26 +412,37 @@ def _stable_id(value: str) -> int:
     return int(hashlib.md5(str(value).encode("utf-8")).hexdigest()[:8], 16)
 
 
+def _normalize_bias_label(bias: str) -> str:
+    b = (bias or "").lower().replace("_", "-").replace(" ", "-").strip()
+    if b in ["left", "lean-left", "leaning-left"]:
+        return "lean-left" if "lean" in b else "left"
+    if b in ["right", "lean-right", "leaning-right"]:
+        return "lean-right" if "lean" in b else "right"
+    if b in ["center", "centre", "neutral", "balanced"]:
+        return "center"
+    return b or "center"
+
 def _bias_distribution(group: pd.DataFrame) -> dict:
     counts = {
         "left": 0,
-        "leaning_left": 0,
+        "lean-left": 0,
         "center": 0,
-        "leaning_right": 0,
+        "lean-right": 0,
         "right": 0,
     }
-    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("")
     for b in col:
-        if b == "left":
+        norm = _normalize_bias_label(b)
+        if norm == "left":
             counts["left"] += 1
-        elif b == "right":
+        elif norm == "right":
             counts["right"] += 1
-        elif b == "center":
+        elif norm == "center":
             counts["center"] += 1
-        elif "left" in b:
-            counts["leaning_left"] += 1
-        elif "right" in b:
-            counts["leaning_right"] += 1
+        elif norm == "lean-left":
+            counts["lean-left"] += 1
+        elif norm == "lean-right":
+            counts["lean-right"] += 1
         else:
             counts["center"] += 1
     total = max(sum(counts.values()), 1)
@@ -442,30 +453,31 @@ def _compute_silent_outlets(group: pd.DataFrame) -> dict:
     """Flag bias categories with zero articles when others have significant coverage."""
     counts: dict[str, int] = {
         "left": 0,
-        "leaning_left": 0,
+        "lean-left": 0,
         "center": 0,
-        "leaning_right": 0,
+        "lean-right": 0,
         "right": 0,
     }
-    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("")
     for b in col:
-        if b == "left":
+        norm = _normalize_bias_label(b)
+        if norm == "left":
             counts["left"] += 1
-        elif b == "right":
+        elif norm == "right":
             counts["right"] += 1
-        elif b == "center":
+        elif norm == "center":
             counts["center"] += 1
-        elif "left" in b:
-            counts["leaning_left"] += 1
-        elif "right" in b:
-            counts["leaning_right"] += 1
+        elif norm == "lean-left":
+            counts["lean-left"] += 1
+        elif norm == "lean-right":
+            counts["lean-right"] += 1
         else:
             counts["center"] += 1
 
     total = max(sum(counts.values()), 1)
     threshold = max(1, total // 4)  # at least 25% covered by another group
-    left_vol = counts["left"] + counts["leaning_left"]
-    right_vol = counts["right"] + counts["leaning_right"]
+    left_vol = counts["left"] + counts["lean-left"]
+    right_vol = counts["right"] + counts["lean-right"]
     center_vol = counts["center"]
 
     return {
