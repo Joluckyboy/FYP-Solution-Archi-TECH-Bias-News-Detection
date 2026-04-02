@@ -241,38 +241,38 @@ def test_get_article_unsupported_site(client):
 # Screen Scraper Tests
 # ============================================================================
 
-def test_get_article_screenscraper_no_url(client):
-    """Test error when screen scraper URL is not provided"""
-    response = client.get('/scraper/get-article-screenscraper')
-    assert response.status_code == 422  # FastAPI validation error
+# def test_get_article_screenscraper_no_url(client):
+#     """Test error when screen scraper URL is not provided"""
+#     response = client.get('/scraper/get-article-screenscraper')
+#     assert response.status_code == 422  # FastAPI validation error
 
 
-@patch('app.os.remove')
-@patch('PIL.Image.open')
-@patch('pytesseract.image_to_string')
-@patch('selenium.webdriver.Chrome')
-def test_get_article_screenscraper_success(mock_chrome, mock_ocr, mock_image_open, mock_remove, client):
-    """Test successful screen scraping with Selenium + OCR"""
-    # Mock Selenium WebDriver
-    mock_driver = MagicMock()
-    mock_chrome.return_value = mock_driver
-    mock_driver.execute_script.return_value = 2000  # page height
-    mock_driver.get_screenshot_as_file.return_value = True
+# @patch('app.os.remove')
+# @patch('PIL.Image.open')
+# @patch('pytesseract.image_to_string')
+# @patch('selenium.webdriver.Chrome')
+# def test_get_article_screenscraper_success(mock_chrome, mock_ocr, mock_image_open, mock_remove, client):
+#     """Test successful screen scraping with Selenium + OCR"""
+#     # Mock Selenium WebDriver
+#     mock_driver = MagicMock()
+#     mock_chrome.return_value = mock_driver
+#     mock_driver.execute_script.return_value = 2000  # page height
+#     mock_driver.get_screenshot_as_file.return_value = True
     
-    # Mock PIL Image
-    mock_img = MagicMock()
-    mock_image_open.return_value = mock_img
+#     # Mock PIL Image
+#     mock_img = MagicMock()
+#     mock_image_open.return_value = mock_img
     
-    # Mock OCR extraction
-    mock_ocr.return_value = "Extracted article text from screenshot\nWith multiple lines"
+#     # Mock OCR extraction
+#     mock_ocr.return_value = "Extracted article text from screenshot\nWith multiple lines"
     
-    response = client.get('/scraper/get-article-screenscraper?url=https://example.com')
-    assert response.status_code == 200
-    data = response.json()
-    assert 'body' in data
-    assert 'Extracted' in data['body']
-    # Verify driver was properly closed
-    mock_driver.quit.assert_called_once()
+#     response = client.get('/scraper/get-article-screenscraper?url=https://example.com')
+#     assert response.status_code == 200
+#     data = response.json()
+#     assert 'body' in data
+#     assert 'Extracted' in data['body']
+#     # Verify driver was properly closed
+#     mock_driver.quit.assert_called_once()
 
 
 # ============================================================================

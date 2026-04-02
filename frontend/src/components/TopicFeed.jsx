@@ -37,7 +37,7 @@ const TopicFeed = ({
                 setLoadingInternal(false);
             } catch (err) {
                 console.error("Failed to fetch topics:", err);
-                setErrorInternal("Failed to load topics. Please ensure the backend analyzer service is running.");
+                setErrorInternal("Failed to load topics. Please ensure the backend analyser service is running.");
                 setLoadingInternal(false);
             }
         };

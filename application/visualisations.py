@@ -243,11 +243,11 @@ def _normalize_bias_to_group(label: str) -> Optional[str]:
     if s in {"left", "liberal"}:
         return "left"
     if s in {"lean-left", "leaning-left", "center-left", "centre-left", "left-leaning"}:
-        return "leaning-left"
+        return "lean-left"
     if s in {"center", "centre", "neutral", "balanced"}:
         return "center"
     if s in {"lean-right", "leaning-right", "center-right", "centre-right", "right-leaning"}:
-        return "leaning-right"
+        return "lean-right"
     if s in {"right", "conservative"}:
         return "right"
     return None
@@ -266,9 +266,9 @@ def load_visualisations_data() -> Dict[str, Any]:
             # MUST match frontend keys exactly:
             "outletBiasGroups": {
                 "left": [],
-                "leaning-left": [],
+                "lean-left": [],
                 "center": [],
-                "leaning-right": [],
+                "lean-right": [],
                 "right": [],
             },
         }
@@ -323,9 +323,9 @@ def load_visualisations_data() -> Dict[str, Any]:
             if topic_slug not in topic_outlet_bias_groups:
                 topic_outlet_bias_groups[topic_slug] = {
                     "left": [],
-                    "leaning-left": [],
+                    "lean-left": [],
                     "center": [],
-                    "leaning-right": [],
+                    "lean-right": [],
                     "right": [],
                 }
 
@@ -342,7 +342,7 @@ def load_visualisations_data() -> Dict[str, Any]:
     # Ensure default exists
     topic_outlet_bias_groups.setdefault(
     "general-news",
-    {"left": [], "leaning-left": [], "center": [], "leaning-right": [], "right": []},
+    {"left": [], "lean-left": [], "center": [], "lean-right": [], "right": []},
     )
 
     # --------------------------------------------------------------
@@ -350,9 +350,9 @@ def load_visualisations_data() -> Dict[str, Any]:
     # --------------------------------------------------------------
     bias_groups: Dict[str, List[str]] = {
     "left": [],
-    "leaning-left": [],
+    "lean-left": [],
     "center": [],
-    "leaning-right": [],
+    "lean-right": [],
     "right": [],
     }
 

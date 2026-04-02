@@ -3,7 +3,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 beautifulsoup4==4.12.3
-lxml-html-clean==0.4.4
+lxml==4.9.3
 newspaper3k==0.2.8
 nltk==3.9.4
 selenium
@@ -13,3 +13,4 @@ boto3
 langdetect==1.0.9
 pytesseract
 Pillow
+yt-dlp

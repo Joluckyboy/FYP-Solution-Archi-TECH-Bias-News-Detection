@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { HashLoader } from "react-spinners";
 import "../index.css";
+import { normalizeBias } from "@/utils/biasNormalizer";
 
 // ─── Side colours ─────────────────────────────────────────────────────────────
 
@@ -21,24 +22,20 @@ const R_BORDER = "#7c3aed";
 // ─── Bias ─────────────────────────────────────────────────────────────────────
 
 const BIAS_STYLE = {
-  left:            { label: "Left",          color: "#1d4ed8", bg: "#dbeafe", border: "#93c5fd" },
-  "leaning-left":  { label: "Leaning Left",  color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-  "leaning left":  { label: "Leaning Left",  color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-  center:          { label: "Center",        color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  centre:          { label: "Center",        color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  neutral:         { label: "Center",        color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  "leaning-right": { label: "Leaning Right", color: "#dc2626", bg: "#fff1f2", border: "#fecaca" },
-  "leaning right": { label: "Leaning Right", color: "#dc2626", bg: "#fff1f2", border: "#fecaca" },
-  right:           { label: "Right",         color: "#b91c1c", bg: "#fee2e2", border: "#fca5a5" },
+  left:         { label: "Left",       color: "#1d4ed8", bg: "#dbeafe", border: "#93c5fd" },
+  "lean-left":  { label: "Lean Left",  color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+  center:       { label: "Center",     color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  "lean-right": { label: "Lean Right", color: "#dc2626", bg: "#fff1f2", border: "#fecaca" },
+  right:        { label: "Right",      color: "#b91c1c", bg: "#fee2e2", border: "#fca5a5" },
 };
-const BIAS_SPECTRUM = ["left","leaning-left","center","leaning-right","right"];
+const BIAS_SPECTRUM = ["left", "lean-left", "center", "lean-right", "right"];
 
 function getBias(raw) {
-  const key = (raw||"").toLowerCase().trim().replace(/_/g,"-");
-  return BIAS_STYLE[key] ?? { label: raw||"—", color:"#64748b", bg:"#f8fafc", border:"#e2e8f0" };
+  const key = normalizeBias(raw);
+  return BIAS_STYLE[key] ?? { label: raw || "—", color: "#64748b", bg: "#f8fafc", border: "#e2e8f0" };
 }
 function biasPos(raw) {
-  const idx = BIAS_SPECTRUM.indexOf((raw||"").toLowerCase().trim().replace(/_/g,"-"));
+  const idx = BIAS_SPECTRUM.indexOf(normalizeBias(raw));
   return idx === -1 ? 2 : idx;
 }
 

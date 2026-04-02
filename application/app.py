@@ -37,6 +37,26 @@ _analysis_guard_lock = threading.Lock()
 _active_retry_urls = set()
 _active_full_urls = set()
 
+YOUTUBE_CHANNEL_DOMAIN_MAP = {
+    "cna": "channelnewsasia.com",
+    "channel newsasia": "channelnewsasia.com",
+    "the straits times": "straitstimes.com",
+    "straits times": "straitstimes.com",
+    "today": "todayonline.com",
+    "today online": "todayonline.com",
+    "mothership": "mothership.sg",
+    "cnn": "cnn.com",
+    "nbc news": "nbcnews.com",
+    "fox news": "foxnews.com",
+    "bbc news": "bbc.com",
+    "reuters": "reuters.com",
+    "associated press": "apnews.com",
+    "npr": "npr.org",
+    # ← ADD THESE 3:
+    "abc news": "abcnews.go.com",
+    "cbs news": "cbsnews.com",
+    "msnbc": "msnbc.com",
+}
 
 def _start_unique_background(url: str, job_type: str, target) -> bool:
     """Start background job only if same URL/job_type is not already running."""
@@ -149,19 +169,19 @@ def health_check2():
 async def check_query():
     return {"status": "ok"}
 
-# @app.get("/application/bias_dashboard")
-# def get_bias_dashboard():
-#     """
-#     Returns aggregated bias metrics for the frontend dashboard (Sprint 1 MVP).
-#     Data is loaded from datasets/news_outlets_summary.csv via dashboard_methods.py
-#     """
-#     try:
-#         return dashboard_methods.load_dashboard_data()
-#     except FileNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except Exception:
-#         logger.exception("Failed to load bias dashboard data")
-#         raise HTTPException(status_code=500, detail="Failed to load bias dashboard data")
+@app.get("/application/bias_dashboard")
+def get_bias_dashboard():
+    """
+    Returns aggregated bias metrics for the frontend dashboard (Sprint 1 MVP).
+    Data is loaded from datasets/news_outlets_summary.csv via dashboard_methods.py
+    """
+    try:
+        return dashboard_methods.load_dashboard_data()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        logger.exception("Failed to load bias dashboard data")
+        raise HTTPException(status_code=500, detail="Failed to load bias dashboard data")
     
 @app.get("/application/visualisations")
 def get_visualisations():
@@ -350,15 +370,44 @@ def _find_similar_aliases(query: str, max_results: int = 5) -> list:
 
 
 @app.get("/application/source_credibility")
-def get_source_credibility(domain: str = Query(..., description="Domain to check credibility for")):
+def get_source_credibility(domain: str = Query(..., description="Domain to check credibility for"), video_uploader: str = Query(None, description="YouTube channel name for credibility analysis")):
     """
     Calculate credibility score for a news source based on historical analysis data.
     Queries all analyzed articles from the given domain and aggregates metrics.
+    Added video_uploader param — when analyzing a YouTube video,
+    the scraper passes the channel name so we can map it to the real outlet domain.
     """
     from urllib.parse import urlparse
 
     # Keep original input for fuzzy matching before normalization
     original_input = domain.strip().lower()
+
+    if "youtube.com" in original_input or "youtu.be" in original_input:
+        if video_uploader:
+            uploader_lower = video_uploader.strip().lower()
+            resolved_domain = YOUTUBE_CHANNEL_DOMAIN_MAP.get(uploader_lower)
+            if not resolved_domain:
+                # Try partial match
+                for channel, d in YOUTUBE_CHANNEL_DOMAIN_MAP.items():
+                    if channel in uploader_lower or uploader_lower in channel:
+                        resolved_domain = d
+                        break
+            if resolved_domain:
+                domain = resolved_domain
+                original_input = resolved_domain
+            else:
+                # Unknown YouTube channel — no credibility data possible
+                return {
+                    "domain": f"youtube.com ({video_uploader})",
+                    "status": "no_data",
+                    "message": f"No credibility data for YouTube channel '{video_uploader}'. Submit articles directly from their website to build a profile.",
+                }
+        else:
+            return {
+                "domain": "youtube.com",
+                "status": "no_data", 
+                "message": "YouTube channel unknown. No credibility history available.",
+            }
 
     # Normalize domain: strip protocol, www, trailing slashes
     domain = original_input
@@ -366,6 +415,14 @@ def get_source_credibility(domain: str = Query(..., description="Domain to check
         domain = urlparse(domain).netloc or domain
     domain = domain.removeprefix("www.")
     domain = domain.rstrip("/")
+
+    SUBDOMAIN_NORMALIZE = {
+    "edition.cnn.com":  "cnn.com",
+    "lite.cnn.com":     "cnn.com",
+    "money.cnn.com":    "cnn.com",
+    "us.cnn.com":       "cnn.com",
+    }
+    domain = SUBDOMAIN_NORMALIZE.get(domain, domain)
 
     if not domain:
         raise HTTPException(status_code=400, detail="Domain is required")
@@ -793,13 +850,17 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                 raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
             text = data.get("body", "")
             title = data.get("headline", "")
-            
+            uploader = data.get("uploader", "")
+
             if not text or not title:
                 raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
-            
-            # Save article content to database
-            initial_save = methods.create_news(url, title, text)
+
+            # Save article content to database — now includes uploader
+            initial_save = methods.create_news(url, title, text, uploader=uploader)  # ← pass uploader
             logger.info(f"Article content saved for {url}")
+
+            if uploader and isinstance(initial_save, dict):
+                initial_save["uploader"] = uploader
 
         # FULL ANALYSIS: Run all services IN PARALLEL (for new articles or force re-analyze)
         def full_analysis():
