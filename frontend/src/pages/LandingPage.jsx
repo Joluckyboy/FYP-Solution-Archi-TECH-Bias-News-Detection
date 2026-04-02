@@ -319,7 +319,7 @@ const LandingPage = () => {
 
         {/* Latest Topics Card */}
         <div className="mb-12">
-          <Card className="w-full h-[600px] sm:h-[1000px] flex flex-col">
+          <Card className="w-full h-[1000px] sm:h-[750px] flex flex-col">
             <CardHeader className="px-4 sm:px-6">
               <div className="flex flex-col gap-4">
                 {/* Header Row: Title & Search */}
