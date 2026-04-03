@@ -10,14 +10,19 @@ class TopicClusteredService:
     def __init__(self):
         # Load the S-BERT model. This might take a moment on first run.
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
-        try:
-            # Initialize summarization pipeline (lightweight model)
-            self.summarizer = pipeline(
-                "summarization", model="sshleifer/distilbart-cnn-12-6"
-            )
-        except Exception as e:
-            print(f"Warning: Could not load summarization model: {e}")
+
+        # In ECS/Docker we run offline, so skip trying to fetch a summarizer model.
+        if os.getenv("TRANSFORMERS_OFFLINE", "0") == "1" or os.getenv("HF_HUB_OFFLINE", "0") == "1":
             self.summarizer = None
+        else:
+            try:
+                # Initialize summarization pipeline (lightweight model)
+                self.summarizer = pipeline(
+                    "summarization", model="sshleifer/distilbart-cnn-12-6"
+                )
+            except Exception as e:
+                print(f"Warning: Could not load summarization model: {e}")
+                self.summarizer = None
 
         self.api_key = os.getenv("API_KEY")
 
@@ -116,7 +121,7 @@ class TopicClusteredService:
 
         rep = group.iloc[0]
         # Date handling
-        dates = pd.to_datetime(group["published_at"], errors="coerce", dayfirst=True)
+        dates = pd.to_datetime(group["published_at"], errors="coerce")
         latest_date = dates.max()
         latest_date_str = (
             latest_date.strftime("%Y-%m-%d") if not pd.isnull(latest_date) else ""
@@ -203,11 +208,14 @@ class TopicClusteredService:
 
     def _compute_silent_outlets(self, bias_counts: dict, total: int) -> dict:
         """Flag bias categories with zero articles when others have significant coverage."""
+        # Ensure all expected keys exist
+        for k in ["left", "lean-left", "center", "lean-right", "right"]:
+            bias_counts.setdefault(k, 0)
         threshold = max(
             1, total // 4
         )  # at least 25% of cluster covered by another group
-        left_vol = bias_counts["left"] + bias_counts["leaning_left"]
-        right_vol = bias_counts["right"] + bias_counts["leaning_right"]
+        left_vol = bias_counts["left"] + bias_counts["lean-left"]
+        right_vol = bias_counts["right"] + bias_counts["lean-right"]
         center_vol = bias_counts["center"]
 
         return {
@@ -226,7 +234,6 @@ class TopicClusteredService:
         group_sorted["_parsed_date"] = pd.to_datetime(
             group_sorted.get("published_at", group_sorted.get("date", None)),
             errors="coerce",
-            dayfirst=True,
         )
         group_sorted = group_sorted.sort_values("_parsed_date", ascending=False)
 
