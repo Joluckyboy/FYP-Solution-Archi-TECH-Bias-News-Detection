@@ -49,7 +49,7 @@ CSV_HEADERS = [
     "summary", "image_url", "country", "topic", "political_bias",
 ]
 
-VALID_BIAS = {"left", "lean-left", "center", "lean-right", "right"}
+VALID_BIAS = {"left", "leaning-left", "center", "leaning-right", "right"}
 
 # ── Step 1: Wait for all sidecars ─────────────────────────────────────────────
 def wait_for_service(name: str, url: str, max_retries: int = 40) -> None:
@@ -143,7 +143,6 @@ def classify_article(article: dict) -> str:
         )
         if r.status_code == 200:
             label = r.json().get("rating", "").strip().lower().replace("_", "-")
-            label = label.replace("leaning-", "lean-")   # ← ADD THIS LINE
             if label in VALID_BIAS:
                 return label
     except Exception as e:
