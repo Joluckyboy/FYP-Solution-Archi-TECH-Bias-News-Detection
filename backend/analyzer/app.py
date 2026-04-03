@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time as _time
+import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -243,6 +244,7 @@ def cluster_and_save():
         svc = get_topic_service()
         topics = svc.cluster_articles(df)
     except Exception as e:
+        traceback.print_exc()
         return JSONResponse({"error": f"Clustering failed: {e}"}, status_code=500)
 
     # Build title → cluster_id lookup
