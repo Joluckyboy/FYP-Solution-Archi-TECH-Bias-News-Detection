@@ -110,6 +110,23 @@ def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             sanitized_data.append(sanitized_item)
     return sanitized_data
 
+
+def _normalize_bias_rating(label: str) -> str:
+    s = (label or "").strip().lower().replace("_", "-")
+    s = re.sub(r"\s+", "-", s)
+
+    if s in {"left", "liberal"}:
+        return "left"
+    if s in {"lean-left", "leaning-left", "center-left", "centre-left", "left-leaning"}:
+        return "lean-left"
+    if s in {"center", "centre", "neutral", "balanced"}:
+        return "center"
+    if s in {"lean-right", "leaning-right", "center-right", "centre-right", "right-leaning"}:
+        return "lean-right"
+    if s in {"right", "conservative"}:
+        return "right"
+    return "center"
+
 # Scraper calls
 def extract_news(url):
     query_url = vars.scraper_url + "/scraper/get-article"
@@ -161,10 +178,10 @@ def get_news_by_id (news_id):
 
     return news
 
-def create_news (url, title, content):
+def create_news (url, title, content, uploader: str = ""):
     
     query_url = vars.database_url + "/database/"
-    data = {"url": url, "title": title, "content": content}
+    data = {"url": url, "title": title, "content": content, "uploader": uploader}
 
     response = requests.post(query_url, json=data)
     news = response.json()
@@ -271,7 +288,8 @@ def get_political_bias(text, url, title: str):
             timeout=30
         )
         rating_data = rating_response.json()
-        rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+        raw_rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+        rating = _normalize_bias_rating(raw_rating)
 
         # 2. Get topics covered/omitted (uses Perplexity, gracefully falls back)
         logger.info(f"[political_bias] Starting topics analysis for {url}")

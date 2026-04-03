@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..core import s3_sync
 from ..core.services import get_topic_service
+from ..core.redis_cache import get_cached, set_cached, delete_cached
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -26,9 +27,9 @@ SCRAPED_DATA_PATH = os.path.join(SCRAPER_DATA_DIR, "scraped_articles.csv")
 
 DEFAULT_BIAS_DISTRIBUTION: dict[str, int] = {
     "left": 0,
-    "leaning_left": 0,
+    "lean-left": 0,
     "center": 0,
-    "leaning_right": 0,
+    "lean-right": 0,
     "right": 0,
 }
 
@@ -184,71 +185,102 @@ def _build_topics_from_scraped_csv(df: pd.DataFrame) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+_REDIS_TOPICS_KEY = "analyzer:topics"
+_REDIS_TOPICS_TTL = 21600  # 6 hours — covers EC2 uptime window (12pm-6pm)
+
+
 def fetch_topics_data() -> tuple[list | None, str | None]:
     """
     Returns (topics, error_string).
-    Priority: semantic clustering → CSV topic-column fallback.
+    Cache priority: in-memory → Redis → rebuild from CSV.
     """
+    global _topics_cache, _topics_cache_time, _topics_cache_csv_mtime
+
+    now = _time.time()
+
+    # ── 1. In-memory cache (fastest) ──────────────────────────────────────
+    try:
+        csv_mtime = os.path.getmtime(SCRAPED_DATA_PATH) if os.path.exists(SCRAPED_DATA_PATH) else 0.0
+    except OSError:
+        csv_mtime = 0.0
+
+    mem_fresh = (
+        _topics_cache is not None
+        and (now - _topics_cache_time) < _TOPICS_CACHE_TTL
+        and csv_mtime == _topics_cache_csv_mtime
+    )
+    if mem_fresh:
+        print("Returning in-memory cached topics.")
+        return _topics_cache, None
+
+    # ── 2. Redis cache (survives restarts) ────────────────────────────────
+    redis_data = get_cached(_REDIS_TOPICS_KEY)
+    if redis_data is not None:
+        print("Returning Redis cached topics.")
+        _topics_cache = redis_data
+        _topics_cache_time = now
+        _topics_cache_csv_mtime = csv_mtime
+        return redis_data, None
+
+    # ── 3. Rebuild from CSV ───────────────────────────────────────────────
     s3_sync.ensure_scraped_csv()
     df = _safe_read_csv(SCRAPED_DATA_PATH)
 
     if df is None or len(df) == 0:
         return None, f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}."
 
-    global _topics_cache, _topics_cache_time, _topics_cache_csv_mtime
-
-    now = _time.time()
+    # Refresh mtime after potential S3 download
     try:
         csv_mtime = os.path.getmtime(SCRAPED_DATA_PATH)
     except OSError:
         csv_mtime = 0.0
 
-    cache_fresh = (
-        _topics_cache is not None
-        and (now - _topics_cache_time) < _TOPICS_CACHE_TTL
-        and csv_mtime == _topics_cache_csv_mtime
-    )
-    if cache_fresh:
-        print("Returning cached topics.")
-        return _topics_cache, None
+    topics = None
 
     if "cluster_id" in df.columns and df["cluster_id"].notna().any():
         print(f"Building topics from cluster_id ({len(df)} rows)...")
         try:
-            topics = _build_topics_from_cluster_id(df)  # ← new function (Change 2)
-            _topics_cache = topics
-            _topics_cache_time = now
-            _topics_cache_csv_mtime = csv_mtime
-            return topics, None
+            topics = _build_topics_from_cluster_id(df)
         except Exception as e:
             print(f"cluster_id grouping failed: {e}")
             traceback.print_exc()
 
-    print(f"Running TopicClusteredService on {len(df)} rows...")
-    try:
-        topics = get_topic_service().cluster_articles(df)
-        _topics_cache = topics
-        _topics_cache_time = now
-        _topics_cache_csv_mtime = csv_mtime
-        return topics, None
-    except Exception as e:
-        print(f"TopicClusteredService failed: {e}")
-        traceback.print_exc()
+    if topics is None:
+        print(f"Running TopicClusteredService on {len(df)} rows...")
+        try:
+            topics = get_topic_service().cluster_articles(df)
+            # Write cluster_id back to local CSV so future rebuilds use the fast path
+            _backfill_cluster_ids(df, topics)
+        except Exception as e:
+            print(f"TopicClusteredService failed: {e}")
+            traceback.print_exc()
 
-    if "topic" in df.columns:
-        print(
-            f"Falling back to CSV topic grouping: {SCRAPED_DATA_PATH} ({len(df)} rows)"
+    if topics is None and "topic" in df.columns:
+        print(f"Falling back to CSV topic grouping: {SCRAPED_DATA_PATH} ({len(df)} rows)")
+        topics = _build_topics_from_scraped_csv(df)
+
+    if topics is None:
+        return None, (
+            f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}. "
+            "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
         )
-        fallback = _build_topics_from_scraped_csv(df)
-        _topics_cache = fallback
-        _topics_cache_time = now
-        _topics_cache_csv_mtime = csv_mtime
-        return fallback, None
 
-    return None, (
-        f"scraped_articles.csv not found/invalid at {SCRAPED_DATA_PATH}. "
-        "Ensure the scraper writes scraped_articles.csv and the analyzer volume mount is correct."
-    )
+    # Populate both caches
+    _topics_cache = topics
+    _topics_cache_time = now
+    _topics_cache_csv_mtime = csv_mtime
+    set_cached(_REDIS_TOPICS_KEY, topics, ttl=_REDIS_TOPICS_TTL)
+
+    return topics, None
+
+
+def bust_topics_cache():
+    """Clear both in-memory and Redis topic caches (called after /dashboard/cluster)."""
+    global _topics_cache, _topics_cache_time
+    _topics_cache = None
+    _topics_cache_time = 0.0
+    delete_cached(_REDIS_TOPICS_KEY)
+    print("Topics cache busted (memory + Redis).")
 
 
 # ---------------------------------------------------------------------------
@@ -380,26 +412,37 @@ def _stable_id(value: str) -> int:
     return int(hashlib.md5(str(value).encode("utf-8")).hexdigest()[:8], 16)
 
 
+def _normalize_bias_label(bias: str) -> str:
+    b = (bias or "").lower().replace("_", "-").replace(" ", "-").strip()
+    if b in ["left", "lean-left", "leaning-left"]:
+        return "lean-left" if "lean" in b else "left"
+    if b in ["right", "lean-right", "leaning-right"]:
+        return "lean-right" if "lean" in b else "right"
+    if b in ["center", "centre", "neutral", "balanced"]:
+        return "center"
+    return b or "center"
+
 def _bias_distribution(group: pd.DataFrame) -> dict:
     counts = {
         "left": 0,
-        "leaning_left": 0,
+        "lean-left": 0,
         "center": 0,
-        "leaning_right": 0,
+        "lean-right": 0,
         "right": 0,
     }
-    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("")
     for b in col:
-        if b == "left":
+        norm = _normalize_bias_label(b)
+        if norm == "left":
             counts["left"] += 1
-        elif b == "right":
+        elif norm == "right":
             counts["right"] += 1
-        elif b == "center":
+        elif norm == "center":
             counts["center"] += 1
-        elif "left" in b:
-            counts["leaning_left"] += 1
-        elif "right" in b:
-            counts["leaning_right"] += 1
+        elif norm == "lean-left":
+            counts["lean-left"] += 1
+        elif norm == "lean-right":
+            counts["lean-right"] += 1
         else:
             counts["center"] += 1
     total = max(sum(counts.values()), 1)
@@ -410,30 +453,31 @@ def _compute_silent_outlets(group: pd.DataFrame) -> dict:
     """Flag bias categories with zero articles when others have significant coverage."""
     counts: dict[str, int] = {
         "left": 0,
-        "leaning_left": 0,
+        "lean-left": 0,
         "center": 0,
-        "leaning_right": 0,
+        "lean-right": 0,
         "right": 0,
     }
-    col = group.get("political_bias", pd.Series(dtype=str)).fillna("").str.lower()
+    col = group.get("political_bias", pd.Series(dtype=str)).fillna("")
     for b in col:
-        if b == "left":
+        norm = _normalize_bias_label(b)
+        if norm == "left":
             counts["left"] += 1
-        elif b == "right":
+        elif norm == "right":
             counts["right"] += 1
-        elif b == "center":
+        elif norm == "center":
             counts["center"] += 1
-        elif "left" in b:
-            counts["leaning_left"] += 1
-        elif "right" in b:
-            counts["leaning_right"] += 1
+        elif norm == "lean-left":
+            counts["lean-left"] += 1
+        elif norm == "lean-right":
+            counts["lean-right"] += 1
         else:
             counts["center"] += 1
 
     total = max(sum(counts.values()), 1)
     threshold = max(1, total // 4)  # at least 25% covered by another group
-    left_vol = counts["left"] + counts["leaning_left"]
-    right_vol = counts["right"] + counts["leaning_right"]
+    left_vol = counts["left"] + counts["lean-left"]
+    right_vol = counts["right"] + counts["lean-right"]
     center_vol = counts["center"]
 
     return {
@@ -444,6 +488,29 @@ def _compute_silent_outlets(group: pd.DataFrame) -> dict:
         "center_silent": center_vol == 0
         and (left_vol >= threshold or right_vol >= threshold),
     }
+
+
+# ---------------------------------------------------------------------------
+# Backfill cluster_id into local CSV after on-demand S-BERT clustering
+# ---------------------------------------------------------------------------
+
+
+def _backfill_cluster_ids(df: pd.DataFrame, topics: list[dict]) -> None:
+    """Write cluster_id back into the local CSV so future cache misses use the fast path."""
+    try:
+        cluster_map: dict[str, str] = {}
+        for topic in topics:
+            cid = str(topic.get("id", ""))
+            for article in topic.get("articles", []):
+                title = article.get("title", "")
+                if title:
+                    cluster_map[title] = cid
+
+        df["cluster_id"] = df["title"].map(cluster_map).fillna("unclustered")
+        df.to_csv(SCRAPED_DATA_PATH, index=False)
+        print(f"[backfill] Wrote cluster_id to local CSV ({len(cluster_map)} mapped).")
+    except Exception as e:
+        print(f"[backfill] Failed to write cluster_id to CSV: {e}")
 
 
 # ---------------------------------------------------------------------------

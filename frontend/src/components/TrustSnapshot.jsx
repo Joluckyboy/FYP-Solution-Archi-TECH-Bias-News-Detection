@@ -164,6 +164,7 @@ function ColTitle({ icon: Icon, iconColor = "#6366f1", children }) {
 // If the text already has markdown lists, render as-is.
 // If it's plain prose paragraphs, split and render as bullet points.
 function SummaryContent({ text, dotColor = "bg-violet-400" }) {
+  const summaryFontSize = "15px";
   const hasMarkdownList = /^[\s]*[-*\d]/m.test(text);
 
   if (hasMarkdownList) {
@@ -173,12 +174,12 @@ function SummaryContent({ text, dotColor = "bg-violet-400" }) {
           ul: ({ children }) => <ul className="space-y-2.5">{children}</ul>,
           ol: ({ children }) => <ol className="space-y-2.5">{children}</ol>,
           li: ({ children }) => (
-            <li className="flex items-start gap-2.5 leading-relaxed text-md">
+            <li className="flex items-start gap-2.5 leading-relaxed" style={{ fontSize: summaryFontSize }}>
               <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 8, width: 6, height: 6 }} />
               <span>{children}</span>
             </li>
           ),
-          p: ({ children }) => <p className="leading-relaxed mb-2.5 text-md">{children}</p>,
+          p: ({ children }) => <p className="leading-relaxed mb-2.5" style={{ fontSize: summaryFontSize }}>{children}</p>,
           strong: ({ children }) => <span style={{ fontWeight: 600, color: "#111827" }}>{children}</span>,
         }}
       >
@@ -197,7 +198,7 @@ function SummaryContent({ text, dotColor = "bg-violet-400" }) {
   return (
     <ul className="space-y-2">
       {sentences.map((s, i) => (
-        <li key={i} className="flex items-start gap-2.5 text-md">
+        <li key={i} className="flex items-start gap-2.5" style={{ fontSize: summaryFontSize }}>
           <span className={`shrink-0 rounded-full ${dotColor}`} style={{ marginTop: 7, width: 6, height: 6 }} />
           <span style={{ color: "#374151", lineHeight: 1.6 }}>{s}</span>
         </li>
@@ -212,13 +213,16 @@ const TrustSnapshot = ({ data, apiUrl }) => {
   const [credLoading, setCredLoading] = useState(false);
 
   useEffect(() => {
-    if (!apiUrl || !data?.url) return;
-    const domain = domainFromUrl(data.url);
-    setCredLoading(true);
-    fetch(`${apiUrl}/application/source_credibility?domain=${encodeURIComponent(domain)}`)
-      .then(r => r.json()).then(setCredibility)
-      .catch(() => setCredibility(null)).finally(() => setCredLoading(false));
-  }, [apiUrl, data?.url]);
+      if (!apiUrl || !data?.url) return;
+      const domain = domainFromUrl(data.url);
+      const uploader = data?.uploader || "";
+      const params = new URLSearchParams({ domain });
+      if (uploader) params.set("video_uploader", uploader);
+      setCredLoading(true);
+      fetch(`${apiUrl}/application/source_credibility?${params.toString()}`)
+        .then(r => r.json()).then(setCredibility)
+        .catch(() => setCredibility(null)).finally(() => setCredLoading(false));
+  }, [apiUrl, data?.url, data?.uploader]);
 
   const trust = useMemo(
     () => data ? computeTrustScore({ factcheckResult: data.factcheck_result, propagandaResult: data.propaganda_result }) : null,

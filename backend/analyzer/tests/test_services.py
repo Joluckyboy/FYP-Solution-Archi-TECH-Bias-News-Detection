@@ -14,8 +14,9 @@ import analyzer.app as analyzer_app_module
 
 def _client():
     with patch.object(analyzer_app_module.s3_sync, "ensure_scraped_csv", return_value=None):
-        with TestClient(analyzer_app_module.app) as client:
-            yield client
+        with patch("analyzer.app.fetch_topics_data", return_value=([], None)):
+            with TestClient(analyzer_app_module.app) as client:
+                yield client
 
 
 def test_health_root():
@@ -135,6 +136,7 @@ def test_cluster_endpoint_success(mock_get_topic_service, mock_safe_csv, mock_bo
 
 @patch("analyzer.app.os.path.exists")
 def test_related_articles_requires_title(mock_exists):
+    """Test that related articles endpoint requires a non-empty title"""
     mock_exists.return_value = True
     client = next(_client())
     response = client.post("/dashboard/related_articles", json={"title": ""})

@@ -20,6 +20,8 @@ from scrapers.custom_scrapers import (
     scrape_cna,
     scrape_fox_news,
     scrape_straits_times,
+    scrape_video_with_ytdlp,   # ← add
+    _is_video_url,              # ← add
 )
 from scrapers.generic_scraper import scrape_generic_article, scrape_generic_source
 from utils.background_jobs import create_scrape_job, get_job_status
@@ -60,20 +62,129 @@ def _get_article_count(num_articles: str | None, default: int | None = 100) -> i
         return None
     return value
 
+def _scrape_hosted_video_page(url: str):
+    """
+    Scrape a non-YouTube hosted video page by extracting metadata + caption text.
+    These pages don't have transcripts, so we extract og:description + any <p> text.
+    """
+    try:
+        import requests as _requests
+        from bs4 import BeautifulSoup as bs
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        res = _requests.get(url, headers=headers, timeout=10)
+        soup = bs(res.content, "html.parser")
+
+        # Headline from og:title
+        headline = ""
+        og_title = soup.find("meta", property="og:title")
+        if og_title and og_title.get("content"):
+            headline = og_title["content"].strip()
+        if not headline:
+            h1 = soup.find("h1")
+            headline = h1.get_text(strip=True) if h1 else "Video"
+
+        # Body: og:description + all <p> text
+        body_parts = []
+        og_desc = soup.find("meta", property="og:description")
+        if og_desc and og_desc.get("content"):
+            body_parts.append(og_desc["content"].strip())
+
+        paras = [p.get_text(strip=True) for p in soup.find_all("p") if len(p.get_text(strip=True)) > 20]
+        body_parts.extend(paras)
+
+        body = " ".join(body_parts).strip()
+
+        if not body:
+            logger.warning(f"Hosted video page: no content extracted from {url}")
+            return None
+
+        # Image
+        image_url = ""
+        og_image = soup.find("meta", property="og:image")
+        if og_image and og_image.get("content"):
+            image_url = og_image["content"]
+
+        # Date
+        publish_date = None
+        for time_elem in soup.find_all("time"):
+            dt = time_elem.get("datetime")
+            if dt:
+                try:
+                    from datetime import datetime
+                    date_obj = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+                    publish_date = date_obj.strftime("%Y-%m-%d")
+                    break
+                except Exception:
+                    continue
+
+        logger.info(f"Hosted video page scraped: '{headline[:60]}' ({len(body)} chars)")
+
+        return {
+            "headline": headline.replace("\n", " "),
+            "body": body,
+            "summary": body[:300] + "..." if len(body) > 300 else body,
+            "publish_date": publish_date,
+            "image_url": image_url,
+            "topic": None,  # will be derived downstream
+        }
+
+    except Exception as e:
+        logger.error(f"Hosted video page scraping error for {url}: {e}")
+        return None
+
 
 def _check_which_site(url: str, skip_age_check: bool = False):
-    parse = urlparse(url).netloc
-    if "youtube" in parse.split(".") or "youtu" in parse.split("."):
-        return _scrape_youtube(url)
-    if "straitstimes" in parse:
-        return scrape_straits_times(url, skip_age_check=skip_age_check)
-    elif "channelnewsasia" in parse:
-        return scrape_cna(url, skip_age_check=skip_age_check)
-    elif "fox" in parse:
-        return scrape_fox_news(url, skip_age_check=skip_age_check)
-    else:
-        return scrape_generic_article(url, skip_age_check=skip_age_check)
+    parse = urlparse(url).netloc.lower()
 
+    # 1. YouTube
+    if 'youtube' in parse.split('.') or 'youtu.be' in parse:
+        result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+        if result:
+            return result
+        return _scrape_youtube(url)
+
+    # 2. Straits Times — video pages first, then articles
+    if 'straitstimes' in parse:
+        if _is_video_url(url):                                    # ← ADD THIS
+            result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+            if result:
+                return result
+            return _scrape_hosted_video_page(url)
+        return scrape_straits_times(url, skip_age_check=skip_age_check)
+
+    # 3. CNA — video pages first, then articles
+    if 'channelnewsasia' in parse:
+        if _is_video_url(url):                                    # ← ADD THIS
+            result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+            if result:
+                return result
+            return _scrape_hosted_video_page(url)
+        return scrape_cna(url, skip_age_check=skip_age_check)
+
+    # 4. Fox News
+    if 'foxnews' in parse or 'fox' in parse.split('.'):
+        if _is_video_url(url):                                    # ← ADD THIS
+            result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+            if result:
+                return result
+            return _scrape_hosted_video_page(url)
+        return scrape_fox_news(url, skip_age_check=skip_age_check)
+
+    # 5. Any other video page URL
+    if _is_video_url(url):
+        result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+        if result:
+            return result
+        return _scrape_hosted_video_page(url)
+
+    # 6. Generic article
+    result = scrape_generic_article(url, skip_age_check=skip_age_check)
+    if result is None and _is_video_url(url):
+        result = scrape_video_with_ytdlp(url, skip_age_check=skip_age_check)
+    if result is None and _is_video_url(url):
+        result = _scrape_hosted_video_page(url)
+    return result
+    
 def _scrape_youtube(video_url: str):
     """Extract YouTube transcript with caching and retry logic."""
     try:
@@ -368,45 +479,45 @@ def article_stats():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.get("/scraper/get-article-screenscraper")
-def get_article_screenscraper(url: str = Query(...)):
-    """Screenshot + OCR via Selenium/Tesseract."""
-    try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        from PIL import Image
-        import pytesseract
+# @app.get("/scraper/get-article-screenscraper")
+# def get_article_screenscraper(url: str = Query(...)):
+#     """Screenshot + OCR via Selenium/Tesseract."""
+#     try:
+#         from selenium import webdriver
+#         from selenium.webdriver.chrome.options import Options
+#         from PIL import Image
+#         import pytesseract
 
-        random_uuid = uuid.uuid4()
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("blink-settings=imagesEnabled=false")
-        driver = webdriver.Chrome(options=options)
-        try:
-            driver.get(url)
-            time.sleep(3)
-            page_height = driver.execute_script("return document.body.scrollHeight")
-            driver.set_window_size(1920, page_height)
-            image_name = f"{random_uuid}.png"
-            driver.get_screenshot_as_file(image_name)
-            extracted_text = (
-                pytesseract.image_to_string(Image.open(image_name))
-                .strip()
-                .replace("\n", " ")
-            )
-            try:
-                os.remove(image_name)
-            except Exception:
-                pass
-            return {"body": extracted_text}
-        except Exception as e:
-            return JSONResponse({"error": f"An error occurred: {str(e)}"}, status_code=500)
-        finally:
-            driver.quit()
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+#         random_uuid = uuid.uuid4()
+#         options = Options()
+#         options.add_argument("--headless")
+#         options.add_argument("--disable-gpu")
+#         options.add_argument("--window-size=1920,1080")
+#         options.add_argument("blink-settings=imagesEnabled=false")
+#         driver = webdriver.Chrome(options=options)
+#         try:
+#             driver.get(url)
+#             time.sleep(3)
+#             page_height = driver.execute_script("return document.body.scrollHeight")
+#             driver.set_window_size(1920, page_height)
+#             image_name = f"{random_uuid}.png"
+#             driver.get_screenshot_as_file(image_name)
+#             extracted_text = (
+#                 pytesseract.image_to_string(Image.open(image_name))
+#                 .strip()
+#                 .replace("\n", " ")
+#             )
+#             try:
+#                 os.remove(image_name)
+#             except Exception:
+#                 pass
+#             return {"body": extracted_text}
+#         except Exception as e:
+#             return JSONResponse({"error": f"An error occurred: {str(e)}"}, status_code=500)
+#         finally:
+#             driver.quit()
+#     except Exception as e:
+#         return JSONResponse({"error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

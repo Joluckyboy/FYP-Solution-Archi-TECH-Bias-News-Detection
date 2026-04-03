@@ -6,12 +6,13 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
+import { normalizeBias, getBiasLabel } from "@/utils/biasNormalizer";
 
 const BIAS_CONFIG = [
     { key: "left", label: "Left", color: "#93C5FD" },         // blue-300
-    { key: "leaningLeft", label: "Leaning Left", color: "#BFDBFE" },  // blue-200
+    { key: "leaningLeft", label: "Lean Left", color: "#BFDBFE" },  // blue-200
     { key: "center", label: "Center", color: "#E9D5FF" },       // purple-200
-    { key: "leaningRight", label: "Leaning Right", color: "#FECACA" }, // red-200
+    { key: "leaningRight", label: "Lean Right", color: "#FECACA" }, // red-200
     { key: "right", label: "Right", color: "#FCA5A5" },        // red-300
 ];
 
@@ -132,16 +133,13 @@ const MediaBiasChart = ({ articles, metrics }) => {
 
                     const BIAS_RANK = {
                         "left": 0,
-                        "leaning left": 1, "leaning-left": 1, "leaning_left": 1,
+                        "lean-left": 1,
                         "center": 2,
-                        "leaning right": 3, "leaning-right": 3, "leaning_right": 3,
+                        "lean-right": 3,
                         "right": 4,
                     };
                     const getBiasRank = (bias) => {
-                        for (const [key, rank] of Object.entries(BIAS_RANK)) {
-                            if (bias.includes(key)) return rank;
-                        }
-                        return 2; // default to center
+                        return BIAS_RANK[normalizeBias(bias)] ?? 2; // default to center
                     };
 
                     const sources = Object.values(uniqueSources).sort(
@@ -156,15 +154,16 @@ const MediaBiasChart = ({ articles, metrics }) => {
                             <div className="flex flex-wrap justify-center gap-2">
                                 {sources.map((s, i) => {
                                     let pillClass = "bg-slate-100 border-slate-200 text-slate-700";
-                                    if (s.bias.includes("leaning left") || s.bias.includes("leaning_left") || s.bias.includes("leaning-left")) pillClass = "bg-blue-100 border-blue-200 text-blue-600";
-                                    else if (s.bias.includes("left")) pillClass = "bg-blue-200 border-blue-300 text-blue-800";
-                                    else if (s.bias.includes("leaning right") || s.bias.includes("leaning_right") || s.bias.includes("leaning-right")) pillClass = "bg-red-100 border-red-200 text-red-600";
-                                    else if (s.bias.includes("right")) pillClass = "bg-red-200 border-red-300 text-red-800";
-                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-200 text-purple-800";
+                                    const normalized = normalizeBias(s.bias);
+                                    if (normalized === "lean-left")  pillClass = "bg-blue-100 border-blue-200 text-blue-600";
+                                    else if (normalized === "left")  pillClass = "bg-blue-200 border-blue-300 text-blue-800";
+                                    else if (normalized === "lean-right") pillClass = "bg-red-100 border-red-200 text-red-600";
+                                    else if (normalized === "right") pillClass = "bg-red-200 border-red-300 text-red-800";
+                                    else if (normalized === "center") pillClass = "bg-purple-100 border-purple-200 text-purple-800";
                                     return (
                                         <div key={i}
                                             className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-sm font-medium ${pillClass}`}
-                                            title={`${s.source} (${s.bias})`}>
+                                            title={`${s.source} (${getBiasLabel(s.bias)})`}>
                                             <img
                                                 src={getSourceIcon(s.source)}
                                                 alt={s.source}
