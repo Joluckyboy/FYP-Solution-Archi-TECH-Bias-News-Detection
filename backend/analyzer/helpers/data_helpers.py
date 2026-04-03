@@ -216,11 +216,20 @@ def fetch_topics_data() -> tuple[list | None, str | None]:
     # ── 2. Redis cache (survives restarts) ────────────────────────────────
     redis_data = get_cached(_REDIS_TOPICS_KEY)
     if redis_data is not None:
-        print("Returning Redis cached topics.")
-        _topics_cache = redis_data
-        _topics_cache_time = now
-        _topics_cache_csv_mtime = csv_mtime
-        return redis_data, None
+        # New cache format includes csv_mtime so we can reject stale Redis data.
+        if isinstance(redis_data, dict) and "topics" in redis_data:
+            cached_mtime = float(redis_data.get("csv_mtime", -1.0))
+            cached_topics = redis_data.get("topics")
+            if cached_mtime == csv_mtime:
+                print("Returning Redis cached topics.")
+                _topics_cache = cached_topics
+                _topics_cache_time = now
+                _topics_cache_csv_mtime = csv_mtime
+                return cached_topics, None
+            print("Redis topics cache stale (csv mtime changed); rebuilding.")
+        else:
+            # Legacy format had only topics list and could become stale after CSV updates.
+            print("Ignoring legacy Redis topics cache format; rebuilding.")
 
     # ── 3. Rebuild from CSV ───────────────────────────────────────────────
     s3_sync.ensure_scraped_csv()
@@ -269,7 +278,11 @@ def fetch_topics_data() -> tuple[list | None, str | None]:
     _topics_cache = topics
     _topics_cache_time = now
     _topics_cache_csv_mtime = csv_mtime
-    set_cached(_REDIS_TOPICS_KEY, topics, ttl=_REDIS_TOPICS_TTL)
+    set_cached(
+        _REDIS_TOPICS_KEY,
+        {"csv_mtime": csv_mtime, "topics": topics},
+        ttl=_REDIS_TOPICS_TTL,
+    )
 
     return topics, None
 
