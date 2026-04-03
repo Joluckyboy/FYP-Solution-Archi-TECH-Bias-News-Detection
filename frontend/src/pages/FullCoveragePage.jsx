@@ -62,6 +62,22 @@ const FullCoveragePage = () => {
     }, [topicId]);
 
     // ─── Derived metrics ────────────────────────────────────────────────────────
+
+    // Normalization function for bias
+    function getNormalizedBias(article) {
+        // Prefer 'lean', then 'leaning', then 'political_bias', then 'bias'
+        const raw = article.lean || article.leaning || article.political_bias || article.bias || '';
+        const value = raw.toLowerCase().replace(/[_\s]/g, '-');
+        if (value === "left") return "left";
+        if (value === "right") return "right";
+        if (value === "center" || value === "centre") return "center";
+        if (value === "lean-left" || value === "leaning-left") return "lean-left";
+        if (value === "lean-right" || value === "leaning-right") return "lean-right";
+        if (value.includes("left")) return "lean-left";
+        if (value.includes("right")) return "lean-right";
+        return "center"; // fallback
+    }
+
     const getBiasMetrics = () => {
         if (!articles || articles.length === 0) {
             return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
@@ -69,13 +85,13 @@ const FullCoveragePage = () => {
 
         const counts = { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
         articles.forEach(a => {
-            const b = (a.political_bias || a.bias || "").toLowerCase();
+            const b = getNormalizedBias(a);
             if (b === "left") counts.left++;
             else if (b === "right") counts.right++;
             else if (b === "center") counts.center++;
-            else if (b.includes("left")) counts.leaningLeft++;
-            else if (b.includes("right")) counts.leaningRight++;
-            else counts.center++; // Fallback to center if unclassified
+            else if (b === "lean-left") counts.leaningLeft++;
+            else if (b === "lean-right") counts.leaningRight++;
+            else counts.center++;
         });
 
         const total = articles.length;
