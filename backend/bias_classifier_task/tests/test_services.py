@@ -21,7 +21,7 @@ def test_classify_article_success():
     with patch("classify_task.requests.get", return_value=mock_response):
         article = {"source": "CNA", "title": "T", "summary": "S"}
         label = classify_task.classify_article(article)
-        assert label == "lean-right"
+        assert label == "leaning-right"
 
 
 def test_classify_article_invalid_returns_empty():
