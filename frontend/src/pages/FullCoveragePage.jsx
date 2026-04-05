@@ -142,10 +142,30 @@ const FullCoveragePage = () => {
 
     // ─── Copy handler ────────────────────────────────────────────────────────────
     const handleCopy = (url, idx) => {
-        navigator.clipboard.writeText(url).then(() => {
+        const doFallbackCopy = (text) => {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textarea);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            // HTTPS path
+            navigator.clipboard.writeText(url).then(() => {
+                setCopiedIdx(idx);
+                setTimeout(() => setCopiedIdx(null), 2000);
+            });
+        } else {
+            // HTTP fallback (your EC2 case)
+            doFallbackCopy(url);
             setCopiedIdx(idx);
             setTimeout(() => setCopiedIdx(null), 2000);
-        });
+        }
     };
 
     if (loading) {
