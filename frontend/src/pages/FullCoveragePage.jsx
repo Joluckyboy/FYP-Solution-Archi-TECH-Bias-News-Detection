@@ -150,8 +150,10 @@ const FullCoveragePage = () => {
             document.body.appendChild(textarea);
             textarea.focus();
             textarea.select();
-            document.execCommand("copy");
+            
+            const success = document.execCommand("copy"); // returns true/false
             document.body.removeChild(textarea);
+            return success;
         };
 
         if (navigator.clipboard && window.isSecureContext) {
@@ -162,9 +164,11 @@ const FullCoveragePage = () => {
             });
         } else {
             // HTTP fallback (your EC2 case)
-            doFallbackCopy(url);
-            setCopiedIdx(idx);
-            setTimeout(() => setCopiedIdx(null), 2000);
+            const success = doFallbackCopy(url);
+            if (success) {
+                setCopiedIdx(idx);
+                setTimeout(() => setCopiedIdx(null), 2000);
+            }
         }
     };
 
