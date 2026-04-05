@@ -5,6 +5,7 @@ Related-articles lookup helpers used by analyzer routes.
 """
 
 import re
+from urllib.parse import urlparse, unquote
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,19 @@ def _l2_normalize_rows(values: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(values, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
     return values / norms
+
+
+def _normalize_url(value: str) -> str:
+    raw = unquote(str(value or "")).strip()
+    if not raw:
+        return ""
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    netloc = parsed.netloc.lower().replace("www.", "")
+    path = parsed.path.rstrip("/")
+    if not netloc:
+        return raw.rstrip("/").lower()
+    return f"{netloc}{path}".rstrip("/")
 
 
 # ── Source name → domain mapping ─────────────────────────────────────────────
@@ -116,6 +130,23 @@ def find_cluster_id_by_title(df: pd.DataFrame, query_title: str):
             best_cid   = cluster_ids[idx]
 
     return best_cid if best_score >= threshold else None
+
+
+def find_cluster_id_by_url(df: pd.DataFrame, query_url: str):
+    """Find the cluster_id for a given URL using normalized exact matching."""
+    normalized_query = _normalize_url(query_url)
+    if not normalized_query:
+        return None
+
+    if "url" not in df.columns:
+        return None
+
+    urls = df["url"].astype(str).map(_normalize_url)
+    exact = urls == normalized_query
+    if exact.any():
+        return df["cluster_id"].astype(str)[exact].iloc[0]
+
+    return None
 
 
 def filter_related(cluster_df: pd.DataFrame, source_domain: str, query_title: str) -> list:

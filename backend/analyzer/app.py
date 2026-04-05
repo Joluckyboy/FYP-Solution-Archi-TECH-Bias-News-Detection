@@ -16,6 +16,7 @@ from .helpers import (
     fetch_topics_data,
     bust_topics_cache,
     _safe_read_csv,
+    find_cluster_id_by_url,
     find_cluster_id_by_title,
     filter_related,
     related_articles_sbert,
@@ -280,6 +281,7 @@ async def related_articles(request: Request):
 
     body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
     query_title = (body.get("title") or "").strip()
+    query_url = (body.get("url") or "").strip()
     source_domain = (body.get("source_domain") or "").strip().lower()
 
     if not query_title:
@@ -300,12 +302,14 @@ async def related_articles(request: Request):
 
     # ── Fast path: use precomputed cluster_id ─────────────────────────────────
     if "cluster_id" in df.columns and df["cluster_id"].notna().any():
-        cluster_id = find_cluster_id_by_title(df, query_title)
+        cluster_id = find_cluster_id_by_url(df, query_url) if query_url else None
+        if cluster_id is None:
+            cluster_id = find_cluster_id_by_title(df, query_title)
         if cluster_id is None:
             return {
                 "matched": False,
                 "articles": [],
-                "reason": "Article title not found in cluster database",
+                "reason": "Article not found in cluster database",
             }
 
         cluster_articles = df[df["cluster_id"].astype(str) == str(cluster_id)]
