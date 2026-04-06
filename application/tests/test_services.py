@@ -200,6 +200,18 @@ def test_related_coverage_success(mock_methods):
         body = response.json()
 
 
+def test_related_coverage_forwards_url_to_analyzer(mock_methods):
+    mock_methods.get_news.return_value = {"title": "T", "content": "C"}
+    analyzer_resp = MagicMock()
+    analyzer_resp.status_code = 200
+    analyzer_resp.json.return_value = {"articles": [], "cluster_title": "", "matched": False, "reason": ""}
+
+    with patch("app._requests.post", return_value=analyzer_resp) as mock_post:
+        response = client.get("/application/related_coverage?url=https://example.com/a")
+        assert response.status_code == 200
+        assert mock_post.call_args.kwargs["json"]["url"] == "https://example.com/a"
+
+
 # ─── NEW TESTS FOR UPLOADER FEATURE ─────────────────────────────────────────
 
 def test_new_query_with_youtube_url(mock_methods):

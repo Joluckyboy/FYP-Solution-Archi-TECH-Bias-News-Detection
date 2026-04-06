@@ -1007,7 +1007,12 @@ async def get_related_coverage(url: str = Query(..., description="URL of the ana
     try:
         resp = _requests.post(
             f"{analyzer_url}/dashboard/related_articles",
-            json={"title": title, "summary": summary, "source_domain": source_domain},
+            json={
+                "title": title,
+                "url": url,
+                "summary": summary,
+                "source_domain": source_domain,
+            },
             timeout=15,
         )
         if resp.status_code == 200:
