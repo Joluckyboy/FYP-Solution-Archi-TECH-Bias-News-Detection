@@ -34,22 +34,22 @@ const PoliticalBias = ({ politicalBiasResult }) => {
       {/* Political Bias Scale */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="font-semibold text-base mb-3 text-gray-700">Political Bias Rating</div>
-        <div className="flex gap-2 justify-between">
+        <div className="relative my-4 flex items-center justify-between">
+          <div className="absolute inset-x-0 top-1/2 h-px bg-gray-200" />
           {biasLevels.map((label) => {
             const isActive = normalizedBias === label.toLowerCase();
             return (
-              <div
-                key={label}
-                className={`flex-1 min-w-0 text-center py-2 px-1 rounded-md text-xs sm:text-sm font-medium transition-all leading-tight break-words ${
-                  isActive
-                    ? `bg-white text-black shadow-md scale-105 ring-2 ring-offset-1 ring-black`
-                    : 'bg-gray-100 text-gray-300'
-                }`}
-              >
-                {label}
+              <div key={label} className="relative z-10 flex flex-col items-center text-center">
+                <div className={`mb-2 h-3 w-3 rounded-full ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                <span className={`text-xs ${isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                  {label}
+                </span>
               </div>
             );
           })}
+        </div>
+        <div className="text-sm text-gray-500">
+          Selected bias: <span className="font-semibold text-gray-900">{rating}</span>
         </div>
       </div>
 
