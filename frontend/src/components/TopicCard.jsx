@@ -22,7 +22,7 @@ const TopicCard = ({ topic }) => {
     const navigate = useNavigate();
 
     const rawImages = allImages?.length > 0 ? allImages : (image ? [image] : []);
-    
+
     // Proactively proxy known blocked domains to avoid the initial 406 error
     const imagesList = rawImages.map((url) => {
         if (!url) return url;
@@ -37,18 +37,33 @@ const TopicCard = ({ topic }) => {
     const hasImage = !!currentImage && currentImage.startsWith("http") && !currentImage.includes("placehold.co");
 
     const [analyzing, setAnalyzing] = useState(false);
-    const [analyzeError, setAnalyzeError] = useState(null);
+    const [analyseError, setAnalyseError] = useState(null);
+
+    // Support canonical and legacy bias keys so percentages stay correct during migrations.
+    const getBiasValue = (...keys) => {
+        for (const key of keys) {
+            const value = Number(biasDistribution?.[key]);
+            if (!Number.isNaN(value)) return value;
+        }
+        return 0;
+    };
+
+    const left = getBiasValue("left");
+    const leanLeft = getBiasValue("lean-left", "lean_left", "leaning-left", "leaning_left");
+    const center = getBiasValue("center", "centre");
+    const leanRight = getBiasValue("lean-right", "lean_right", "leaning-right", "leaning_right");
+    const right = getBiasValue("right");
 
     // Calculate total for percentages
-    const total = biasDistribution.left + biasDistribution.leaning_left + biasDistribution.center + biasDistribution.leaning_right + biasDistribution.right;
-    const leftPct = total > 0 ? ((biasDistribution.left + biasDistribution.leaning_left) / total) * 100 : 0;
-    const centerPct = total > 0 ? (biasDistribution.center / total) * 100 : 0;
-    const rightPct = total > 0 ? ((biasDistribution.right + biasDistribution.leaning_right) / total) * 100 : 0;
+    const total = left + leanLeft + center + leanRight + right;
+    const leftPct = total > 0 ? ((left + leanLeft) / total) * 100 : 0;
+    const centerPct = total > 0 ? (center / total) * 100 : 0;
+    const rightPct = total > 0 ? ((right + leanRight) / total) * 100 : 0;
 
-    const handleAnalyze = async () => {
+    const handleAnalyse = async () => {
         if (!frontUrl) return;
         setAnalyzing(true);
-        setAnalyzeError(null);
+        setAnalyseError(null);
         try {
             const API_URL = await get_api();
             const res = await axios.post(`${API_URL}/application/new_query`, {
@@ -59,8 +74,8 @@ const TopicCard = ({ topic }) => {
                 state: { articleUrl: frontUrl },
             });
         } catch (err) {
-            console.error("Analyze failed:", err);
-            setAnalyzeError("Failed to analyse. Please try again.");
+            console.error("Analyse failed:", err);
+            setAnalyseError("Failed to analyse. Please try again.");
             setAnalyzing(false);
         }
     };
@@ -105,15 +120,15 @@ const TopicCard = ({ topic }) => {
                 {/* Bias Bar Chart */}
                 <div className="mt-2">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1 font-semibold">
-                        <span className="text-blue-500">Left {Math.round(leftPct)}%</span>
+                        <span className="text-blue-600">Left {Math.round(leftPct)}%</span>
                         <span className="text-purple-500">Center {Math.round(centerPct)}%</span>
-                        <span className="text-red-500">Right {Math.round(rightPct)}%</span>
+                        <span className="text-red-600">Right {Math.round(rightPct)}%</span>
                     </div>
 
                     <div className="h-3 w-full flex rounded-full overflow-hidden bg-gray-100">
-                        <div className="h-full bg-blue-400 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
-                        <div className="h-full bg-purple-500 relative group" style={{ width: `${centerPct}%` }} />
-                        <div className="h-full bg-red-400 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
+                        <div className="h-full bg-blue-300 first:rounded-l-full relative group" style={{ width: `${leftPct}%` }} />
+                        <div className="h-full bg-purple-200 relative group" style={{ width: `${centerPct}%` }} />
+                        <div className="h-full bg-red-300 last:rounded-r-full relative group" style={{ width: `${rightPct}%` }} />
                     </div>
                 </div>
             </CardContent>
@@ -122,7 +137,7 @@ const TopicCard = ({ topic }) => {
                 <div className="flex gap-2 w-full">
                     {/* View Full Coverage */}
                     <button
-                        className="flex-1 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-md transition-colors"
+                        className="flex-1 py-2 border border-slate-400 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-md transition-colors"
                         onClick={() => navigate(`/full-coverage/${id}`)}
                     >
                         View Full Coverage
@@ -132,7 +147,7 @@ const TopicCard = ({ topic }) => {
                     {frontUrl ? (
                         <button
                             className="flex-1 py-2 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-md transition-colors"
-                            onClick={handleAnalyze}
+                            onClick={handleAnalyse}
                             disabled={analyzing}
                         >
                             {analyzing ? (
@@ -142,7 +157,6 @@ const TopicCard = ({ topic }) => {
                                 </>
                             ) : (
                                 <>
-                                    <Zap className="h-3.5 w-3.5" />
                                     Analyse Top Article
                                 </>
                             )}
@@ -159,8 +173,8 @@ const TopicCard = ({ topic }) => {
                     )}
                 </div>
 
-                {analyzeError && (
-                    <p className="text-xs text-red-500 text-center">{analyzeError}</p>
+                {analyseError && (
+                    <p className="text-xs text-red-500 text-center">{analyseError}</p>
                 )}
             </CardFooter>
         </Card>

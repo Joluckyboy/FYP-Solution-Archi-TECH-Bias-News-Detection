@@ -1,207 +1,251 @@
-from flask import current_app, Blueprint, render_template, request, jsonify
-import torch
-import numpy as np
-from .prompts import prompts
-from perplexity import Perplexity
 import json
+import logging
 import re
+from typing import Optional
 
-biasengine = Blueprint('biasengine', __name__, url_prefix='/biasengine')
+import torch
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
+
+from .prompts import prompts
+
+logger = logging.getLogger(__name__)
+
+# Replaces Flask Blueprint — same url_prefix, same routes
+biasengine = APIRouter(prefix="/biasengine")
 
 
-def _extract_article_fields():
-    payload = request.get_json(silent=True) if request.method == "POST" else None
-    payload = payload or {}
-
-    site = payload.get("site") or request.args.get("site")
-    title = payload.get("title") or request.args.get("title")
-    page_text = payload.get("page_text") or request.args.get("page_text")
-
-    return site, title, page_text
-
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _parse_json_safely(raw_text: str):
     cleaned = re.sub(r"```json|```", "", (raw_text or "")).strip()
-
     try:
         return json.loads(cleaned)
     except Exception:
         pass
-
-    start_candidates = [idx for idx in (cleaned.find("{"), cleaned.find("[")) if idx != -1]
+    start_candidates = [i for i in (cleaned.find("{"), cleaned.find("[")) if i != -1]
     if not start_candidates:
         raise ValueError("Model response does not contain JSON")
-
     start = min(start_candidates)
     end = max(cleaned.rfind("}"), cleaned.rfind("]"))
-    candidate = cleaned[start:end + 1] if end > start else cleaned[start:]
-
+    candidate = cleaned[start: end + 1] if end > start else cleaned[start:]
     try:
         return json.loads(candidate)
     except Exception:
         return json.loads(candidate, strict=False)
 
-@biasengine.get("/")
-def health_check():
-    # return 200
-    return {"status": "ok"}
 
-@biasengine.route('/hello')
+async def _extract_fields(
+    request: Request,
+    site: Optional[str],
+    title: Optional[str],
+    page_text: Optional[str],
+):
+    """Support both GET query params and POST JSON body — mirrors original Flask helper."""
+    if request.method == "POST":
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+        site = payload.get("site") or site
+        title = payload.get("title") or title
+        page_text = payload.get("page_text") or page_text
+    return site, title, page_text
+
+
+def _run_bert(model_state: dict, site: str, title: str, page_text: str) -> list:
+    """Run BERT tokenisation + forward pass. Returns raw sigmoid output list."""
+    tokenizer = model_state["tokenizer"]
+    model = model_state["model"]
+    device = model_state["device"]
+
+    example = str(site) + str(title) + str(page_text)
+    encodings = tokenizer.encode_plus(
+        example,
+        None,
+        add_special_tokens=True,
+        max_length=256,
+        padding="max_length",
+        return_token_type_ids=True,
+        truncation=True,
+        return_attention_mask=True,
+        return_tensors="pt",
+    )
+    with torch.no_grad():
+        input_ids = encodings["input_ids"].to(device, dtype=torch.long)
+        attention_mask = encodings["attention_mask"].to(device, dtype=torch.long)
+        token_type_ids = encodings["token_type_ids"].to(device, dtype=torch.long)
+        output = model(input_ids, attention_mask, token_type_ids)
+        return torch.sigmoid(output).cpu().detach().numpy().tolist()
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+@biasengine.get("/hello")
 def hello():
     return "Hello"
 
-def _rate_bias(use_perplexity: bool):
+
+@biasengine.get("/rate_bias")
+@biasengine.post("/rate_bias")
+async def rate_bias(
+    request: Request,
+    site: Optional[str] = Query(default=None),
+    title: Optional[str] = Query(default=None),
+    page_text: Optional[str] = Query(default=None),
+):
     try:
-        site, title, page_text = _extract_article_fields()
+        from main import model_state  # model loaded in main.py lifespan
+
+        site, title, page_text = await _extract_fields(request, site, title, page_text)
 
         if not site or not title or not page_text:
-            return jsonify({"status": 400, "message": "Missing required fields: site, title, page_text"}), 400
+            return JSONResponse(
+                {"status": 400, "message": "Missing required fields: site, title, page_text"},
+                status_code=400,
+            )
 
-        example = str(site) + str(title) + str(page_text)
+        final_output = _run_bert(model_state, site, title, page_text)
 
-        encodings = current_app.tokenizer.encode_plus(
-            example,
-            None,
-            add_special_tokens=True,
-            max_length=256,
-            padding='max_length',
-            return_token_type_ids=True,
-            truncation=True,
-            return_attention_mask=True,
-            return_tensors='pt'
-        )
-
-        with torch.no_grad():
-            input_ids = encodings['input_ids'].to(current_app.device, dtype=torch.long)
-            attention_mask = encodings['attention_mask'].to(current_app.device, dtype=torch.long)
-            token_type_ids = encodings['token_type_ids'].to(current_app.device, dtype=torch.long)
-            output = current_app.model(input_ids, attention_mask, token_type_ids)
-            final_output = torch.sigmoid(output).cpu().detach().numpy().tolist()
-
-        if use_perplexity and getattr(current_app, "pkey", None):
+        pkey = model_state.get("pkey")
+        if pkey:
             try:
-                # get prompts
-                sys_prompt = prompts.sys_prompt
-                user_prompt = prompts.user_prompt + "<article>" + str(site) + " | " + str(title) + " | " + str(page_text) + "</article>"
+                from perplexity import Perplexity
 
-                # Initialize the client (uses PERPLEXITY_API_KEY environment variable)
-                client = Perplexity(api_key=current_app.pkey)
-
-                # Make the API call with a preset
+                user_prompt = (
+                    prompts.user_prompt
+                    + "<article>"
+                    + str(site) + " | " + str(title) + " | " + str(page_text)
+                    + "</article>"
+                )
+                client = Perplexity(api_key=pkey)
                 completion = client.chat.completions.create(
                     model="sonar",
                     messages=[
-                        {
-                            "role": "system",
-                            "content": sys_prompt
-                        },
-                        {
-                            "role": "user",
-                            "content": user_prompt
-                        }
-                    ]
+                        {"role": "system", "content": prompts.sys_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
                 )
-
-                # adjust sigmoid weights
-                target_dict = {'left': 0, 'leaning-left': 1, 'center': 2, 'leaning-right': 3, 'right': 4}
+                target_dict = {"left": 0, "leaning-left": 1, "center": 2, "leaning-right": 3, "right": 4}
                 bias = json.loads(completion.choices[0].message.content)["bias"]
+                final_output[int(target_dict[bias])] = final_output[int(target_dict[bias])] * 1.2
+            except Exception:
+                pass  # non-fatal
 
-                index_to_adjust = target_dict[bias]
-                final_output[int(index_to_adjust)] = final_output[int(index_to_adjust)] * 1.2
-
-            except:
-                pass
-
-        # translate into text
-        final_output = final_output[0]
-        max_prob = max(final_output)
-        max_index = final_output.index(max_prob)
-        target_list = ['left', 'leaning-left', 'center', 'leaning-right', 'right']
-        label = target_list[max_index]
-
-        return jsonify({"status": 200, "rating": label})
+        scores = final_output[0]
+        label = ["left", "leaning-left", "center", "leaning-right", "right"][scores.index(max(scores))]
+        return {"status": 200, "rating": label}
 
     except Exception as e:
-        current_app.logger.exception("rate_bias failed")
-        return jsonify({"status": 500, "message": str(e)}), 500
+        logger.exception("rate_bias failed")
+        return JSONResponse({"status": 500, "message": str(e)}, status_code=500)
 
 
-@biasengine.route('/rate_bias', methods=["GET", "POST"])
-def rate_bias():
-    return _rate_bias(use_perplexity=True)
-
-
-@biasengine.route('/rate_bias_no_perplexity', methods=["GET", "POST"])
-def rate_bias_no_perplexity():
-    return _rate_bias(use_perplexity=False)
-
-@biasengine.route('/get_topics', methods=["GET", "POST"])
-def get_topics():
-
+@biasengine.get("/rate_bias_no_perplexity")
+@biasengine.post("/rate_bias_no_perplexity")
+async def rate_bias_no_perplexity(
+    request: Request,
+    site: Optional[str] = Query(default=None),
+    title: Optional[str] = Query(default=None),
+    page_text: Optional[str] = Query(default=None),
+):
     try:
+        from main import model_state
+
+        site, title, page_text = await _extract_fields(request, site, title, page_text)
+
+        if not site or not title or not page_text:
+            return JSONResponse(
+                {"status": 400, "message": "Missing required fields: site, title, page_text"},
+                status_code=400,
+            )
+
+        final_output = _run_bert(model_state, site, title, page_text)
+        scores = final_output[0]
+        label = ["left", "leaning-left", "center", "leaning-right", "right"][scores.index(max(scores))]
+        return {"status": 200, "rating": label}
+
+    except Exception as e:
+        logger.exception("rate_bias_no_perplexity failed")
+        return JSONResponse({"status": 500, "message": str(e)}, status_code=500)
+
+
+@biasengine.get("/get_topics")
+@biasengine.post("/get_topics")
+async def get_topics(
+    request: Request,
+    site: Optional[str] = Query(default=None),
+    title: Optional[str] = Query(default=None),
+    page_text: Optional[str] = Query(default=None),
+):
+    try:
+        from main import model_state
+
+        site, title, page_text = await _extract_fields(request, site, title, page_text)
+
+        if not site or not title or not page_text:
+            return JSONResponse(
+                {"status": 400, "message": "Missing required fields: site, title, page_text"},
+                status_code=400,
+            )
+
+        pkey = model_state.get("pkey")
+        if not pkey:
+            return JSONResponse({"status": 500, "message": "API_KEY not set"}, status_code=500)
+
         output = ""
         counter = 0
         last_error = None
-        site, title, page_text = _extract_article_fields()
-
-        if not site or not title or not page_text:
-            return jsonify({"status": 400, "message": "Missing required fields: site, title, page_text"}), 400
 
         while output == "" and counter < 3:
             try:
-                # get prompts
-                sys_prompt = prompts.topics_sys_prompt
-                user_prompt = prompts.topics_user_prompt + "<article>" + str(site) + " | " + str(title) + " | " + str(page_text) + "</article>"
+                from perplexity import Perplexity
 
-                # Initialize the client (uses PERPLEXITY_API_KEY environment variable)
-                client = Perplexity(api_key=current_app.pkey)
-
-                # Make the API call with a preset
+                user_prompt = (
+                    prompts.topics_user_prompt
+                    + "<article>"
+                    + str(site) + " | " + str(title) + " | " + str(page_text)
+                    + "</article>"
+                )
+                client = Perplexity(api_key=pkey)
                 completion = client.chat.completions.create(
                     model="sonar",
                     messages=[
-                        {
-                            "role": "system",
-                            "content": sys_prompt
-                        },
-                        {
-                            "role": "user",
-                            "content": user_prompt
-                        }
-                    ]
+                        {"role": "system", "content": prompts.topics_sys_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
                 )
-                
-                #check output format
                 raw_content = completion.choices[0].message.content
                 temp_output = _parse_json_safely(raw_content)
+
                 if not isinstance(temp_output, dict):
                     raise ValueError("Model response is not a JSON object")
-
-                keys = list(temp_output.keys())
-                if "covered" in keys and "omitted" in keys:
-                    output = temp_output
-                else:
+                if "covered" not in temp_output or "omitted" not in temp_output:
                     raise ValueError("Missing required keys: covered, omitted")
-                
-                # increment counter
+
+                output = temp_output
                 counter += 1
+
             except Exception as e:
                 last_error = str(e)
-                current_app.logger.warning("get_topics parse attempt %s failed: %s", counter + 1, last_error)
-                # increment counter
+                logger.warning("get_topics attempt %s failed: %s", counter + 1, last_error)
                 counter += 1
                 continue
-    
-        if not output or not isinstance(output, dict):
-            current_app.logger.warning("get_topics fallback applied after retries. last_error=%s", last_error)
-            return jsonify({
-                'status': 200,
-                'topics': {'covered': [], 'omitted': []},
-                'warning': f"Topics analysis unavailable: {last_error or 'model output format invalid'}"
-            })
 
-        return jsonify({'status': 200, 'topics': output})
-    
+        if not output or not isinstance(output, dict):
+            logger.warning("get_topics fallback. last_error=%s", last_error)
+            return {
+                "status": 200,
+                "topics": {"covered": [], "omitted": []},
+                "warning": f"Topics analysis unavailable: {last_error or 'model output format invalid'}",
+            }
+
+        return {"status": 200, "topics": output}
+
     except Exception as e:
-        current_app.logger.exception("get_topics failed")
-        return jsonify({'status': 500, 'message': str(e)}), 500
+        logger.exception("get_topics failed")
+        return JSONResponse({"status": 500, "message": str(e)}, status_code=500)

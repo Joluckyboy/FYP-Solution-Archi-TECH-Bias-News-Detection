@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-const EMOTION_COLORS = {
+const EMOTION_COLOURS = {
   joy: "#f59e0b", love: "#ec4899", excitement: "#f97316",
   optimism: "#84cc16", admiration: "#06b6d4", approval: "#22c55e",
   neutral: "#94a3b8", curiosity: "#8b5cf6", surprise: "#14b8a6",
@@ -19,17 +19,31 @@ const EMOTION_COLORS = {
   disgust: "#78716c", disappointment: "#6b7280", annoyance: "#f87171",
   grief: "#1e3a5f", remorse: "#7c3aed", embarrassment: "#db2777",
   nervousness: "#d97706", confusion: "#64748b", disapproval: "#f43f5e",
-  realization: "#0ea5e9", caring: "#10b981", relief: "#a3e635", pride: "#7c3aed",
+  realisation: "#0ea5e9", caring: "#10b981", relief: "#a3e635", pride: "#7c3aed",
 };
-const getColor = (e) => EMOTION_COLORS[(e ?? "neutral").toLowerCase()] ?? "#94a3b8";
+
+const normaliseEmotionKey = (emotion) => {
+  const key = (emotion ?? "neutral").toLowerCase().trim();
+  if (key === "realization") return "realisation";
+  return key;
+};
+
+const getEmotionLabel = (emotion) => {
+  const key = normaliseEmotionKey(emotion);
+  if (key === "realisation") return "Realisation";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+};
+
+const getColour = (e) => EMOTION_COLOURS[normaliseEmotionKey(e)] ?? "#94a3b8";
 
 const EMOTION_EMOJI = {
   joy: "😄", love: "❤️", excitement: "🎉", fear: "😨", anger: "😡",
   sadness: "😢", neutral: "😐", optimism: "🌟", curiosity: "🤔",
   approval: "👍", disapproval: "👎", disappointment: "😞", annoyance: "😤",
   confusion: "😕", admiration: "🤩", surprise: "😮", caring: "🤗",
-  relief: "😌", realization: "💡", pride: "🦁", grief: "😭",
+  relief: "😌", realisation: "💡", pride: "🦁", grief: "😭",
   remorse: "😔", embarrassment: "😳", nervousness: "😰",
+  disgust: "🤢", desire: "✨", gratitude: "🙏", amusement: "😂",
 };
 
 const EMOTION_MEANING = {
@@ -53,10 +67,14 @@ const EMOTION_MEANING = {
   remorse:        "This article expresses regret or guilt.",
   confusion:      "This article deals with unclear or conflicting information.",
   caring:         "This article expresses concern and compassion for others.",
-  realization:    "This article reveals new understanding or insight.",
+  realisation:    "This article reveals new understanding or insight.",
   relief:         "This article reflects a sense of tension being resolved.",
   nervousness:    "This article carries an anxious or uneasy tone.",
   pride:          "This article expresses achievement or a sense of identity.",
+  desire:         "This article expresses a want, wish, or longing.",
+  gratitude:      "This article expresses thankfulness or appreciation.",
+  amusement:      "This article finds something funny or entertaining.",
+  embarrassment:  "This article expresses shame or self-consciousness.",
 };
 
 const READER_IMPACT = {
@@ -75,9 +93,22 @@ const READER_IMPACT = {
   joy:            { icon: "😄", text: "This article has a positive, uplifting tone. Be aware that positive framing can sometimes gloss over complexity." },
   admiration:     { icon: "🤩", text: "This article expresses strong admiration — it may be presenting someone in a very favourable light." },
   disgust:        { icon: "🤢", text: "This article contains language designed to provoke strong disgust — a common persuasion technique." },
-  realization:    { icon: "💡", text: "This article presents new information or insight that may shift your understanding of the topic." },
+  realisation:    { icon: "💡", text: "This article presents new information or insight that may shift your understanding of the topic." },
+  grief:          { icon: "😭", text: "This article deals with deep loss. Grief-laden writing can create strong emotional resonance that influences how you process the facts." },
+  remorse:        { icon: "😔", text: "This article expresses regret or guilt. Consider whose remorse is being described and whether it is genuine." },
+  confusion:      { icon: "😕", text: "This article deals with uncertain or conflicting information. Be cautious about drawing firm conclusions." },
+  caring:         { icon: "🤗", text: "This article expresses compassion for others. Empathetic framing can be powerful — check that it is grounded in evidence." },
+  relief:         { icon: "😌", text: "This article frames a situation as resolved. Consider whether the relief is fully warranted." },
+  nervousness:    { icon: "😰", text: "This article carries an anxious tone. Nervousness can be contagious in writing — assess whether the worry is proportionate." },
+  pride:          { icon: "🦁", text: "This article expresses pride or achievement. Pride-based framing can appeal to identity — stay critical of the underlying claims." },
+  desire:         { icon: "✨", text: "This article expresses longing or aspiration. Desire-driven framing can make things seem more appealing than they are." },
+  gratitude:      { icon: "🙏", text: "This article expresses thankfulness. Gratitude framing often presents a favourable view — consider whether other perspectives are missing." },
+  amusement:      { icon: "😂", text: "This article uses humour or levity. Amusing framing can make serious topics feel lighter and may reduce critical scrutiny." },
+  embarrassment:  { icon: "😳", text: "This article involves shame or embarrassment. Such framing can be used to discredit people — evaluate the underlying facts independently." },
+  love:           { icon: "❤️", text: "This article expresses deep affection. Emotionally warm framing can make readers more sympathetic to the subject." },
 };
 
+// ── EXPANDED to all 28 go_emotions labels ─────────────────────────────────────
 const EMOTION_GUIDE = [
   { emoji: "😐", name: "Neutral",        desc: "Reporting facts without taking a side. Common in news articles." },
   { emoji: "👍", name: "Approval",       desc: "Someone in the article is expressing support, praise, or agreement." },
@@ -89,8 +120,24 @@ const EMOTION_GUIDE = [
   { emoji: "🌟", name: "Optimism",       desc: "Forward-looking with hope or positive expectation." },
   { emoji: "😞", name: "Disappointment", desc: "Expectations were not met — something fell short." },
   { emoji: "😤", name: "Annoyance",      desc: "Mild irritation or frustration, less intense than anger." },
-  { emoji: "💡", name: "Realization",    desc: "A new understanding or discovery is being revealed." },
+  { emoji: "💡", name: "Realisation",    desc: "A new understanding or discovery is being revealed." },
   { emoji: "🤔", name: "Curiosity",      desc: "The text raises questions or invites deeper thinking." },
+  { emoji: "😕", name: "Confusion",      desc: "Uncertainty or lack of clarity is expressed." },
+  { emoji: "😮", name: "Surprise",       desc: "An unexpected event or revelation is described." },
+  { emoji: "🤩", name: "Admiration",     desc: "Strong positive regard or respect is conveyed." },
+  { emoji: "❤️", name: "Love",           desc: "Warmth, affection, or deep care is expressed." },
+  { emoji: "🤗", name: "Caring",         desc: "Concern for others' wellbeing or welfare." },
+  { emoji: "✨", name: "Desire",         desc: "A want, wish, or longing is expressed." },
+  { emoji: "🎉", name: "Excitement",     desc: "High energy enthusiasm or anticipation." },
+  { emoji: "🙏", name: "Gratitude",      desc: "Thankfulness or appreciation is expressed." },
+  { emoji: "🦁", name: "Pride",          desc: "A sense of achievement or self-worth is conveyed." },
+  { emoji: "😌", name: "Relief",         desc: "Tension resolved — a stressful situation has passed." },
+  { emoji: "😂", name: "Amusement",      desc: "Something is found funny or entertaining." },
+  { emoji: "😭", name: "Grief",          desc: "Deep sorrow, often related to loss." },
+  { emoji: "😔", name: "Remorse",        desc: "Guilt or regret over a past action." },
+  { emoji: "😳", name: "Embarrassment",  desc: "Shame or self-consciousness is expressed." },
+  { emoji: "😰", name: "Nervousness",    desc: "Anxiety or apprehension about something uncertain." },
+  { emoji: "🤢", name: "Disgust",        desc: "Strong aversion or revulsion is expressed." },
 ];
 
 const THRESHOLD = 0.02;
@@ -116,14 +163,14 @@ function _buildVerdict(weighted_avg, dominant_emotion) {
       return {
         style: "bg-rose-50 border-rose-300 text-rose-800",
         icon: "⚠️",
-        text: `This article carries a strong ${domLower} tone (${Math.round((weighted_avg[domLower] ?? 0) * 100)}%). Be aware of how this may shape your reaction to the content.`,
+        text: `This article carries a strong ${domLower} tone (${((weighted_avg[domLower] ?? 0) * 100).toFixed(1)}%). Be aware of how this may shape your reaction to the content.`,
       };
     }
     if (POSITIVE_EMOTIONS.includes(domLower)) {
       return {
         style: "bg-green-50 border-green-300 text-green-800",
         icon: "✅",
-        text: `This article carries a positive ${domLower} tone (${Math.round((weighted_avg[domLower] ?? 0) * 100)}%). Positive framing can sometimes make content seem more credible than it is.`,
+        text: `This article carries a positive ${domLower} tone (${((weighted_avg[domLower] ?? 0) * 100).toFixed(1)}%). Positive framing can sometimes make content seem more credible than it is.`,
       };
     }
   }
@@ -140,13 +187,13 @@ function _buildVerdict(weighted_avg, dominant_emotion) {
 
     // Mention second emotion if notable
     const secondPart = secondaries.length > 1
-      ? ` and ${secondaries[1][0]} (${Math.round(secondaries[1][1] * 100)}%)`
+      ? ` and ${secondaries[1][0]} (${((secondaries[1][1] ?? 0) * 100).toFixed(1)}%)`
       : "";
 
     return {
       style: isNeg ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-blue-50 border-blue-300 text-blue-800",
       icon: isNeg ? "⚠️" : "💬",
-      text: `This article is mostly neutral in tone, but contains notable ${secEmotion} (${Math.round(secScore * 100)}%)${secondPart} language. This may subtly shape how you feel while reading.`,
+      text: `This article is mostly neutral in tone, but contains notable ${secEmotion} (${(secScore * 100).toFixed(1)}%)${secondPart} language. This may subtly shape how you feel while reading.`,
     };
   }
 
@@ -161,7 +208,7 @@ function _findExample(emotion, sentence_emotions, section_emotions) {
   if (sentence_emotions?.length) {
     // First try: find a sentence where this emotion is dominant
     const dominant = sentence_emotions
-      .filter(s => s.dominant === emotion)
+      .filter(s => normaliseEmotionKey(s.dominant) === normaliseEmotionKey(emotion))
       .sort((a, b) => b.score - a.score)[0];
     if (dominant?.sentence) return { text: dominant.sentence, isFull: true };
 
@@ -170,11 +217,11 @@ function _findExample(emotion, sentence_emotions, section_emotions) {
     const inTop3 = sentence_emotions
       .filter(s =>
         Array.isArray(s.top_emotions) &&
-        s.top_emotions.some(e => e.label === emotion)
+        s.top_emotions.some(e => normaliseEmotionKey(e.label) === normaliseEmotionKey(emotion))
       )
       .map(s => ({
         sentence: s.sentence,
-        emotionScore: s.top_emotions.find(e => e.label === emotion)?.score ?? 0,
+        emotionScore: s.top_emotions.find(e => normaliseEmotionKey(e.label) === normaliseEmotionKey(emotion))?.score ?? 0,
       }))
       .sort((a, b) => b.emotionScore - a.emotionScore)[0];
     if (inTop3?.sentence) return { text: inTop3.sentence, isFull: true };
@@ -204,7 +251,7 @@ function _buildReaderInsights(weighted_avg, dominant_emotion) {
   const secondaries = Object.entries(weighted_avg)
     .filter(([k, v]) => k !== domLower && v >= SECONDARY_THRESHOLD && !seen.has(k))
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3); // show up to 3 secondary emotions
+    .slice(0, 3);
 
   for (const [emotion] of secondaries) {
     const impact = READER_IMPACT[emotion];
@@ -230,20 +277,30 @@ const EmotionTab = ({ emotionResult }) => {
     section_emotions  = [],
   } = emotionResult;
 
-  const derived          = _deriveDominant(weighted_avg);
-  const dominant_emotion = rawDominant ?? derived.emotion;
+  const normalisedWeightedAvg = Object.entries(weighted_avg).reduce((acc, [emotion, score]) => {
+    const key = normaliseEmotionKey(emotion);
+    acc[key] = (acc[key] ?? 0) + (Number(score) || 0);
+    return acc;
+  }, {});
+
+  const derived          = _deriveDominant(normalisedWeightedAvg);
+  const dominant_emotion = normaliseEmotionKey(rawDominant ?? derived.emotion);
   const dominant_score   = rawScore    ?? derived.score;
   const domLower         = dominant_emotion?.toLowerCase() ?? "neutral";
-  const domColor         = getColor(dominant_emotion);
+  const domColour        = getColour(dominant_emotion);
 
-  const chartData = Object.entries(weighted_avg)
+  const chartData = Object.entries(normalisedWeightedAvg)
     .filter(([, v]) => v >= THRESHOLD)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, value]) => ({ name, value: Math.round(value * 100) }));
+    .map(([name, value]) => ({
+      key: name,
+      label: getEmotionLabel(name),
+      value: parseFloat((value * 100).toFixed(1)),
+    }));
 
-  const readerInsights = _buildReaderInsights(weighted_avg, dominant_emotion);
-  const verdict        = _buildVerdict(weighted_avg, dominant_emotion);
+  const readerInsights = _buildReaderInsights(normalisedWeightedAvg, dominant_emotion);
+  const verdict        = _buildVerdict(normalisedWeightedAvg, dominant_emotion);
 
   return (
     <div className="space-y-6">
@@ -258,15 +315,15 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 2. Overall Emotional Tone ─────────────────────────────────────── */}
       <div
         className="rounded-xl border-2 p-5"
-        style={{ borderColor: domColor, background: domColor + "15" }}
+        style={{ borderColor: domColour, background: domColour + "15" }}
       >
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+        <p className="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-3">
           Overall Emotional Tone
         </p>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-4xl">{EMOTION_EMOJI[domLower] ?? "🎭"}</span>
           <div>
-            <p className="text-2xl font-bold capitalize" style={{ color: domColor }}>
+            <p className="text-2xl font-bold capitalize" style={{ color: domColour }}>
               {dominant_emotion}
             </p>
             <p className="text-sm text-gray-400">
@@ -284,33 +341,32 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 3. How might this article affect you? ────────────────────────── */}
       {readerInsights.length > 0 && (
         <div>
-          <p className="text-sm font-semibold mb-1 text-gray-600">
+          <p className="text-md font-semibold mb-1 text-gray-600">
             How might this article affect you?
           </p>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-sm text-gray-400 mb-3">
             Based on the emotional language detected, here's what to be aware of as a reader.
           </p>
 
           <div className="flex flex-col gap-3">
             {readerInsights.map(({ emotion, icon, text }) => {
-              const color   = getColor(emotion);
+              const colour  = getColour(emotion);
               const example = _findExample(emotion, sentence_emotions, section_emotions);
 
               return (
                 <div
                   key={emotion}
                   className="rounded-xl border-2 p-4"
-                  style={{ borderColor: color + "66", background: color + "0f" }}
+                  style={{ borderColor: colour + "66", background: colour + "0f" }}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{icon}</span>
-                    <span className="text-xs font-bold uppercase tracking-wide capitalize" style={{ color }}>
+                    <span className="text-md font-bold uppercase tracking-wide capitalize" style={{ color: colour }}>
                       {emotion}
                     </span>
-                    {/* Show percentage for non-dominant emotions so user understands scale */}
-                    {emotion !== domLower && weighted_avg[emotion] !== undefined && (
-                      <span className="text-[10px] text-gray-400 ml-auto">
-                        {Math.round((weighted_avg[emotion] ?? 0) * 100)}% of article
+                    {emotion !== domLower && normalisedWeightedAvg[emotion] !== undefined && (
+                      <span className="text-sm text-gray-400 ml-auto">
+                        {((normalisedWeightedAvg[emotion] ?? 0) * 100).toFixed(1)}% of article
                       </span>
                     )}
                   </div>
@@ -318,13 +374,13 @@ const EmotionTab = ({ emotionResult }) => {
                   <p className="text-sm text-gray-700 mb-3">{text}</p>
 
                   {example && emotion !== "neutral" && (
-                    <div className="border-l-4 pl-3 py-1" style={{ borderColor: color }}>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+                    <div className="border-l-4 pl-3 py-1" style={{ borderColor: colour }}>
+                      <p className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-1">
                         Example from this article
                       </p>
-                      <p className="text-xs text-gray-600 italic">"{example.text}"</p>
+                      <p className="text-sm text-gray-600 italic">"{example.text}"</p>
                       {!example.isFull && (
-                        <p className="text-[10px] text-gray-400 mt-1">(section preview)</p>
+                        <p className="text-sm text-gray-400 mt-1">(section preview)</p>
                       )}
                     </div>
                   )}
@@ -338,14 +394,14 @@ const EmotionTab = ({ emotionResult }) => {
       {/* ── 4. Emotion Breakdown ─────────────────────────────────────────── */}
       {chartData.length > 0 && (
         <div>
-          <p className="text-sm font-semibold mb-1 text-gray-600">Emotion Breakdown</p>
+          <p className="text-md font-semibold mb-1 text-gray-600">Emotion Breakdown</p>
           <div className="flex items-center gap-1.5 mb-3">
-            <p className="text-xs text-gray-400">
+            <p className="text-sm text-gray-400">
               How strongly each emotion appears across the whole article.
             </p>
             <span className="relative group inline-flex items-center shrink-0 cursor-help">
-              <span className="text-[10px] text-gray-500 bg-gray-100 rounded-full w-[16px] h-[16px] inline-flex items-center justify-center border border-gray-300 font-bold select-none">?</span>
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed shadow-lg">
+              <span className="text-sm text-gray-500 bg-gray-100 rounded-full w-[16px] h-[16px] inline-flex items-center justify-center border border-gray-300 font-bold select-none">?</span>
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-sm rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed shadow-lg">
                 These scores don't add up to 100%. Each sentence is scored on all emotions independently — a sentence can be 70% neutral and 24% approving simultaneously. The bars show emotional strength, not proportional slices.
                 <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
               </span>
@@ -353,19 +409,42 @@ const EmotionTab = ({ emotionResult }) => {
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 40 }}>
-              <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }}
-                tickFormatter={v => v.charAt(0).toUpperCase() + v.slice(1)} />
-              <Tooltip formatter={(v, name) => [`${v}%`, name.charAt(0).toUpperCase() + name.slice(1)]} />
+              <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 13 }} />
+              <YAxis type="category" dataKey="label" width={100} tick={{ fontSize: 13 }}
+                tickFormatter={v => v} />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0]?.payload;
+                  const value = payload[0]?.value;
+                  return (
+                    <div style={{
+                      background: "white",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      fontSize: 12,
+                    }}>
+                      <p style={{ margin: 0, fontWeight: 500, color: "#374151", textTransform: "capitalize" }}>
+                        {row?.label}
+                      </p>
+                      <p style={{ margin: 0, color: "#6b7280" }}>
+                        {Number(value).toFixed(1)}%
+                      </p>
+                    </div>
+                  );
+                }}
+              />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {chartData.map(e => <Cell key={e.name} fill={getColor(e.name)} />)}
+                {chartData.map(e => <Cell key={e.key} fill={getColour(e.key)} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
 
+          {/* ── What do these emotions mean? — now shows all 28 labels ── */}
           <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
             <button
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-600 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-md font-medium text-gray-600 transition-colors"
               onClick={() => setGuideOpen(!guideOpen)}
             >
               <span>📘 What do these emotions mean?</span>
@@ -374,7 +453,7 @@ const EmotionTab = ({ emotionResult }) => {
             {guideOpen && (
               <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {EMOTION_GUIDE.map(({ emoji, name, desc }) => (
-                  <div key={name} className="flex items-start gap-2 text-xs text-gray-600">
+                  <div key={name} className="flex items-start gap-2 text-sm text-gray-600">
                     <span className="text-base shrink-0">{emoji}</span>
                     <span><strong>{name}:</strong> {desc}</span>
                   </div>

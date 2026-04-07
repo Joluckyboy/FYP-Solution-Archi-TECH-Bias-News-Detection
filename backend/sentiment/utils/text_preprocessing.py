@@ -27,27 +27,22 @@ def _fix_merged_tokens(text: str) -> str:
     if not _WORDNINJA_AVAILABLE:
         return text
 
-    # Match tokens that are: all lowercase OR start with one uppercase then all lowercase
-    # AND are 7+ chars (short words are unlikely to be merges)
-    # AND contain no digits or special chars
     def try_split(m):
         token = m.group(0)
-        lower = token.lower()
+        
+        # SKIP anything starting with uppercase — proper nouns, acronyms
+        # wordninja destroys "Zolfaghari" → "Zol fag hari"
+        if token[0].isupper():
+            return token
 
-        # Skip if it looks like a clean single word (heuristic: no repeated consonants
-        # that would indicate a boundary, and it's a common word)
-        # Let wordninja decide — if it returns 1 word, keep original
+        lower = token.lower()
         parts = wordninja.split(lower)
         if len(parts) <= 1:
-            return token  # not a merge, keep as-is
+            return token
 
-        # Reconstruct preserving original capitalisation of first char
         rejoined = ' '.join(parts)
-        if token[0].isupper():
-            rejoined = rejoined[0].upper() + rejoined[1:]
         return rejoined
 
-    # Only try to split tokens that are 7+ chars, all-alpha, no existing space
     text = re.sub(r'\b[a-zA-Z]{7,}\b', try_split, text)
     return text
 
@@ -105,6 +100,7 @@ def preprocess_article_text(text: str) -> str:
     # ── 7. Fix em-dash/en-dash with no surrounding spaces ─────────────────
     text = re.sub(r'\s*(–|—)\s*', ' — ', text)
 
+
     # ── 8. Convert paragraph breaks into sentence boundaries ──────────────
     def paragraph_to_sentence(match):
         preceding = match.group(1)
@@ -114,10 +110,21 @@ def preprocess_article_text(text: str) -> str:
 
     text = re.sub(r'(.)\n\n', paragraph_to_sentence, text)
 
+    # ── NEW: Single newlines that join two capitalised sentences ──────────
+    # "...outside of the plane\nAccording to" → "...outside of the plane. According to"
+    text = re.sub(
+        r'([a-z\"\'\u201d])\n([A-Z\"\'\u201c])',
+        r'\1. \2',
+        text
+    )
+
     # ── 9. General cleanup ─────────────────────────────────────────────────
     text = re.sub(r'\n+', ' ', text)
     text = re.sub(r'\s{2,}', ' ', text)
     text = text.strip()
+
+    text = _filter_boilerplate_sentences(text)
+    return text
 
     # ── 10. Drop boilerplate sentences by pattern ─────────────────────────
     text = _filter_boilerplate_sentences(text)

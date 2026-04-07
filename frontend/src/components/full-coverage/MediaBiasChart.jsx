@@ -6,13 +6,14 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
+import { normalizeBias, getBiasLabel } from "@/utils/biasNormalizer";
 
 const BIAS_CONFIG = [
-    { key: "left", label: "Left", color: "#2563EB" },
-    { key: "leaningLeft", label: "Leaning Left", color: "#60A5FA" },
-    { key: "center", label: "Center", color: "#7C3AED" },
-    { key: "leaningRight", label: "Leaning Right", color: "#F87171" },
-    { key: "right", label: "Right", color: "#DC2626" },
+    { key: "left", label: "Left", color: "#93C5FD" },         // blue-300
+    { key: "leaningLeft", label: "Lean Left", color: "#BFDBFE" },  // blue-200
+    { key: "center", label: "Center", color: "#E9D5FF" },       // purple-200
+    { key: "leaningRight", label: "Lean Right", color: "#FECACA" }, // red-200
+    { key: "right", label: "Right", color: "#FCA5A5" },        // red-300
 ];
 
 const SG_DOMAINS = {
@@ -38,7 +39,7 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
     return (
-        <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central"
+        <text x={x} y={y} fill="#000" textAnchor="middle" dominantBaseline="central"
             style={{ fontSize: 11, fontWeight: 700 }}>
             {`${(percent * 100).toFixed(0)}%`}
         </text>
@@ -57,23 +58,23 @@ const MediaBiasChart = ({ articles, metrics }) => {
         .filter(d => d.value > 0);
 
     return (
-        <div className="bg-white rounded-xl p-6 flex flex-col shadow-sm border border-slate-100 h-full">
-            <h3 className="font-semibold text-slate-700 mb-1 text-center">News Article Bias Analysis</h3>
-            <p className="text-sm text-slate-500 mb-3 text-center">
+        <div className="bg-white rounded-xl p-5 flex flex-col shadow-sm border border-slate-100 h-full">
+            <h3 className="font-semibold text-lg text-slate-700 mb-1 text-center">News Article Bias Analysis</h3>
+            <p className="text-base text-slate-500 mb-2 text-center">
                 This chart shows the political bias distribution of{" "}
                 <span className="font-bold text-slate-700">{totalArticles}</span>{" "}
                 article{totalArticles !== 1 ? "s" : ""} covered by this news cluster.
             </p>
 
             {/* Pie Chart */}
-            <div className="w-full h-52 flex-shrink-0">
+            <div className="w-full h-48 flex-shrink-0 mt-2 mb-1">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={chartData}
                             cx="50%"
-                            cy="50%"
-                            outerRadius={88}
+                            cy="45%"
+                            outerRadius={75}
                             dataKey="value"
                             labelLine={false}
                             label={renderCustomLabel}
@@ -93,7 +94,7 @@ const MediaBiasChart = ({ articles, metrics }) => {
                                         border: "1px solid #E2E8F0",
                                         borderRadius: "8px",
                                         padding: "8px 12px",
-                                        fontSize: "12px",
+                                        fontSize: "13px",
                                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                                     }}>
                                         <p style={{ fontWeight: 700, color: "#1E293B", marginBottom: 2 }}>{name}</p>
@@ -106,17 +107,18 @@ const MediaBiasChart = ({ articles, metrics }) => {
                         />
                         <Legend
                             iconType="circle"
-                            iconSize={8}
-                            wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                            iconSize={10}
+                            wrapperStyle={{ fontSize: "14px", paddingTop: "8px" }}
+                            formatter={(value) => <span style={{ color: "#000000", fontWeight: 500 }}>{value}</span>}
                         />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
 
-            {/* Polarization Analysis */}
-            <div className="mt-4 pt-4 border-t border-slate-100 w-full">
-                <h4 className="font-semibold text-slate-700 mb-1 text-center">
-                    Polarization Analysis
+            {/* Polarisation Analysis */}
+            <div className="mt-2 pt-3 border-t border-slate-100 w-full">
+                <h4 className="font-semibold text-lg text-slate-700 mb-1 text-center">
+                    Polarisation Analysis
                 </h4>
                 {(() => {
                     const uniqueSources = {};
@@ -128,30 +130,47 @@ const MediaBiasChart = ({ articles, metrics }) => {
                             };
                         }
                     });
-                    const sources = Object.values(uniqueSources);
+
+                    const BIAS_RANK = {
+                        "left": 0,
+                        "lean-left": 1,
+                        "center": 2,
+                        "lean-right": 3,
+                        "right": 4,
+                    };
+                    const getBiasRank = (bias) => {
+                        return BIAS_RANK[normalizeBias(bias)] ?? 2; // default to center
+                    };
+
+                    const sources = Object.values(uniqueSources).sort(
+                        (a, b) => getBiasRank(a.bias) - getBiasRank(b.bias)
+                    );
                     return (
                         <div className="flex flex-col items-center">
-                            <p className="text-sm text-slate-500 mb-3">
+                            <p className="text-base text-slate-500 mb-2">
                                 This story is covered by{" "}
                                 <span className="font-bold text-slate-800">{sources.length}</span> unique sources.
                             </p>
                             <div className="flex flex-wrap justify-center gap-2">
                                 {sources.map((s, i) => {
                                     let pillClass = "bg-slate-100 border-slate-200 text-slate-700";
-                                    if (s.bias.includes("left")) pillClass = "bg-blue-100 border-blue-200 text-blue-800";
-                                    else if (s.bias.includes("right")) pillClass = "bg-red-100 border-red-200 text-red-800";
-                                    else if (s.bias.includes("center")) pillClass = "bg-purple-100 border-purple-200 text-purple-800";
+                                    const normalized = normalizeBias(s.bias);
+                                    if (normalized === "lean-left")  pillClass = "bg-blue-100 border-blue-200 text-blue-600";
+                                    else if (normalized === "left")  pillClass = "bg-blue-200 border-blue-300 text-blue-800";
+                                    else if (normalized === "lean-right") pillClass = "bg-red-100 border-red-200 text-red-600";
+                                    else if (normalized === "right") pillClass = "bg-red-200 border-red-300 text-red-800";
+                                    else if (normalized === "center") pillClass = "bg-purple-100 border-purple-200 text-purple-800";
                                     return (
                                         <div key={i}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${pillClass}`}
-                                            title={`${s.source} (${s.bias})`}>
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-sm font-medium ${pillClass}`}
+                                            title={`${s.source} (${getBiasLabel(s.bias)})`}>
                                             <img
                                                 src={getSourceIcon(s.source)}
                                                 alt={s.source}
                                                 className="h-4 w-4 rounded-full object-cover flex-shrink-0"
                                                 onError={(e) => { e.target.style.display = "none"; }}
                                             />
-                                            <span className="max-w-[80px] truncate">{s.source}</span>
+                                            <span className="max-w-[100px] truncate">{s.source}</span>
                                         </div>
                                     );
                                 })}

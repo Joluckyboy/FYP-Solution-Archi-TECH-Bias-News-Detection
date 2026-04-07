@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query
+﻿from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 
 import vars as vars
-
+import requests as _requests
+from urllib.parse import urlparse
 import threading
 import time
 import json
@@ -36,6 +37,26 @@ _analysis_guard_lock = threading.Lock()
 _active_retry_urls = set()
 _active_full_urls = set()
 
+YOUTUBE_CHANNEL_DOMAIN_MAP = {
+    "cna": "channelnewsasia.com",
+    "channel newsasia": "channelnewsasia.com",
+    "the straits times": "straitstimes.com",
+    "straits times": "straitstimes.com",
+    "today": "todayonline.com",
+    "today online": "todayonline.com",
+    "mothership": "mothership.sg",
+    "cnn": "cnn.com",
+    "nbc news": "nbcnews.com",
+    "fox news": "foxnews.com",
+    "bbc news": "bbc.com",
+    "reuters": "reuters.com",
+    "associated press": "apnews.com",
+    "npr": "npr.org",
+    # ← ADD THESE 3:
+    "abc news": "abcnews.go.com",
+    "cbs news": "cbsnews.com",
+    "msnbc": "msnbc.com",
+}
 
 def _start_unique_background(url: str, job_type: str, target) -> bool:
     """Start background job only if same URL/job_type is not already running."""
@@ -349,15 +370,44 @@ def _find_similar_aliases(query: str, max_results: int = 5) -> list:
 
 
 @app.get("/application/source_credibility")
-def get_source_credibility(domain: str = Query(..., description="Domain to check credibility for")):
+def get_source_credibility(domain: str = Query(..., description="Domain to check credibility for"), video_uploader: str = Query(None, description="YouTube channel name for credibility analysis")):
     """
     Calculate credibility score for a news source based on historical analysis data.
     Queries all analyzed articles from the given domain and aggregates metrics.
+    Added video_uploader param — when analyzing a YouTube video,
+    the scraper passes the channel name so we can map it to the real outlet domain.
     """
     from urllib.parse import urlparse
 
     # Keep original input for fuzzy matching before normalization
     original_input = domain.strip().lower()
+
+    if "youtube.com" in original_input or "youtu.be" in original_input:
+        if video_uploader:
+            uploader_lower = video_uploader.strip().lower()
+            resolved_domain = YOUTUBE_CHANNEL_DOMAIN_MAP.get(uploader_lower)
+            if not resolved_domain:
+                # Try partial match
+                for channel, d in YOUTUBE_CHANNEL_DOMAIN_MAP.items():
+                    if channel in uploader_lower or uploader_lower in channel:
+                        resolved_domain = d
+                        break
+            if resolved_domain:
+                domain = resolved_domain
+                original_input = resolved_domain
+            else:
+                # Unknown YouTube channel — no credibility data possible
+                return {
+                    "domain": f"youtube.com ({video_uploader})",
+                    "status": "no_data",
+                    "message": f"No credibility data for YouTube channel '{video_uploader}'. Submit articles directly from their website to build a profile.",
+                }
+        else:
+            return {
+                "domain": "youtube.com",
+                "status": "no_data", 
+                "message": "YouTube channel unknown. No credibility history available.",
+            }
 
     # Normalize domain: strip protocol, www, trailing slashes
     domain = original_input
@@ -365,6 +415,14 @@ def get_source_credibility(domain: str = Query(..., description="Domain to check
         domain = urlparse(domain).netloc or domain
     domain = domain.removeprefix("www.")
     domain = domain.rstrip("/")
+
+    SUBDOMAIN_NORMALIZE = {
+    "edition.cnn.com":  "cnn.com",
+    "lite.cnn.com":     "cnn.com",
+    "money.cnn.com":    "cnn.com",
+    "us.cnn.com":       "cnn.com",
+    }
+    domain = SUBDOMAIN_NORMALIZE.get(domain, domain)
 
     if not domain:
         raise HTTPException(status_code=400, detail="Domain is required")
@@ -476,20 +534,18 @@ def get_source_credibility(domain: str = Query(..., description="Domain to check
         skew = 0.0
 
     # Credibility score (0-100):
-    # - Low propaganda = good (weight 40%)
-    # - High factual accuracy = good (weight 40%)
-    # - Low sentiment skew = good (weight 20%)
+    # - Low propaganda = good (weight 50%)
+    # - High factual accuracy = good (weight 50%)
     if label is None:
-        propaganda_score = (1.0 - avg_propaganda) * 40
-        accuracy_score = factual_accuracy * 40
-        skew_score = (1.0 - min(skew, 1.0)) * 20
-        credibility_score = round(propaganda_score + accuracy_score + skew_score, 1)
+        propaganda_score = (1.0 - avg_propaganda) * 50
+        accuracy_score = factual_accuracy * 50
+        credibility_score = round(propaganda_score + accuracy_score, 1)
 
-        if credibility_score >= 80:
+        if credibility_score >= 50:
             label = "Highly Credible"
-        elif credibility_score >= 60:
-            label = "Moderately Credible"
         elif credibility_score >= 40:
+            label = "Moderately Credible"
+        elif credibility_score >= 20:
             label = "Questionable"
         else:
             label = "Low Credibility"
@@ -695,6 +751,8 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             if not text or not title:
                 logger.warning(f"Stored content missing for {url}, re-scraping...")
                 data = methods.extract_news(url)
+                if not data:
+                    raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
                 text = data.get("body", "")
                 title = data.get("headline", "")
                 if not text or not title:
@@ -749,6 +807,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                             sentiment=fresh_data.get("sentiment_result"),
                             emotion=fresh_data.get("emotion_result"),
                             propaganda=fresh_data.get("propaganda_result"),
+                            political_bias=fresh_data.get("political_bias_result"),
                             summarise=fresh_data.get("summarise_result"),
                             allow_partial_local=True,
                         )
@@ -787,15 +846,21 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             # NEW ARTICLE: Scrape and save content
             logger.info(f"New article detected: {url}")
             data = methods.extract_news(url)
+            if not data:
+                raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
             text = data.get("body", "")
             title = data.get("headline", "")
-            
+            uploader = data.get("uploader", "")
+
             if not text or not title:
                 raise HTTPException(status_code=400, detail="Invalid URL - could not extract content")
-            
-            # Save article content to database
-            initial_save = methods.create_news(url, title, text)
+
+            # Save article content to database — now includes uploader
+            initial_save = methods.create_news(url, title, text, uploader=uploader)  # ← pass uploader
             logger.info(f"Article content saved for {url}")
+
+            if uploader and isinstance(initial_save, dict):
+                initial_save["uploader"] = uploader
 
         # FULL ANALYSIS: Run all services IN PARALLEL (for new articles or force re-analyze)
         def full_analysis():
@@ -847,6 +912,7 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
                     sentiment=fresh_data.get("sentiment_result"),
                     emotion=fresh_data.get("emotion_result"),
                     propaganda=fresh_data.get("propaganda_result"),
+                    political_bias=fresh_data.get("political_bias_result"),
                     summarise=fresh_data.get("summarise_result"),
                     allow_partial_local=True,
                 )
@@ -892,3 +958,74 @@ def process_url(url: str, return_news: bool = False, background: bool = True, fo
             else:
                 error_message = str(error) if str(error) else "Internal Server Error"
                 raise HTTPException(status_code=500, detail=error_message)
+            
+
+@app.get("/application/related_coverage")
+async def get_related_coverage(url: str = Query(..., description="URL of the analysed article")):
+    """
+    Find related articles from other outlets covering the same story.
+ 
+    Steps:
+      1. Fetch the analysed article's title + summary from DB (or scraper)
+      2. POST to analyzer /dashboard/related_articles with title + url
+      3. Return matched cluster articles filtered to 1-per-outlet, excluding source outlet
+    """
+
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+ 
+    # Get the analysed article data
+    try:
+        article_data = methods.get_news(url)
+    except Exception:
+        article_data = {}
+ 
+    title   = article_data.get("title", "")
+    summary = article_data.get("content", "")[:500] if article_data.get("content") else ""
+ 
+    if not title:
+        # Try to scrape if not in DB yet
+        try:
+            scraped = methods.extract_news(url)
+            title   = scraped.get("headline", "")
+            summary = scraped.get("body", "")[:500] if scraped.get("body") else ""
+        except Exception:
+            pass
+ 
+    if not title:
+        return {"articles": [], "matched": False, "reason": "Could not extract article title"}
+ 
+    # Extract source domain of the submitted article
+    try:
+        source_domain = urlparse(url).netloc.replace("www.", "")
+    except Exception:
+        source_domain = ""
+ 
+    # Call analyzer service to find matching cluster
+    analyzer_url = vars.analyzer_url if hasattr(vars, "analyzer_url") else os.getenv("ANALYZER_URL", "http://localhost:8017")
+ 
+    try:
+        resp = _requests.post(
+            f"{analyzer_url}/dashboard/related_articles",
+            json={
+                "title": title,
+                "url": url,
+                "summary": summary,
+                "source_domain": source_domain,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return {
+                "articles":     data.get("articles", []),
+                "cluster_title": data.get("cluster_title", ""),
+                "matched":      data.get("matched", False),
+                "reason":       data.get("reason", ""),
+            }
+        else:
+            return {"articles": [], "matched": False, "reason": f"Analyzer returned {resp.status_code}"}
+    except Exception as e:
+        logger.error(f"Related coverage lookup failed: {e}")
+        return {"articles": [], "matched": False, "reason": "Related coverage unavailable"}
+ 

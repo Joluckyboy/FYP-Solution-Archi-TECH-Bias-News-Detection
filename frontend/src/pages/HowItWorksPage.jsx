@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import get_api from "@/config/config";
 import axios from "axios";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts"; 
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 
 const HowItWorksPage = () => {
   const [stats, setStats] = useState(null);
@@ -23,7 +24,11 @@ const HowItWorksPage = () => {
     load();
   }, []);
 
-  if (loading) return <div className="flex justify-center p-20">Loading explanations... Please wait!</div>;
+  if (loading) return (
+    <div className="flex justify-center items-center py-20">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+    </div>
+  );
 
   // Transform trend data for chart
   const trendData = stats?.dailyTrend?.map(item => ({

@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 // import API_URL from "@/config/config";
+import { isNonNewsDomain, isYouTubeUrl } from "@/utils/newsURLClassifier";
 import get_api, { get_analyzer } from "@/config/config";
 import BiasLabelGuide from "@/components/BiasLabelGuide";
 import TrendingKeywords from "@/components/TrendingKeywords";
 import TopicOutletBias from "@/components/TopicOutletBias";
 import TopicFeed from "@/components/TopicFeed";
+import { Search } from "lucide-react";
 
 import { CustomInput } from "@/components/ui/custom-input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -28,18 +31,21 @@ const LandingPage = () => {
   const [articleURL, setArticleURL] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState(false);
-  const [forceReanalyze] = useState(false);
+  const [nonNewsError, setNonNewsError] = useState(false);
+  const [youtubeError, setYoutubeError] = useState(false); // ← ADD
+  const [forceReanalyse] = useState(false);
 
   // ── Topics state (lifted here so filter pills can share it) ──────────────
   const [topics, setTopics] = useState([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [topicsError, setTopicsError] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    get_analyzer().then((analyzerUrl) => {
+    get_analyzer().then((analyserUrl) => {
       axios
-        .get(`${analyzerUrl}/dashboard/topics`)
+        .get(`${analyserUrl}/dashboard/topics`)
         .then((res) => {
           setTopics(res.data.topics || []);
           setTopicsLoading(false);
@@ -106,172 +112,237 @@ const LandingPage = () => {
     setArticleURL(event.target.value);
   };
 
-  const handleButtonClick = () => {
-    console.log(`Button was clicked: ${articleURL}`);
-    if (!articleURL) {
-      setError(true);
-      return;
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      navigate(`/keywords/${encodeURIComponent(trimmed)}`);
     }
+  };
 
-    const new_query = async () => {
-      try {
-        // Notify background script that analysis is starting (for badge update)
-        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
-          chrome.runtime.sendMessage({ action: "analysisStarted" });
-        }
+  const handleButtonClick = () => {
+    setError(false);
+    setNonNewsError(false);
+    setYoutubeError(false); // ← ADD
 
-        // "url": articleURL in body (not params)
-        // let res = await axios.get(`${API_URL}/application/new_query`);
-        let res = await axios.post(`${API_URL}/application/new_query`, {
-          url: articleURL,
-          force: forceReanalyze,
-        });
-        let data = res.data;
+    if (!articleURL) { setError(true); return; }
+    if (isNonNewsDomain(articleURL)) { setNonNewsError(true); return; }
 
-        // setData(apiData);
-        console.log("landing page API fetch successful:", data);
-
-        navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
-      } catch (error) {
-        console.error("API fetch failed, using fallback JSON:", error);
-        setError(true);
-        // Clear badge on error
-        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
-          chrome.runtime.sendMessage({ action: "clearBadge" });
-        }
-      }
-    };
-
-    // Redirect to the results page with the article URL in body (not params)
-    // history.push("/results", { articleURL });
     new_query();
   };
 
+  const new_query = async () => {
+    try {
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage({ action: "analysisStarted" });
+      }
+      let res = await axios.post(`${API_URL}/application/new_query`, {
+        url: articleURL,
+        force: forceReanalyse,
+      });
+      let data = res.data;
+      navigate(`/results/${data.id}?redirect=false`, { state: { articleUrl: articleURL } });
+    } catch (error) {
+      console.error("API fetch failed:", error);
+
+      // ── YouTube-specific error ──────────────────────────────────────────
+      if (isYouTubeUrl(articleURL)) {
+        setYoutubeError(true);
+      } else {
+        setError(true);
+      }
+      // ───────────────────────────────────────────────────────────────────
+
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage({ action: "clearBadge" });
+      }
+    }
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full mt-6 sm:mt-12 mb-12 flex flex-col items-center px-4 sm:px-0">
       {/* Header Text */}
-      <div className="text-center m-12 mt-48 slide-in-right">
-        <h1
-          className={`checkmate-gradient pb-4 ${isMobile ? "text-3xl" : "text-5xl"
-            }`}
-        >
+      <div className="text-center mx-4 sm:mx-12 mt-8 sm:mt-16 sm:mb-8 slide-in-right">
+        <h1 className="checkmate-gradient pb-4 sm:pb-8 text-3xl sm:text-5xl">
           Your Move Against Misinformation
         </h1>
-        <h2 className={`text-2xl ${isMobile ? "text-xl" : "text-2xl"}`}>
-          Analyse any article for emotions, sentiment, and facts.
+        <h2 className="text-lg sm:text-2xl">
+          Analyse any news article, news website video, or YouTube news video for 
+          emotions, sentiment, facts, propaganda, and political bias.
         </h2>
       </div>
 
       {/* Search Input */}
-      <div className="flex justify-center items-center w-full mb-6">
-        <div className="w-[50%]">
+      <div className="flex justify-center items-center w-full mt-6 sm:mt-0">
+        <div className="w-[90%] sm:w-[70%] md:w-[50%]">
           <CustomInput
             placeholder="Drop an article link"
             value={articleURL}
             onChange={handleInputChange}
           />
+          <p className="text-s text-slate-400 text-center mt-2">
+            Supports news articles, video pages (CNN, NBC News, Today.com, Fox News…), and YouTube 
+            channels from CNA, BBC, Reuters, and more
+          </p>
           <br />
-          <div className="flex justify-center items-center w-full mt-4 mb-16">
+          <div className="flex justify-center items-center w-full mt-4 mb-8 sm:mb-16">
             <Button onClick={handleButtonClick} className="bg-blue-700">
               Analyse Now
             </Button>
           </div>
-          {error ? (
+          {youtubeError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Unsupported YouTube Channel</AlertTitle>
+              <AlertDescription>
+                Only YouTube videos from news channels are supported (e.g. CNA, 
+                BBC News, Reuters, NBC News). Please submit a video from a 
+                recognised news organisation.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {nonNewsError && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Not a News Article</AlertTitle>
+              <AlertDescription>
+                This URL doesn't appear to be a news source. CheckMate supports
+                news articles, news outlet video pages, and YouTube videos from
+                news channels (e.g. CNA, BBC, Reuters).
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
-                Something went wrong. Please try again.
-                <br />
-                Ensure that the input is not empty or that you are using a valid
-                URL.
+                Something went wrong. Please try again. Ensure that the input
+                is not empty or that you are using a valid URL.
               </AlertDescription>
             </Alert>
-          ) : (
-            <></>
           )}
         </div>
       </div>
 
-      {/* Resizable Panels */}
-      <div className="flex w-full justify-center items-center slide-in-left mb-12">
-        <div className={`w-[75%] ${isMobile ? "h-[700px]" : ""}`}>
-          <ResizablePanelGroup
-            direction={isMobile ? "vertical" : "horizontal"}
-            className="mb-6"
-          >
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <BadgeCheck size={30} />
+      {/* Feature Cards — grid on mobile, resizable panels on desktop */}
+      <div className="flex w-full justify-center items-center slide-in-left mb-12 sm:mb-24">
+        {isMobile ? (
+          <div className="w-[90%] grid grid-cols-2 gap-3">
+            {[
+              { icon: <BadgeCheck size={24} />, title: "Fact-Checking", desc: "Make sure the content is accurate and trustworthy." },
+              { icon: <Gauge size={24} />, title: "Sentiment Analysis", desc: "Find out if the article's sentiment is positive, negative, or neutral." },
+              { icon: <SmilePlus size={24} />, title: "Emotion Analysis", desc: "Understand underlying emotions and see if they run high in this article." },
+              { icon: <Scale size={24} />, title: "Propaganda Analysis", desc: "Check if the article leans or favours a certain side." },
+              { icon: <Landmark size={24} />, title: "Political Bias", desc: "Analyse the political bias of the article and see what topics are covered or omitted." },
+            ].map((item, i) => (
+              <div key={i} className={`p-4 rounded-lg border bg-white ${i === 4 ? "col-span-2" : ""}`}>
+                <div className="pb-2">{item.icon}</div>
+                <h3 className="font-semibold pb-1 text-sm">{item.title}</h3>
+                <p className="text-slate-600 text-xs">{item.desc}</p>
               </div>
-              <h3 className="font-semibold pb-3 ">Fact-Checking</h3>
-              <p className="text-slate-600">
-                Make sure the content is accurate and trustworthy.
-              </p>
-            </ResizablePanel>
+            ))}
+          </div>
+        ) : (
+          <div className="w-[75%]">
+            <ResizablePanelGroup direction="horizontal" className="mb-6">
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <BadgeCheck size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Fact-Checking</h3>
+                <p className="text-slate-600">
+                  Make sure the content is accurate and trustworthy.
+                </p>
+              </ResizablePanel>
 
-            {/* Render the handle only in horizontal mode */}
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Gauge size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Sentiment Analysis</h3>
-              <p className="text-slate-600">
-                Find out if the article's sentiment is positive, negative, or
-                neutral.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Gauge size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Sentiment Analysis</h3>
+                <p className="text-slate-600">
+                  Find out if the article's sentiment is positive, negative, or
+                  neutral.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <SmilePlus size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Emotion Analysis</h3>
-              <p className="text-slate-600">
-                Understand underlying emotions and see if they run high in this
-                article.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <SmilePlus size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Emotion Analysis</h3>
+                <p className="text-slate-600">
+                  Understand underlying emotions and see if they run high in this
+                  article.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Scale size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Propaganda Analysis</h3>
-              <p className="text-slate-600">
-                Check if the article leans or favours a certain side.
-              </p>
-            </ResizablePanel>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Scale size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Propaganda Analysis</h3>
+                <p className="text-slate-600">
+                  Check if the article leans or favours a certain side.
+                </p>
+              </ResizablePanel>
 
-            {!isMobile && <ResizableHandle />}
+              <ResizableHandle />
 
-            <ResizablePanel className={`m-4 ${isMobile ? "m-2" : "m-4"}`}>
-              <div className="pb-3">
-                <Landmark size={30} />
-              </div>
-              <h3 className="font-semibold pb-3">Political Bias</h3>
-              <p className="text-slate-600">
-                Analyze the political bias of the article and see what topics are covered or omitted.
-              </p>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
+              <ResizablePanel className="m-4">
+                <div className="pb-3">
+                  <Landmark size={30} />
+                </div>
+                <h3 className="font-semibold pb-3">Political Bias</h3>
+                <p className="text-slate-600">
+                  Analyse the political bias of the article and see what topics are covered or omitted.
+                </p>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        )}
       </div>
 
-      <div className="ml-12 mr-12">
+      <div className="mx-4 sm:ml-12 sm:mr-12 w-[calc(100%-2rem)] sm:w-auto">
+
+        {/* Guide to Political Bias Labels */}
+        <BiasLabelGuide />
 
         {/* Latest Topics Card */}
         <div className="mb-12">
-          <Card className="w-full h-[600px] flex flex-col">
-            <CardHeader>
-              <div className="flex flex-col gap-3">
-                <CardTitle className="text-left checkmate-gradient">News Clusters  — Find all the Latest News here! </CardTitle>
+          <Card className="w-full h-[1000px] sm:h-[750px] flex flex-col">
+            <CardHeader className="px-4 sm:px-6">
+              <div className="flex flex-col gap-4">
+                {/* Header Row: Title & Search */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <CardTitle className="text-left checkmate-gradient text-lg sm:text-2xl">
+                    News Clusters — Find all the Latest News here!
+                  </CardTitle>
+                  
+                  {/* Search Bar */}
+                  <form onSubmit={handleSearchSubmit} className="flex-shrink-0">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search articles..."
+                        className="h-9 pl-8 w-48 sm:w-52 pr-3 text-sm"
+                        enterKeyHint="search"
+                      />
+                    </div>
+                  </form>
+                </div>
+                
                 {/* Filter pills */}
                 {(() => {
                   const cats = [...new Set(topics.map(t => t.topicName).filter(Boolean))].sort();
@@ -304,13 +375,14 @@ const LandingPage = () => {
                 })()}
               </div>
             </CardHeader>
-            <CardContent className="p-6 flex-1 overflow-y-auto">
+            <CardContent className="p-4 sm:p-6 flex-1 overflow-y-auto">
               <TopicFeed
                 compact={true}
                 topics={topics}
                 loading={topicsLoading}
                 error={topicsError}
                 selectedTopic={selectedTopic}
+                searchQuery={searchQuery}
               />
             </CardContent>
           </Card>
@@ -318,48 +390,36 @@ const LandingPage = () => {
 
         {/* Visualisations */}
         <div className="grid grid-cols-1 gap-8 mb-12">
-          {/* Guide to Political Bias Labels */}
-          <BiasLabelGuide />
+
           {/* Outlet Bias */}
-          <Card className="h-[650px] flex flex-col">
+          <Card className="flex flex-col">
             <CardHeader className="flex-none">
-              <CardTitle className="checkmate-gradient">
-                Bias Distribution
+              <CardTitle className="checkmate-gradient text-lg sm:text-2xl">
+                News Outlets: Political Bias Distribution
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 bg-transparent flex flex-col overflow-hidden">
+            <CardContent className="flex-1 p-0 bg-transparent flex flex-col">
               <TopicOutletBias />
             </CardContent>
-            <CardFooter className="h-20 px-8 pb-4 from-gray-50 to-blue-50 flex items-center flex-none">
-              <p className="text-base text-gray-600 italic m-0">
+            <CardFooter className="px-4 sm:px-8 pt-3 from-gray-50 to-blue-50 flex items-center flex-none">
+              <p className="pt-4 text-xs sm:text-base font-semibold italic">
                 Ratings reflect outlet perspective only, not accuracy or credibility.
+                <br />
+                As such, we strongly encourage you to read outlets across the political spectrum to gain multiple perspectives.
               </p>
             </CardFooter>
           </Card>
         </div>
 
         {/* Trending Keywords */}
-        <div className="mb-12">
-          <Card className="w-full min-h-[300px]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-left checkmate-gradient">Trending Keywords</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 h-[240px] overflow-hidden">
+        <div>
+          <Card className="w-full min-h-[200px] sm:min-h-[300px]">
+            <CardContent className="p-0">
               <TrendingKeywords />
             </CardContent>
           </Card>
         </div>
-
-        {/* Link to Explanations */}
-        <div className="text-center mb-10">
-          <Link to="/how-it-works" className="m-2 px-3 py-2 rounded-md hover:bg-gray-100 text-base font-medium inline-block">
-            How This Works!
-          </Link>
-        </div>
-
-
       </div>
-
     </div>
   );
 };

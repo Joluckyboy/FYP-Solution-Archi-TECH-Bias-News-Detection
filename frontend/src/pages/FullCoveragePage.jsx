@@ -4,7 +4,6 @@ import axios from "axios";
 import { get_analyzer } from '@/config/config';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
 
 // Modular Components
 import TopicHeader from "@/components/full-coverage/TopicHeader";
@@ -12,7 +11,6 @@ import ClusterSummary from "@/components/full-coverage/ClusterSummary";
 import MediaBiasChart from "@/components/full-coverage/MediaBiasChart";
 import FeaturedCoverageGrid from "@/components/full-coverage/FeaturedCoverageGrid";
 import ArticleListSection from "@/components/full-coverage/ArticleListSection";
-import CoverageTimeline from "@/components/full-coverage/CoverageTimeline";
 
 const FullCoveragePage = () => {
     const { topicId } = useParams();
@@ -64,6 +62,22 @@ const FullCoveragePage = () => {
     }, [topicId]);
 
     // ─── Derived metrics ────────────────────────────────────────────────────────
+
+    // Normalization function for bias
+    function getNormalizedBias(article) {
+        // Prefer 'lean', then 'leaning', then 'political_bias', then 'bias'
+        const raw = article.lean || article.leaning || article.political_bias || article.bias || '';
+        const value = raw.toLowerCase().replace(/[_\s]/g, '-');
+        if (value === "left") return "left";
+        if (value === "right") return "right";
+        if (value === "center" || value === "centre") return "center";
+        if (value === "lean-left" || value === "leaning-left") return "lean-left";
+        if (value === "lean-right" || value === "leaning-right") return "lean-right";
+        if (value.includes("left")) return "lean-left";
+        if (value.includes("right")) return "lean-right";
+        return "center"; // fallback
+    }
+
     const getBiasMetrics = () => {
         if (!articles || articles.length === 0) {
             return { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0, total: 0, raw: { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 } };
@@ -71,13 +85,13 @@ const FullCoveragePage = () => {
 
         const counts = { left: 0, leaningLeft: 0, center: 0, leaningRight: 0, right: 0 };
         articles.forEach(a => {
-            const b = (a.political_bias || a.bias || "").toLowerCase();
+            const b = getNormalizedBias(a);
             if (b === "left") counts.left++;
             else if (b === "right") counts.right++;
             else if (b === "center") counts.center++;
-            else if (b.includes("left")) counts.leaningLeft++;
-            else if (b.includes("right")) counts.leaningRight++;
-            else counts.center++; // Fallback to center if unclassified
+            else if (b === "lean-left") counts.leaningLeft++;
+            else if (b === "lean-right") counts.leaningRight++;
+            else counts.center++;
         });
 
         const total = articles.length;
@@ -128,10 +142,34 @@ const FullCoveragePage = () => {
 
     // ─── Copy handler ────────────────────────────────────────────────────────────
     const handleCopy = (url, idx) => {
-        navigator.clipboard.writeText(url).then(() => {
-            setCopiedIdx(idx);
-            setTimeout(() => setCopiedIdx(null), 2000);
-        });
+        const doFallbackCopy = (text) => {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";
+            textarea.style.opacity = "0";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            
+            const success = document.execCommand("copy"); // returns true/false
+            document.body.removeChild(textarea);
+            return success;
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            // HTTPS path
+            navigator.clipboard.writeText(url).then(() => {
+                setCopiedIdx(idx);
+                setTimeout(() => setCopiedIdx(null), 2000);
+            });
+        } else {
+            // HTTP fallback (your EC2 case)
+            const success = doFallbackCopy(url);
+            if (success) {
+                setCopiedIdx(idx);
+                setTimeout(() => setCopiedIdx(null), 2000);
+            }
+        }
     };
 
     if (loading) {
@@ -163,7 +201,7 @@ const FullCoveragePage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            <div className="container mx-auto px-6 py-8 max-w-7xl">
+            <div className="mx-4 sm:mx-12 py-8">
                 <TopicHeader title={topic.title} />
 
                 {/* Cluster Summary + Media Bias Chart */}
@@ -172,69 +210,14 @@ const FullCoveragePage = () => {
                     <MediaBiasChart topic={topic} articles={articles} metrics={metrics} />
                 </div>
 
-                {/* Comparative Coverage Analysis */}
-                {(enrichmentLoading || parsedComparative.left || parsedComparative.center || parsedComparative.right) && (
-                    <div className="mb-12 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <Sparkles className="h-4 w-4 text-indigo-500" />
-                                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Comparative Coverage Analysis</h3>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-600">
-                                    <Sparkles className="h-3 w-3" /> AI Generated
-                                </span>
-                                {enrichmentLoading && <Skeleton className="h-4 w-20 inline-block" />}
-                            </div>
-                            <p className="text-sm text-slate-500 mb-3">
-                                Explore how differently the Left, Center and Right would cover the same piece of news. For perspective(s) lacking in coverage, our AI Analyser will predict how the story would be covered!
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                            {enrichmentLoading && !topic?.comparative_analysis ? (
-                                [1, 2, 3].map((i) => (
-                                    <div key={i} className="p-5 bg-slate-50/50 space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <Skeleton className="h-2 w-2 rounded-full" />
-                                            <Skeleton className="h-3 w-24" />
-                                        </div>
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-5/6" />
-                                    </div>
-                                ))
-                            ) : (
-                                [
-                                    { key: "left", label: "Left Framing", headerClass: "text-blue-700", dotClass: "bg-blue-500", bgClass: "bg-blue-100" },
-                                    { key: "center", label: "Center Framing", headerClass: "text-purple-600", dotClass: "bg-purple-400", bgClass: "bg-purple-100" },
-                                    { key: "right", label: "Right Framing", headerClass: "text-red-700", dotClass: "bg-red-500", bgClass: "bg-red-100" },
-                                ].map(({ key, label, headerClass, dotClass, bgClass }) => (
-                                    <div key={key} className={`p-5 ${bgClass}`}>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className={`h-2 w-2 rounded-full ${dotClass}`} />
-                                            <p className={`text-xs font-bold uppercase tracking-wider ${headerClass}`}>{label}</p>
-                                        </div>
-                                        <p className="text-sm text-slate-700 leading-relaxed">
-                                            {parsedComparative[key] || <span className="text-slate-400 italic">No data available</span>}
-                                        </p>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        <p className="px-6 py-3 text-xs text-slate-400 italic border-t border-slate-100">
-                            ✦ This analysis was generated by AI and may not fully represent each outlet's editorial stance.
-                        </p>
-                    </div>
-                )}
-
-                {/* Featured Coverage of Story */}
+                {/* Featured Coverage of Story + Comparative Coverage Analysis */}
                 <FeaturedCoverageGrid
                     featuredLeft={featuredLeft}
                     featuredCenter={featuredCenter}
                     featuredRight={featuredRight}
+                    parsedComparative={parsedComparative}
+                    enrichmentLoading={enrichmentLoading}
                 />
-
-                {/* Coverage Timeline */}
-                <div className="grid grid-cols-1 gap-8 mb-12">
-                    <CoverageTimeline articles={articles} />
-                </div>
 
                 {/* Article list */}
                 <ArticleListSection

@@ -1,3 +1,6 @@
+fastapi
+uvicorn[standard]
+python-multipart
 flask
 flask-cors
 pandas
@@ -5,3 +8,4 @@ scikit-learn
 sentence-transformers>=3.0.0
 requests
 boto3
+redis

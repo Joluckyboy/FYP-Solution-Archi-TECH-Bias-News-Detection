@@ -2,7 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /workspace
 
-# Install dependencies first to leverage caching
+# Install CPU-only PyTorch first (much smaller than default GPU build)
+RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -16,5 +19,4 @@ COPY . ./analyzer/
 # Expose port
 EXPOSE 8017
 
-# Run as a module so relative imports work correctly
-CMD ["python", "-m", "analyzer.app"]
+CMD ["uvicorn", "analyzer.app:app", "--host", "0.0.0.0", "--port", "8017", "--workers", "2"]

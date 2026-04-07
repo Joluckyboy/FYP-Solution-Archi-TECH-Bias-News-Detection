@@ -1,12 +1,10 @@
+from fastapi import HTTPException
 import vars as vars
 from typing import Dict, List, Any
 from urllib.parse import urlparse
 import re
 
 import requests  # type: ignore
-from flask import abort
-
-import pprint
 import logging
 
 from typing import List, Dict, Any
@@ -74,6 +72,7 @@ def _sample_text(text: str, max_chars: int = SAMPLE_MAX_CHARS) -> str:
 
     return result
 
+
 def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Sanitizes the fact-check data to ensure it conforms to the FactCheckItem model.
@@ -111,18 +110,37 @@ def sanitize_factcheck_data(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             sanitized_data.append(sanitized_item)
     return sanitized_data
 
+
+def _normalize_bias_rating(label: str) -> str:
+    s = (label or "").strip().lower().replace("_", "-")
+    s = re.sub(r"\s+", "-", s)
+
+    if s in {"left", "liberal"}:
+        return "left"
+    if s in {"lean-left", "leaning-left", "center-left", "centre-left", "left-leaning"}:
+        return "lean-left"
+    if s in {"center", "centre", "neutral", "balanced"}:
+        return "center"
+    if s in {"lean-right", "leaning-right", "center-right", "centre-right", "right-leaning"}:
+        return "lean-right"
+    if s in {"right", "conservative"}:
+        return "right"
+    return "center"
+
 # Scraper calls
 def extract_news(url):
     query_url = vars.scraper_url + "/scraper/get-article"
     params = {"url": url}
-
     response = requests.get(query_url, params=params)
 
     if response.status_code == 400:
-        abort(400, description="Invalid URL format")
-
-    text = response.json()
-    return text
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+    if response.status_code != 200:
+        return None
+    data = response.json()
+    if not isinstance(data, dict):
+        return None
+    return data
 
 # Database calls
 def check_exists (url):
@@ -160,10 +178,10 @@ def get_news_by_id (news_id):
 
     return news
 
-def create_news (url, title, content):
+def create_news (url, title, content, uploader: str = ""):
     
     query_url = vars.database_url + "/database/"
-    data = {"url": url, "title": title, "content": content}
+    data = {"url": url, "title": title, "content": content, "uploader": uploader}
 
     response = requests.post(query_url, json=data)
     news = response.json()
@@ -270,7 +288,8 @@ def get_political_bias(text, url, title: str):
             timeout=30
         )
         rating_data = rating_response.json()
-        rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+        raw_rating = rating_data.get("rating", "center") if rating_data.get("status") == 200 else "center"
+        rating = _normalize_bias_rating(raw_rating)
 
         # 2. Get topics covered/omitted (uses Perplexity, gracefully falls back)
         logger.info(f"[political_bias] Starting topics analysis for {url}")
@@ -380,6 +399,7 @@ def get_data_summary(
     sentiment=None,
     emotion=None,
     propaganda=None,
+    political_bias=None,
     summarise=None,
     allow_partial_local: bool = False,
 ):
@@ -395,8 +415,10 @@ def get_data_summary(
         sentiment = sentiment or news_data.get("sentiment_result") or {}
         emotion = emotion or news_data.get("emotion_result") or {}
         propaganda = propaganda or news_data.get("propaganda_result") or {}
+        political_bias = political_bias or news_data.get("political_bias_result") or {}
         summarise = summarise or news_data.get("summarise_result") or ""
     else:
+        political_bias = political_bias or {}
         summarise = summarise or ""
 
     has_sentiment = bool(sentiment)
@@ -415,6 +437,7 @@ def get_data_summary(
         "sentiment_result": sentiment,
         "emotion_result": emotion,
         "propaganda_result": propaganda,
+        "political_bias_result": political_bias,
         "summarise_result": summarise,
     }
 
@@ -434,7 +457,7 @@ def get_data_summary(
         print(f"[app] Error calling data summary service ({trigger}): {e}")
         return {}
 
-    summary_fields = {"sentiment_summary", "emotion_summary", "propaganda_summary"}
+    summary_fields = {"sentiment_summary", "emotion_summary", "propaganda_summary", "political_bias_summary"}
     merged_summary = {key: value for key, value in new_summary.items() if key in summary_fields}
 
     db_url = vars.database_url + "/database/ModelDataSummary/"
