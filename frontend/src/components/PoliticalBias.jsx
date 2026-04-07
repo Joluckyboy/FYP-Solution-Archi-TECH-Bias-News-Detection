@@ -29,27 +29,39 @@ const PoliticalBias = ({ politicalBiasResult }) => {
   const biasLevels = ['Left', 'Lean Left', 'Center', 'Lean Right', 'Right'];
   const normalizedBias = normalizeBias(rating).replace(/-/g, ' ');
 
+  const biasColors = {
+    'left': '#60a5fa',
+    'lean left': '#dbeafe',
+    'center': '#e9d5ff',
+    'lean right': '#fee2e2',
+    'right': '#fecaca',
+  };
+
   return (
     <div className="space-y-4">
       {/* Political Bias Scale */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="font-semibold text-base mb-3 text-gray-700">Political Bias Rating</div>
-        <div className="flex gap-2 justify-between">
+        <div className="relative my-4 flex items-center justify-between">
+          <div className="absolute inset-x-0 top-1/2 h-px bg-gray-200" />
           {biasLevels.map((label) => {
             const isActive = normalizedBias === label.toLowerCase();
+            const dotColor = biasColors[label.toLowerCase()];
             return (
-              <div
-                key={label}
-                className={`flex-1 min-w-0 text-center py-2 px-1 rounded-md text-xs sm:text-sm font-medium transition-all leading-tight break-words ${
-                  isActive
-                    ? `bg-white text-black shadow-md scale-105 ring-2 ring-offset-1 ring-black`
-                    : 'bg-gray-100 text-gray-300'
-                }`}
-              >
-                {label}
+              <div key={label} className="relative z-10 flex flex-col items-center text-center">
+                <div
+                  className="mb-2 h-3 w-3 rounded-full"
+                  style={{ backgroundColor: isActive ? dotColor : '#d1d5db' }}
+                />
+                <span className={`text-xs ${isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                  {label}
+                </span>
               </div>
             );
           })}
+        </div>
+        <div className="text-sm text-gray-500">
+          Selected bias: <span className="font-semibold text-gray-900">{rating}</span>
         </div>
       </div>
 
