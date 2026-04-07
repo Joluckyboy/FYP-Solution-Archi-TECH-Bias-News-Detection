@@ -29,6 +29,14 @@ const PoliticalBias = ({ politicalBiasResult }) => {
   const biasLevels = ['Left', 'Lean Left', 'Center', 'Lean Right', 'Right'];
   const normalizedBias = normalizeBias(rating).replace(/-/g, ' ');
 
+  const biasColors = {
+    'left': '#60a5fa',
+    'lean left': '#dbeafe',
+    'center': '#e9d5ff',
+    'lean right': '#fee2e2',
+    'right': '#fecaca',
+  };
+
   return (
     <div className="space-y-4">
       {/* Political Bias Scale */}
@@ -38,9 +46,13 @@ const PoliticalBias = ({ politicalBiasResult }) => {
           <div className="absolute inset-x-0 top-1/2 h-px bg-gray-200" />
           {biasLevels.map((label) => {
             const isActive = normalizedBias === label.toLowerCase();
+            const dotColor = biasColors[label.toLowerCase()];
             return (
               <div key={label} className="relative z-10 flex flex-col items-center text-center">
-                <div className={`mb-2 h-3 w-3 rounded-full ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                <div
+                  className="mb-2 h-3 w-3 rounded-full"
+                  style={{ backgroundColor: isActive ? dotColor : '#d1d5db' }}
+                />
                 <span className={`text-xs ${isActive ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
                   {label}
                 </span>
