@@ -86,8 +86,16 @@ export default function TopicOutletBias() {
   const totalOutlets = new Set(allOutlets.map(item => item.outlet)).size;
   const totalArticles = allOutlets.reduce((sum, item) => sum + item.count, 0);
 
-  const getSortedOutlets = (outlets) =>
-    outlets.sort((a, b) => a.outlet.localeCompare(b.outlet));
+  const getSortedOutlets = (outlets) => {
+    const unique = Object.values(
+      outlets.reduce((acc, item) => {
+        if (!acc[item.outlet]) acc[item.outlet] = item;
+        else acc[item.outlet] = { ...acc[item.outlet], count: acc[item.outlet].count + item.count };
+        return acc;
+      }, {})
+    );
+    return unique.sort((a, b) => a.outlet.localeCompare(b.outlet));
+  };
 
   return (
     <div className="flex flex-col px-4 sm:px-6 gap-4 sm:gap-6">
