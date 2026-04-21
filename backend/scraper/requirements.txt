@@ -3,7 +3,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 beautifulsoup4==4.12.3
-lxml==4.9.3
+lxml==6.1.0
 newspaper3k==0.2.8
 nltk==3.9.4
 selenium
